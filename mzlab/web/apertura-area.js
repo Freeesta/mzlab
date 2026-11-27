@@ -12,5 +12,7 @@ function openingRender(){const el=$("#opening");if(el.hidden)return;
 // display:none) so the panels are built at their final size and nothing moves when they replace the skeleton, which fades in the content once (class opn-rev, opacity only)
 function openingView(/** @type {boolean} */ on){const v=$("#v-data");$("#opening").hidden=!on;v.classList.toggle("opn",on);
   for(const id of ["#tools","#dfiles"])$(id).inert=on;v.setAttribute("aria-busy",String(on));if(on)openingRender();
-  else if(OPEN.on&&!v.hidden){v.classList.add("opn-rev");clearTimeout(OPEN.tm);OPEN.tm=setTimeout(()=>v.classList.remove("opn-rev"),400)}
+  else if(OPEN.on&&!v.hidden){v.classList.add("opn-rev");clearTimeout(OPEN.tm);OPEN.tm=setTimeout(()=>endReveal(v),400)}
   OPEN.on=on}
+// leaving opn-rev would start the entry animation again: mark the panels seen first
+function endReveal(/** @type {HTMLElement} */ v){document.querySelectorAll("#dpanels .pnl").forEach(p=>p.setAttribute("data-seen",""));v.classList.remove("opn-rev")}

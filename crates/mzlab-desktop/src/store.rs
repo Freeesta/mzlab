@@ -391,13 +391,13 @@ mod tests {
         let mut s = Store::default();
         s.set_dir(d.path().join("data"));
         assert!(s.molecules("read", "").unwrap().contains("\"molecules\":[]"));
-        let doc = "{\"schema\":\"molecules/1\",\"molecules\":[{\"name\":\"Esempina\",\"formula\":\"NC10H15O\"}]}";
+        let doc = "{\"schema\":\"molecules/1\",\"molecules\":[{\"name\":\"Exampline\",\"formula\":\"NC10H15O\"}]}";
         s.molecules("write", doc).unwrap();
         s.clear();
         let mut t = Store::default();
         t.set_dir(d.path().join("data"));
         let back = t.molecules("read", "").unwrap();
-        assert!(back.contains("\"name\":\"Esempina\"") && back.contains("\"formula\":\"C10H15NO\"") && back.contains("\"id\":\"u:"), "{back}");
+        assert!(back.contains("\"name\":\"Exampline\"") && back.contains("\"formula\":\"C10H15NO\"") && back.contains("\"id\":\"u:"), "{back}");
         assert_eq!(t.molecules("write", &back).unwrap(), "{}");
         assert_eq!(t.molecules("read", "").unwrap(), back, "canonical bytes stay the same");
         assert!(t.molecules("write", "{\"schema\":\"molecules/1\",\"molecules\":[{\"name\":\"X\",\"formula\":\"Xx9\"}]}").is_err());

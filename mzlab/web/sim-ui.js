@@ -189,7 +189,7 @@
   /** the transition table of the «Method» panel of a SIM sample: name, Q1 and dwell only (a SIM ion has no Q3 or collision energy), «—» for a value the file does not give; null for an MRM table @param {any[]} tr */
   function methodTable(tr) {
     if (!tr.length || !tr.every(t => t.q3 == null)) return null;
-    const v = (/** @type {any} */ x) => x == null || x === "" ? "—" : String(x);
+    const v = (/** @type {any} */ x) => x == null || x === "" ? "—" : METODO_DOC.shown(x);     // the display rule of the Method window: two decimals
     return h`<table><tr><th>${I18N.t("method.tr.name")}</th><th class="num">Q1 (m/z)</th><th class="num">Dwell (ms)</th></tr>${raw(tr.map(t => h`<tr><td>${t.name || "—"}</td><td class="num">${v(t.q1)}</td><td class="num">${t.dwell != null ? Math.round(t.dwell * 1000) : "—"}</td></tr>`).join(""))}</table>`;
   }
 

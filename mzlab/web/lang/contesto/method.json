@@ -2,7 +2,6 @@
   "method.check.bad": "{another} = « (you can choose another one)» or empty.",
   "method.source.pick": "Line above the source table when there are several methods; {select} = drop-down menu (HTML).",
   "method.source.from": "{name} = name of the .dam (protected).",
-  "method.pda.value": "PDA detector line; {start}, {stop}, {step} = wavelengths in nm.",
   "method.error": "Error in the method window; {message} = technical text.",
   "method.row.ms2n": "«MS2» row of the parameters table; {n} = number of scans, {per} = per cycle.",
   "method.name": "Name of a method inside a .dam file that contains more than one (one per sample); {n} = number.",
@@ -11,7 +10,6 @@
   "method.doc.fields": "Title of the collapsible box with all the fields of the file, in the Method window; {n} = how many.",
   "method.doc.btn.xic.tip": "Title and aria-label of the «XIC» button of an inclusion-list row in the Method window; {mz} = m/z of the entry.",
   "method.doc.btn.ms2.tip": "Title and aria-label of the «MS2» button of an inclusion-list row, when an MS² scan matches; {mz} = precursor m/z, {rt} = RT of the scan in minutes.",
-  "method.doc.solvent": "Label of the row of an LC pump solvent in the recorded method; {ch} = channel (A, B...).",
   "method.m.error": "Error reading a .m method in the Method window; {name} = folder, {message} = reason.",
   "method.reg.go": "Accessible name of the button of an error-log entry in the method window: moves the cursor to its time; {t} = time in minutes.",
   "method.doc.notes": "Title of the list, at the top of the method section in the Method window, of the method/1.warnings entries (parts not decoded, missing, truncated).",
@@ -24,5 +22,10 @@
   "method.file.range": "Scanned m/z range in the segment table of the Method window; {lo} = low, {hi} = high.",
   "method.file.msLevel": "MS level in the scan column of the segment table of the Method window; {n} = level.",
   "method.file.sep": "Separator between the scan type, MS level and name in one cell of the segment table of the Method window.",
-  "method.file.listSep": "Separator between several collision energies in one cell of the segment table of the Method window."
+  "method.lc.holdTip": "Tooltip of the dashed part of the gradient and of its last table row; {b} = % B, {from}, {to} = times in min (two decimals).",
+  "method.src.read": "Tooltip of a value read from the file; {at} = the stream and field it was read from (technical, as the file names it).",
+  "method.src.inferred": "Tooltip of a value computed from values read from the file; {at} = how it is computed.",
+  "method.val.min": "A time with its unit in the Method window; {v} = the number (two decimals).",
+  "method.val.C": "A temperature with its unit in the Method window; {v} = the number (two decimals).",
+  "method.val.unit": "A value with its unit in the diode-array rows; {v} = the number or range, {unit} = nm, min, Hz or °C."
 }

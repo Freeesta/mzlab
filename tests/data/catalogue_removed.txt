@@ -1,0 +1,21 @@
+# Names that the old catalogue carried (designer-drug and forensic codes, code-only entries) and that the environmental catalogue must not carry,
+# neither as a name nor as a synonym. One per line.
+SDB-006
+5F-SDB-005
+NM-2201
+LSD
+1P-LSD
+iso-LSD
+DMAA
+MDMB-CHMICA
+JWH-018
+AB-FUBINACA
+4-FA
+2C-B
+25I-NBOMe
+mephedrone
+etizolam
+flualprazolam
+isotonitazene
+furanylfentanyl
+5-MeO-DMT

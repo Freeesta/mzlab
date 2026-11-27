@@ -198,7 +198,10 @@ pub fn code_of_key(key: &str) -> u8 {
         OUTPUT
     } else if SELECTOR_KEYS.contains(&key) {
         SELECTOR
-    } else if DATA_KEYS.contains(&key) || chem_code(key) == Some(DATA) {
+    } else if DATA_KEYS.contains(&key)
+        || key.starts_with("error.molecules.")
+        || chem_code(key) == Some(DATA)
+    {
         DATA
     } else if INTEGRITY_PREFIXES.iter().any(|p| key.starts_with(p)) {
         INTEGRITY

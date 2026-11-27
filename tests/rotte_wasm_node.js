@@ -50,6 +50,7 @@ const run = s => {
     case "lr_reflist_match": return { s: wasm.reflist_match(s.body) };
     case "lr_elements": return { s: wasm.elements() };
     case "lr_formula": return { s: wasm.formula_mz(s.f, s.adduct) };
+    case "lr_molecules": return { s: rotte().molecules(s.mop, s.body) };
     case "lr_stat": return { s: rotte().stat_post(s.path, s.body) };
     case "lr_samples": return { s: rotte().samples(s.cop, s.body) };
     case "open": return { s: e.open(s.slot, mzml.length, rdMzml) };

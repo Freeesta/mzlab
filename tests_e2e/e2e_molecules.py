@@ -15,22 +15,25 @@ try:
         call = lambda op, body: pg.evaluate(post, [op, body])
         cat = pg.evaluate("fetch('static/molecules/catalogue.csv').then(r => r.text())")
         loaded = json.loads(call("load", {"catalog": cat}))
-        assert loaded["errors"] == [] and loaded["total"] == 1228, loaded
+        assert loaded["errors"] == [] and loaded["total"] == 1058, loaded
         hrms = json.loads(call("list", {"catalog": "hrms", "adducts": ["[M+H]+", "[M+Na]+"]}))
-        assert len(hrms) >= 645 and all(len(m["mz"]) == 2 for m in hrms)
+        assert len(hrms) == 1058 and all(len(m["mz"]) == 2 for m in hrms)
         hit = json.loads(call("search", {"q": "paracetamol"}))
         assert hit and hit[0]["name"] == "acetaminophen" and hit[0]["formula"] == "C8H9NO2", hit[:1]
         assert any(h["name"] == "acetaminophen" for h in json.loads(call("search", {"q": "C8H9NO2"})))
         by_mass = json.loads(call("search", {"q": "151.0633", "ppm": 10}))
         assert by_mass and by_mass[0]["name"] == "acetaminophen" and by_mass[0]["score"] < 10, by_mass[:1]
-        print("OK  catalogue loaded (1228), found by name, formula and mass")
+        assert not json.loads(call("search", {"q": "SDB-006"})), "a removed code is still listed"
+        # shorter prefix names rank first, so dimethomorph is in the top five, not necessarily first
+        assert any(h["name"] == "dimethomorph" for h in json.loads(call("search", {"q": "dimeth"}))[:5])
+        print("OK  catalogue loaded (1058), found by name, formula and mass")
 
-        csv = "name;molecular_formula;synonyms\nEsempina;C10H15NO;Ex-1\n"
+        csv = "name;molecular_formula;synonyms\nExampline;C10H15NO;Ex-1\n"
         doc = call("from_csv", {"csv": csv, "file": "mine.csv"})
         assert json.loads(doc)["molecules"][0]["origin"]["type"] == "imported", doc
         assert call("load", {"user": doc}).count('"others":1') == 1
-        mine = json.loads(call("search", {"q": "esempina"}))
-        assert mine and mine[0]["name"] == "Esempina" and mine[0]["id"].startswith("u:"), mine[:1]
+        mine = json.loads(call("search", {"q": "exampline"}))
+        assert mine and mine[0]["name"] == "Exampline" and mine[0]["id"].startswith("u:"), mine[:1]
         again = call("to_csv", json.loads(doc))
         assert call("to_csv", json.loads(call("from_csv", {"csv": again, "file": "mine.csv"}))) == again
         bad = json.loads(call("validate", {"csv": "name;molecular_formula\nOk;CH4\nBad;Xx9\n"}))
