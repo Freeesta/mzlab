@@ -48,7 +48,7 @@ try:
             # the item reads «Options…» (disp.menu); the long wording lives in its aria-label (disp.menu.aria)
             assert any("display options" in (i[1] or "") for i in first[:8]) and hrs >= 3, (first, hrs)
             assert pg.evaluate(f"DDA.ms2For({S1}, {S1}._pm).length") >= 1
-            pg.click("#ctx [role^=menuitem]:has-text('Open the MS² scan')"); ready(pg); pg.wait_for_timeout(800)
+            pg.click("#ctx [role^=menuitem]:has-text('Open MS² scan')"); ready(pg); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.find(p=>p.dda!=null).sid") is not None
         step("right click on a peak: open the MS2 scan first, groups, aria-labels", menu)
         def cont():

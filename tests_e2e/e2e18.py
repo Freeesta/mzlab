@@ -59,7 +59,7 @@ try:
             items = pg.evaluate("[...document.querySelectorAll('#ctx div')].map(d=>[d.textContent,d.className])"); print([i[0] for i in items])
             assert any(i[0] == "Extract ion (XIC)…" for i in items), items
             assert pg.evaluate("document.querySelector('#ctx [data-azione=\"view.resetZoom\"]')") is None, "no zoom yet: the entry is not shown"
-            pg.locator("#ctx div", has_text="Extract an ion").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
+            pg.locator("#ctx div", has_text="Extract ion").first.click(); wait_for_js(pg, "!!document.querySelector('#xicdlg').open")
             assert dlg() and not pg.evaluate("document.querySelector('#askdlg').open"); pg.click("#xic-no")      # the same window, not a separate question
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click(); box = pg.locator("#dpanels .pnl.chrom canvas").first.bounding_box()
             pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(13)"), box["y"] + 100); pg.mouse.down(); pg.mouse.move(box["x"] + pg.evaluate(f"E.panels[{ci}]._a.X(16)"), box["y"] + 100, steps=5); pg.mouse.up(); wait_for_js(pg, f"!!E.panels[{ci}].zoom")
@@ -69,7 +69,7 @@ try:
             pg.locator("#ctx div", has_text="Reset zoom").first.click(); wait_for_js(pg, f"E.panels[{ci}].zoom==null")
             assert pg.evaluate(f"E.panels[{ci}].zoom") is None and pg.locator("#dpanels .pnl.chrom [data-a=fit]").first.is_disabled()
             pg.locator("#dpanels .pnl.chrom [data-a=izoom]").first.click()
-        step("right click on the chromatogram: Extract an ion (same window), Reset zoom", chrom_menu)
+        step("right click on the chromatogram: Extract ion (same window), Reset zoom", chrom_menu)
         def guard():
             c = pg.locator("#dpanels .pnl.chrom [data-a=iauto]").first; c.click()
             ci = pg.evaluate("E.panels.findIndex(p=>p.type==='chrom')"); pt_ = pt(pg, ci, 14.3); pg.mouse.click(pt_["px"], pt_["py"]); wait_for_js(pg, "!!document.querySelector('#askdlg').open")
