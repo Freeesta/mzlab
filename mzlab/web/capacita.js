@@ -61,6 +61,7 @@ export function nota(/** @type {Partial<Record<Nome, boolean>>} */ cap) {
   Object.assign(state.found, cap); state.done = null; rileva();
   // only the functions that depend on what the worker just told (the others are reported where they are used)
   for (const f of Object.keys(REQUISITI)) if (REQUISITI[f].some(n => n in cap) && stato(f) === "no") segnala(f);
+  avisoBrowser();
 }
 
 /** "si" | "no" | "verifica" (a worker has not told yet: the function stays on). The app (desktop) has the native engine: everything is "si". */
@@ -91,5 +92,14 @@ export function serve(/** @type {string} */ funzione, /** @type {HTMLElement | n
 /** The capacities a function lacks (for the technical line of a notice). */
 export const mancano = (/** @type {string} */ funzione) => (REQUISITI[funzione] || []).filter(n => statoCap(n) === "no");
 
+/** The closable browser notice: feature checks only; the module (avviso-browser.js) is loaded only when a notice is due. None in the desktop app. */
+function avisoBrowser() {
+  if (g.MZLAB_DESKTOP) return;
+  const touch = !!(g.matchMedia && g.matchMedia("(hover: none) and (pointer: coarse)").matches);   // another browser does not help on a phone or tablet
+  const kind = stato("motore") === "no" ? "engine" : !touch && stato("cartella") === "no" ? "folder" : "";
+  if (kind) import("./avviso-browser.js").then(m => m.mostra(kind, touch)).catch(() => { /* the notice is a courtesy */ });
+}
+
 rileva();
 window.CAPACITA = { rileva, snapshot, nota, ha, stato, statoCap, serve, mancano, REQUISITI };
+avisoBrowser();

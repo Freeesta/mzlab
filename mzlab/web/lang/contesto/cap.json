@@ -1,3 +1,7 @@
 {
-  "cap.missing": "Notice next to a command that is disabled because the browser lacks the feature; {funzione} = name of the feature (e.g. 3D map); the link to the app follows."
+  "cap.missing": "Notice next to a command that is disabled because the browser lacks the feature; {funzione} = name of the feature (e.g. 3D map); the link to the app follows.",
+  "cap.browser.folder.title": "Closable notice for a browser that runs the site worse; {browser} = Safari, Firefox or \"this browser\".",
+  "cap.browser.folder.text": "Closable notice for a browser that runs the site worse; {browser} = Safari, Firefox or \"this browser\".",
+  "cap.browser.engine.title": "Closable notice for a browser that runs the site worse; {browser} = Safari, Firefox or \"this browser\".",
+  "cap.browser.engine.text": "Closable notice for a browser that runs the site worse; {browser} = Safari, Firefox or \"this browser\"."
 }
