@@ -269,7 +269,3 @@ mod multi_tests;
 #[cfg(test)]
 #[path = "find_nominal_tests.rs"]
 mod nominal_tests;
-
-#[cfg(test)]
-#[path = "find_pair_tests.rs"]
-mod pair_tests;

@@ -59,13 +59,8 @@ fn choice(what: &str, detail: Vec<(&str, Value)>) -> Value {
         .done()
 }
 
-pub fn document(pos: &[Row], neg: &[Row], m: &Matched, p: &Params) -> String {
-    let names = |l: &[super::params::Adduct]| {
-        l.iter()
-            .map(|a| a.name.clone())
-            .collect::<Vec<_>>()
-            .join(",")
-    };
+/// The CSV (pairs, then the rows without a partner) and the pairs as values.
+fn lines(pos: &[Row], neg: &[Row], m: &Matched, p: &Params) -> (String, Vec<Value>) {
     let mut csv =
         String::from("pos_id,neg_id,rule,neutral_mass,err_da,err_ppm,rt_pos,rt_neg,drt,mutual\n");
     let mut pairs = Vec::new();
@@ -120,8 +115,16 @@ pub fn document(pos: &[Row], neg: &[Row], m: &Matched, p: &Params) -> String {
             fix(neg[i].rt, 4)
         );
     }
-    let free = |rows: &[Row], idx: &[usize]| {
-        Value::Arr(idx.iter().map(|&i| row_value(&rows[i])).collect())
+    (csv, pairs)
+}
+
+/// The parameters used, the counts and every automatic choice.
+fn head(pos: &[Row], neg: &[Row], m: &Matched, p: &Params) -> (Value, Value, Vec<Value>) {
+    let names = |l: &[super::params::Adduct]| {
+        l.iter()
+            .map(|a| a.name.clone())
+            .collect::<Vec<_>>()
+            .join(",")
     };
     let params = Obj::new()
         .n("rt_tol", p.rt_tol)
@@ -145,6 +148,15 @@ pub fn document(pos: &[Row], neg: &[Row], m: &Matched, p: &Params) -> String {
         choice("mass_error", vec![("basis", text("neutral mass of the pair (mean of the two), ppm or Da as mass_unit")), ("sign", text("negative minus positive"))]),
         choice("mutual", vec![("basis", text("nearest partner of both rows by the mass and RT errors scaled by their tolerances; every other pair within both tolerances is kept"))]),
     ];
+    (params, counts, choices)
+}
+
+pub fn document(pos: &[Row], neg: &[Row], m: &Matched, p: &Params) -> String {
+    let (csv, pairs) = lines(pos, neg, m, p);
+    let (params, counts, choices) = head(pos, neg, m, p);
+    let free = |rows: &[Row], idx: &[usize]| {
+        Value::Arr(idx.iter().map(|&i| row_value(&rows[i])).collect())
+    };
     write(
         &Obj::new()
             .put("schema", text(super::SCHEMA))
