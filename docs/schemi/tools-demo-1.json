@@ -708,7 +708,23 @@
             "properties":{
               "step":{"const":"features.companions@1"},
               "name":{
-                "enum":["rt_tol","min_corr","weak_corr","min_corr_samples","da_tol","adducts","losses","max_edges"]
+                "enum":[
+                  "rt_tol",
+                  "min_corr",
+                  "weak_corr",
+                  "min_corr_samples",
+                  "da_tol",
+                  "adducts",
+                  "losses",
+                  "iso_group",
+                  "iso_min_corr",
+                  "iso_ratio_min",
+                  "iso_ratio_max",
+                  "iso_m2_max",
+                  "spill_min",
+                  "spill_max",
+                  "max_edges"
+                ]
               },
               "value":{
                 "anyOf":[
@@ -753,6 +769,48 @@
                     "type":"string",
                     "default":"17,18,28,42,44,46",
                     "description":"Comma-separated nominal differences (Da) of in-source fragments: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Adds an isotopes section: M, M+1 and M+2 rows grouped by the rules below, and a +1 channel that holds spill_min to spill_max of M flagged as spill-over instead of an isotope"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":-1,
+                    "maximum":1,
+                    "default":0.5,
+                    "description":"An ion at M+1 or M+2 whose height correlation with M is below this is never an isotope"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.01,
+                    "description":"A +1 ion below this ratio to M is not grouped as an isotope"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A +1 ion above this ratio to M (and outside the spill-over band) is not grouped as an isotope"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":1,
+                    "description":"A +2 ion above this ratio to M is not grouped as an isotope"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.5,
+                    "description":"A correlated +1 channel holding at least this share of M is flagged as instrument spill-over, with its ratio and correlation"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.8,
+                    "description":"Upper end of the spill-over band of the +1 to M ratio"
                   },
                   {
                     "type":"integer",
@@ -3054,7 +3112,21 @@
           {
             "properties":{
               "step":{"const":"tp.generate@1"},
-              "name":{"enum":["algorithm","polarity","max_steps","min_mz","max_suspects","other_polarity","nominal"]},
+              "name":{
+                "enum":[
+                  "algorithm",
+                  "polarity",
+                  "max_steps",
+                  "min_mz",
+                  "max_suspects",
+                  "other_polarity",
+                  "formula_filter",
+                  "filter_steps",
+                  "m2_tol",
+                  "m2_ref",
+                  "nominal"
+                ]
+              },
               "value":{
                 "anyOf":[
                   {"enum":["rule_chain"]},
@@ -3077,6 +3149,29 @@
                     "type":"boolean",
                     "default":false,
                     "description":"Expected members of a family in the other polarity too ([M-H]- of a positive base and the reverse)"
+                  },
+                  {
+                    "type":"boolean",
+                    "default":false,
+                    "description":"Keeps only hypotheses reachable from the parent in filter_steps rule steps whose expected M+2/M is within m2_tol of the parent's; the counts of what it left out are written in the registry"
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":1,
+                    "maximum":4,
+                    "default":2,
+                    "description":"Most rule steps from the parent for a hypothesis to stay (formula filter on)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.1,
+                    "description":"Largest difference between the expected M+2/M of a hypothesis and the reference ratio (formula filter on)"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "description":"Observed M+2/M of the parent (for example from raw isotopes); without it the ratio of the parent's formula is used"
                   },
                   {
                     "type":"boolean",
