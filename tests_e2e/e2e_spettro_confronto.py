@@ -52,6 +52,21 @@ def compare(pg):
     assert [r[3] for r in side[1:]] == ["35", "20"], side                                         # the collision energy of each
     w = pg.inner_text("#spcmp-out"); assert "35" in w and "20 eV" in w and "differ" in w, w       # the warning, from the catalogue
     assert "(default)" in pg.inner_text("#spcmp-out"), "the defaults used are shown"
+def mirror(pg):
+    """The canvas draws A up and B down: the two matched ions (100, 101) as joined bars of one colour, 102 only above and 103 only below in the other; the data table lists them."""
+    bars = pg.evaluate("JSON.parse(document.querySelector('#spcmp-cv').dataset.bars)")
+    assert sorted(b for b in bars if b[0] == "a") == [["a", 100, 0.25, 1], ["a", 101, 0.5625, 1], ["a", 102, 1, 0]], bars     # share of A's base peak (16)
+    assert sorted(b for b in bars if b[0] == "b") == [["b", 100, 0.16, 1], ["b", 101, 0.36, 1], ["b", 103, 1, 0]], bars        # share of B's base peak (25)
+    # the pixels: the middle of each bar has the colour of its kind (matched blue, unmatched vermilion), the matched pair joins both sides, the page background is elsewhere
+    px = pg.evaluate("""(() => { const cv = document.querySelector('#spcmp-cv'), m = cv._mg, g = cv.getContext('2d'), d = cv.width / cv.clientWidth, at = (mz, up, rel) => [...g.getImageData(Math.round(m.X(mz) * d), Math.round((m.mid - (up ? 1 : -1) * rel * m.half / 2) * d), 1, 1).data.slice(0, 3)];
+      return { m101: at(101, true, 0.5625), m101b: at(101, false, 0.36), a102: at(102, true, 1), b103: at(103, false, 1), empty: at(110, true, 1) }; })()""")
+    assert px["m101"] == px["m101b"] != px["a102"], px                                      # matched bars share a colour, the unmatched one differs
+    assert px["a102"] == px["b103"] and px["empty"] != px["a102"] and px["empty"] != px["m101"], px
+    pg.focus("#spcmp-cv"); pg.keyboard.press("t"); wait_for_js(pg, "document.querySelector('#tdati[open] table')")
+    t = pg.inner_text("#tdati table")
+    assert "Matched" in t and "103" in t and "A" in t and "B" in t, t
+    pg.keyboard.press("Escape")
+    assert pg.evaluate("document.querySelector('#spcmp').open"), "Escape closes the table, not the card"
 def parameters(pg):
     """A parameter typed by the user goes to the engine and comes back in the document: tol 1 Da matches 102 with 103; ce_tol 20 eV silences the warning."""
     pg.fill("#spcmp-tol", "1"); pg.fill("#spcmp-cetol", "20"); pg.click("#spcmp-go")
@@ -107,9 +122,9 @@ def run(port, wd, body, size=None):
             errs = [e for e in r.errs if e[0] == "pageerror"]; assert not errs, errs
     finally: r.close()
 def whole(pg):
-    card(pg); compare(pg); parameters(pg); offsets(pg); empty(pg)
+    card(pg); compare(pg); mirror(pg); parameters(pg); offsets(pg); empty(pg)
     assert pg.evaluate("document.documentElement.scrollWidth <= window.innerWidth + 1"), "horizontal page scroll"
-step("menu → card → cosine 0.3916, matched ions with both intensities, the ions of each side, the CE warning, the parameters, an m/z offset per side (fixed, auto, not found, refused), an empty window", lambda: run(8931, "/tmp/wd_spc1", whole))
+step("menu → card → cosine 0.3916, matched ions with both intensities, the mirror canvas and its table, the ions of each side, the CE warning, the parameters, an m/z offset per side (fixed, auto, not found, refused), an empty window", lambda: run(8931, "/tmp/wd_spc1", whole))
 def narrow(pg):
     """The context menu is a right click (the phone has long press): the card is opened as the menu entry does, and must fit the width."""
     pg.evaluate(f"loadScript('m:spettro-confronto.js').then(() => SPCMP.open({SP2}))"); wait_for_js(pg, "document.querySelector('#spcmp') && document.querySelector('#spcmp').open")
