@@ -1,5 +1,5 @@
 # First-order rate of a time series (`quant.kinetics@1`)
-Files: `crates/mzlab-ops/src/run/table/kinetics.rs` (joins, UV factors, fits, choices, the `kinetics-series/1` text), `kinetics_read.rs` (parameters and the two CSVs), `crates/mzlab-cli/src/flow_kinetics.rs` (step descriptor and files), `crates/mzlab-flowkin-wasm/src/lib.rs` (`flow_kinetics` in the browser), `flow/lazy/flow-web-quant.js` (site executor). The fit is `mzlab_core::kinetics::fit_decay` (first-order decay, AICc, residual bootstrap); nothing of it is duplicated.
+Files: `crates/mzlab-ops/src/run/table/kinetics.rs` (joins, UV factors, fits, choices, the `kinetics-series/1` text), `kinetics_read.rs` (parameters and the two CSVs), `kinetics_write.rs` (the `uv` object and the document), `crates/mzlab-cli/src/flow_kinetics.rs` (step descriptor and files), `crates/mzlab-flowkin-wasm/src/lib.rs` (`flow_kinetics` in the browser), `flow/lazy/flow-web-quant.js` (site executor). The fit is `mzlab_core::kinetics::fit_decay` (first-order decay, AICc, residual bootstrap); nothing of it is duplicated.
 
 ## What it does
 One step for the three manual jobs of a kinetic campaign: the areas of fixed RT windows for an ion list, the injection check on a UV reference peak, and k with its uncertainty.

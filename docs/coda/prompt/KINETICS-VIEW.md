@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** `quant.kinetics` prints the numbers and the choices; the owner judges a fit by looking at it. `quant.curve` has the same gap (calibration.md, "Not yet").
 
-**Read first.** `docs/agenti/kinetics-series.md`, `docs/agenti/calibration.md` ("Not yet"), `TP_Mine/lazy/groups-view.js` (the conditions chart to reuse), `docs/agenti/value-states.md`, `docs/agenti/frontend.md` (start with `grep -n 'chart\|svg' docs/agenti/INDICE.md`).
+**Read first.** `docs/agenti/kinetics-series.md`, `docs/agenti/calibration.md` ("Not yet"), `TP_Mine/lazy/groups-view.js` (the conditions chart to reuse), `docs/agenti/value-states.md`, `docs/agenti/flow-web.md` (the Flow page).
 
 **Already on main (checked 28 Nov, re-check before coding).** `quant.kinetics@1` writes `kinetics-series/1` with `files`, `points`, `fits`, `choices` and `warnings`; no view draws it.
 

@@ -9,6 +9,7 @@ pub mod kinetics;
 pub mod kinetics_read;
 #[cfg(test)]
 mod kinetics_tests;
+mod kinetics_write;
 pub mod pol;
 pub mod quant;
 pub mod rows_mgf;
