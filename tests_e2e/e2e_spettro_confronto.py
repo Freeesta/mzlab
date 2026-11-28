@@ -60,8 +60,11 @@ def mirror(pg):
     # the pixels: the middle of each bar has the colour of its kind (matched blue, unmatched vermilion), the matched pair joins both sides, the page background is elsewhere
     px = pg.evaluate("""(() => { const cv = document.querySelector('#spcmp-cv'), m = cv._mg, g = cv.getContext('2d'), d = cv.width / cv.clientWidth, at = (mz, up, rel) => [...g.getImageData(Math.round(m.X(mz) * d), Math.round((m.mid - (up ? 1 : -1) * rel * m.half / 2) * d), 1, 1).data.slice(0, 3)];
       return { m101: at(101, true, 0.5625), m101b: at(101, false, 0.36), a102: at(102, true, 1), b103: at(103, false, 1), empty: at(110, true, 1) }; })()""")
-    assert px["m101"] == px["m101b"] != px["a102"], px                                      # matched bars share a colour, the unmatched one differs
-    assert px["a102"] == px["b103"] and px["empty"] != px["a102"] and px["empty"] != px["m101"], px
+    blue = lambda c: c[2] > c[0] + 80                                                       # Okabe-Ito blue; the thin bars are anti-aliased, so the hue is compared, not the exact value
+    red = lambda c: c[0] > c[2] + 80
+    assert blue(px["m101"]) and blue(px["m101b"]), px                                       # matched: the same colour on both sides
+    assert red(px["a102"]) and red(px["b103"]), px                                          # only in one spectrum: the other colour
+    assert px["empty"] == [255, 255, 255] or not (blue(px["empty"]) or red(px["empty"])), px
     pg.focus("#spcmp-cv"); pg.keyboard.press("t"); wait_for_js(pg, "document.querySelector('#tdati[open] table')")
     t = pg.inner_text("#tdati table")
     assert "Matched" in t and "103" in t and "A" in t and "B" in t, t
