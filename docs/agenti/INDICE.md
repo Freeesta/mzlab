@@ -39,7 +39,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | DAD (UV/Vis) detector of the `.wiff`: matrix, RT-λ map, UV spectrum, TWC/XWC (`xwc.js`), XWC integration, DAD on the MRM panel (`dad-mrm.js`) | `docs/agenti/dad.md` |
 | calculator ("what it could be" groups under the number), Adducts panel, facts on 3200 data, gradient, analog traces, data tables, theme | `docs/agenti/data-3200.md` |
 | sidebar of the Data view, tools, hints, tour | `docs/agenti/data-bar.md` |
-| data channels, `file info`, `trace`, `spectrum` incl. `--sum`, `--bin nominal`, `--peak auto` (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/data-channels.md` |
+| data channels, `file info`, `trace`, `spectrum` incl. `--sum`, `--peak auto` (file → channels: TIC, filters/transitions/precursors, UV, analog; experiment type as a label; open work) | `docs/agenti/data-channels.md` |
 | load a folder, pointed and remembered folder (greyed list, "Others", desktop), background warm-up of the pointed folder's files (queue, `lr_warm`, `lr_warm_claim`) | `docs/agenti/data-folder.md` |
 | peak integration in the Data view (automatic tool, one click = all peaks in HR, parameters, `auto_integrate`) | `docs/agenti/data-integration.md` |
 | first load of several files (only the first opens), fields of the load table | `docs/agenti/data-loading.md` |
@@ -181,6 +181,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | service worker, per-version site cache, `sw-manifest.json`, updates | `docs/agenti/service-worker.md` |
 | Shimadzu `.qgd` and `.lcd` reader (`crates/mzlab-lettori/src/shimadzu/`, `shimadzu` module) | `docs/agenti/shimadzu.md` |
 | multi-library spectral matching engine for mzFlow ("Attribution" node, `table.attribute`) and MSⁿ side panel: `libset`, `libmatch/1`, presets, analogs with ΔFormula, `libraries/2` catalog | `docs/agenti/spectral-match.md` |
+| `spectrum get --bin` (bins of a spectrum, of a `--minus` blank and of a `--sum`, `--mz-offset`, `spectrum-bins/1`) | `docs/agenti/spectrum-bins.md` |
 | MS² spectrum card header (`ms2c`), the removed info rows (notes, retention times, CE, sample) and where `p.note` is still stored, `mzlab-cli file items` | `docs/agenti/spectrum-rows.md` |
 | progressive startup (`AVVIO`), «interface at once» rule; loading area and table (area: header (full screen, logo, (i)), loading area and table,…) | `docs/agenti/startup.md` |
 | statistics as steps: Welch/ANOVA with BH, PCA and KMD in Rust (`crates/mzlab-feat/src/stat/`, `table.stats`, `table.pca`, `table.kmd`, `stat/1`) | `docs/agenti/stat.md` |

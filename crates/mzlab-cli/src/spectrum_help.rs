@@ -27,10 +27,10 @@ usage: mzlab-cli spectrum get FILE (--rt MIN | --rt A,B | --scan NO) [--ms-level
               another sample of FILE
   --minus-sample ID the sample of the blank (a file of several samples)
   --minus-rt A,B the blank's window in minutes; default the window of --rt, or the blank's scan nearest to a single --rt or --scan
-  --bin RULE  unit-resolution data cut into bins (`mzlab-cli spectrum get f.mzML --rt 6,7 --bin nominal --mz-offset 0.24`): the points are summed into
+  --bin RULE  unit-resolution (or HR profile) data cut into bins (`mzlab-cli spectrum get f.mzML --rt 6,7 --bin nominal --mz-offset 0.24`): the points are summed into
               half-open bins [n - 0.5, n + 0.5) around integers (`nominal`) or [k/10 - 0.05, k/10 + 0.05) around tenths (`0.1`) AFTER the offset is taken off;
               the output (spectrum-bins/1, or CSV bin,mz,counts,points) gives the bin, its centre of mass on the corrected scale (intensity-weighted) and the
-              counts summed; the rule and the offset (also 0) are in the document and on stderr; not with --minus, --sum or --peak; a high-resolution file is refused
+              counts summed; the rule and the offset (also 0) are in the document and on stderr; with --minus each side is cut into bins first (each with its own offset) and the blank's bins are subtracted, `evidence.minus.order` is `bin_then_subtract`; with --sum the summed counts are cut; not with --peak; high-resolution PROFILE data is binned too, a high-resolution centroid file is refused
   --mz-offset DA|auto:MZ[@RT]  with --bin: the offset (observed - true, Da) taken off every m/z before the cut: a number (limit 0.6), or measured on the known ion MZ
               (near RT min) as in `trace xic`; the evidence of an estimate is in the document
   --format F  json (default) or csv with the header mz,intensity

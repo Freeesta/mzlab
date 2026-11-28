@@ -24,8 +24,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-SPILL-RAW | `docs/coda/prompt/ISOTOPES-SPILL-RAW.md` | - | spill-over verdict in `raw isotopes` from the Q1 scan itself: the +1 channel against M inside the peak, with the shape correlation, for a file with no feature table |
 | TP-GENERATE-M2-OBSERVED | `docs/coda/prompt/TP-GENERATE-M2-OBSERVED.md` | - | feed the observed parent M+2/M of `raw isotopes` to the `m2_ref` of the `tp.generate` formula filter, logged, instead of a typed number |
-| NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
-| NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | KINETICS-VIEW | `docs/coda/prompt/KINETICS-VIEW.md` | - | the decay plot of `quant.kinetics`: points, fit and k interval per ion and series, the UV factor per file, the flagged points |
 | KINETICS-FORMATION | `docs/coda/prompt/KINETICS-FORMATION.md` | - | opt-in formation-decay fit of a product in `quant.kinetics` (`fit_consecutive`, k1 of the parent as input), logged |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
@@ -91,5 +89,4 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | MENU-LABELS-LEFTOVERS | `docs/coda/prompt/MENU-LABELS-LEFTOVERS.md` | - | short wording (no articles) for aria names of menu entries, dialog and side-panel button labels, and help text that quotes an old entry name |
 | WIFF-OPEN-INSTANT | `docs/coda/prompt/WIFF-OPEN-INSTANT.md` | - | after the index ahead, Open selected still opens each index in the engine (`lrOpen`, `native_attach`, about 240 ms for 4 samples): open it while the dialog is open so Open is instant |
 | PBAR-REMOVE-OLD | `docs/coda/prompt/PBAR-REMOVE-OLD.md` | - | panel toolbar slice: default `qqq.pbar` on and delete the per-panel tool rows and their overflow code |
-| PBAR-PHONE-KEYS | `docs/coda/prompt/PBAR-PHONE-KEYS.md` | - | panel toolbar slice: the bar at 390 px and its keyboard use |
 | TIP-SINGLE-FILE-LEGEND | `docs/coda/prompt/TIP-SINGLE-FILE-LEGEND.md` | needs owner decision: whether a single-file session drops the file name from the legends and other readouts too | the chromatogram hover box drops the file name with one file loaded; the legend chips, the XIC lens and the peak label box still repeat it |

@@ -88,7 +88,7 @@
           },
           "counts": {
             "type": "number",
-            "description": "Intensity summed over the points (the mean over the scans of a window)."
+            "description": "Intensity summed over the points (the mean over the scans of a window; the sum with --sum; the sample's bin minus the blank's with --minus, only bins above zero)."
           },
           "points": {
             "type": "integer",
@@ -99,7 +99,7 @@
     },
     "evidence": {
       "type": "object",
-      "description": "route (/api/spectrum), query (the route query with rebin and mzoff), scan (scan_id, scan_no, rt_min, ms_level; level_auto when the file's only level was chosen) and answer (the route's own scalar members: mode, rule, width_da, edges, mz_offset_da, mz_offset, scans, i0, i1, n, sid).",
+      "description": "route (/api/spectrum), query (the route query with rebin and mzoff), scan (scan_id, scan_no, rt_min, ms_level; level_auto when the file's only level was chosen), minus (with --minus: file, sample, window_min, scan, factor, clip, tol_ppm, order bin_then_subtract, and the blank's mz_offset_da, mz_offset, scans), sum (with --sum: /api/specsum) and answer (the route's own scalar members: mode, rule, width_da, edges, mz_offset_da, mz_offset, scans, i0, i1, n, sid).",
       "required": [
         "route",
         "query",

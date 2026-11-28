@@ -288,7 +288,7 @@ pub fn get(args: Vec<String>) -> Outcome {
         }
         let flags = (blank.is_some(), p.get("--id").is_some());
         let (peak, sum) = peak::modes(&p, &at, flags)?;
-        let bin = bins::options(&p, blank.is_some(), sum.is_some() || peak.is_some())?;
+        let bin = bins::options(&p, peak.is_some())?;
         Ok(Ok((
             p.sample(&file)?,
             p.csv()?,
@@ -310,14 +310,22 @@ pub fn get(args: Vec<String>) -> Outcome {
     finish(
         extract::with_tmp("spectrum", |tmp| {
             let mut s = extract::open_sample(&file, sample, tmp)?;
-            if let Some(b) = &bin {
-                let (doc, notes) = bins::get(&mut s, &at, level, chan.as_deref(), csv, b)?;
-                return Ok((doc, s.note.clone() + &notes));
-            }
             let mut m = match &blank {
                 Some((f, id, w)) => Some(minus::open(f, *id, *w, tmp)?),
                 None => None,
             };
+            if let Some(b) = &bin {
+                let (doc, notes) = bins::get(
+                    &mut s,
+                    &at,
+                    level,
+                    chan.as_deref(),
+                    csv,
+                    b,
+                    (&mut m, &modes.0),
+                )?;
+                return Ok((doc, s.note.clone() + &notes));
+            }
             let (doc, notes) = get_one(
                 &mut s,
                 &at,
@@ -373,6 +381,12 @@ fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
     }
 }
 
+#[cfg(test)]
+#[path = "spectrum_bins_hr_tests.rs"]
+mod bins_hr_tests;
+#[cfg(test)]
+#[path = "spectrum_bins_minus_tests.rs"]
+mod bins_minus_tests;
 #[cfg(test)]
 #[path = "spectrum_bins_tests.rs"]
 mod bins_tests;
