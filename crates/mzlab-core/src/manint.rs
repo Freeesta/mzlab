@@ -442,9 +442,8 @@ fn table_with<X: csv::Extra>(files: &str, windows: &str, sums: bool, extra: &X) 
             .then(x.1.file.cmp(&y.1.file))
             .then(x.1.a.total_cmp(&y.1.a))
     });
-    Ok(csv_text(
-        &rows, &labels, &corrs, &keys, &samples, sums, cols, extra,
-    ))
+    let names: (&[String], &[String]) = (&labels, &corrs);
+    Ok(csv_text(&rows, names, &keys, &samples, sums, cols, extra))
 }
 
 #[path = "manint_edges.rs"]

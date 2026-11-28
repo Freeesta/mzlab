@@ -32,8 +32,7 @@ impl Extra for NoExtra {
 /// The CSV: the header, then for each channel (in the order of `keys`) its rows, and the `sum` row after them when `sums`.
 pub(super) fn csv_text(
     rows: &[(usize, Row)],
-    labels: &[String],
-    corrs: &[String],
+    (labels, corrs): (&[String], &[String]),
     keys: &[Channel],
     samples: &[Sample],
     sums: bool,
@@ -81,7 +80,8 @@ pub(super) fn csv_text(
                 out.pop();
                 out += &ext_cells(&samples[r.file].1[r.tr], r, &corrs[r.label]);
             }
-            let more = cols.cells(&samples[r.file].1[r.tr], r) + &extra.cells(&samples[r.file].1[r.tr], r);
+            let more =
+                cols.cells(&samples[r.file].1[r.tr], r) + &extra.cells(&samples[r.file].1[r.tr], r);
             if !more.is_empty() {
                 out.pop();
                 out += &more;
