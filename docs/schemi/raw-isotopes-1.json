@@ -735,6 +735,42 @@
         "additionalProperties": false
       },
       "description": "one result per file that answered, in input order"
+    },
+    "figures": {
+      "type": "array",
+      "description": "only with --figure: one entry per written SVG, in the order of `results`",
+      "items": {
+        "type": "object",
+        "required": [
+          "file",
+          "sample",
+          "path",
+          "bytes",
+          "sha256"
+        ],
+        "properties": {
+          "file": {
+            "type": "string"
+          },
+          "sample": {
+            "type": [
+              "integer",
+              "null"
+            ]
+          },
+          "path": {
+            "type": "string"
+          },
+          "bytes": {
+            "type": "integer"
+          },
+          "sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$"
+          }
+        },
+        "additionalProperties": false
+      }
     }
   },
   "additionalProperties": false

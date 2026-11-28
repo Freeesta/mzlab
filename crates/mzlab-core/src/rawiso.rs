@@ -162,12 +162,14 @@ pub struct Ask {
     pub formula: Option<String>,
     /// The adduct asked, else `DEFAULT_ADDUCT` when a formula is given.
     pub adduct: Option<String>,
+    /// `figure=1`: also draw the figure (`rawiso_fig`); the route then answers the SVG text instead of the JSON.
+    pub figure: bool,
     pub p: Params,
 }
 
 impl Ask {
     /// `mz=M&rt=A,B[&formula=F][&adduct=A][&bin=nominal][&ms_level=N][&mz_offset=TEXT][&min_counts=..&z_ok=..&z_bad=..&c13_pct=..&carbon_k=..&m2_ratio=..&m2_k=..
-    /// &min_r=..&min_sn=..&min_points=..&alpha=..&side_min=..&gap_min=..]`; a value out of its range is refused, so is a formula the catalogue cannot read.
+    /// &min_r=..&min_sn=..&min_points=..&alpha=..&side_min=..&gap_min=..][&figure=1]`; a value out of its range is refused, so is a formula the catalogue cannot read.
     pub fn of(q: &Query) -> Result<Ask> {
         let mz = match num(q, "mz")? {
             Some(x) if x > 0.0 => x,
@@ -183,6 +185,11 @@ impl Ask {
             Some(x) => return Err(bad("ms_level", &x.to_string())),
         };
         let (formula, adduct) = formula_of(q)?;
+        let figure = match q.some("figure") {
+            None => false,
+            Some("1") => true,
+            Some(v) => return Err(bad("figure", v)),
+        };
         Ok(Ask {
             mz,
             rt,
@@ -190,6 +197,7 @@ impl Ask {
             offset: q.some("mz_offset").map(Spec::parse).transpose()?,
             formula,
             adduct,
+            figure,
             p: params_of(q)?,
         })
     }
@@ -207,14 +215,19 @@ impl Ask {
 pub struct IsoOut {
     pub members: String,
     pub result: String,
+    /// The figure (SVG text) when the question asked for it.
+    pub svg: Option<String>,
 }
 
 impl<R: ReadAt> Routes<R> {
     /// `/api/rawiso?mz=M&rt=A,B[&formula=..&adduct=..][&ms_level=..][&mz_offset=..][&min_counts=..]...`: the members of `raw-isotopes/1` for this sample and
-    /// its `result`.
+    /// its `result`; with `figure=1` the SVG text of its figure instead.
     pub fn raw_isotopes_route(&mut self, q: &Query) -> Result<Option<String>> {
         let o = self.raw_isotopes(&Ask::of(q)?)?;
-        Ok(Some(format!("{{{},\"result\":{}}}", o.members, o.result)))
+        Ok(Some(match o.svg {
+            Some(svg) => svg,
+            None => format!("{{{},\"result\":{}}}", o.members, o.result),
+        }))
     }
 
     /// The answer of `ask` on this sample (its polarity `pol`).
@@ -256,7 +269,11 @@ impl<R: ReadAt> Routes<R> {
         };
         self.forget_sweep();
         let found = crate::rawiso_found::found_of(ask, &rt, &y, centres, q)?;
+        let svg = ask
+            .figure
+            .then(|| crate::rawiso_fig::svg(ask, &found, &rt, &y, centres));
         Ok(IsoOut {
+            svg,
             members: crate::rawiso_json::members_json(ask, n, &probe, off.as_ref(), q.is_some()),
             result: crate::rawiso_json::result_json(ask, &found),
         })
@@ -265,4 +282,4 @@ impl<R: ReadAt> Routes<R> {
 
 #[cfg(test)]
 #[path = "rawiso_tests.rs"]
-mod tests;
+pub(crate) mod tests;

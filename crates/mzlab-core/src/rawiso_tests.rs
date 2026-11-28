@@ -10,7 +10,7 @@ use crate::mzmlwrite::{Header, MzmlWriter};
 
 /// 200 MS1 scans every 0.02 min from 1.0 min. A peak of 21 scans (2.0 to 2.4 min, 200 cps per ion) at m/z 181.07 (M) with `m1` ions per scan at 182.07
 /// and `m2` at 183.07; `m0` ions per scan at M. `steady` adds one ion per scan at 182.07 outside the peak (a background on the M+1 bin).
-fn mzidx(m0: u32, m1: u32, m2: u32, steady: bool) -> Vec<u8> {
+pub(crate) fn mzidx(m0: u32, m1: u32, m2: u32, steady: bool) -> Vec<u8> {
     let mut w = MzmlWriter::new(
         Vec::new(),
         &Header {

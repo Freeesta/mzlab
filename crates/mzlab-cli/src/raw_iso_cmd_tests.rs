@@ -8,12 +8,12 @@ use mzlab_core::mzml::Spectrum;
 use mzlab_core::mzmlwrite::{Header, MzmlWriter};
 use mzlab_core::routes::Query;
 
-fn json(o: &crate::Outcome) -> Value {
+pub(super) fn json(o: &crate::Outcome) -> Value {
     parse(&o.stdout).unwrap_or_else(|e| panic!("{e:?}: {}", String::from_utf8_lossy(&o.stdout)))
 }
 
 /// 200 scans every 0.02 min from 1.0 min; from 2.0 to 2.4 min `m0`, `m1` and `m2` ions (200 cps each) per scan at m/z 181.07, 182.07 and 183.07.
-fn file(tag: &str, m0: f32, m1: f32, m2: f32) -> (std::path::PathBuf, String) {
+pub(super) fn file(tag: &str, m0: f32, m1: f32, m2: f32) -> (std::path::PathBuf, String) {
     let d = dir(tag);
     let mut w = MzmlWriter::new(
         Vec::new(),
@@ -44,7 +44,7 @@ fn file(tag: &str, m0: f32, m1: f32, m2: f32) -> (std::path::PathBuf, String) {
     (d, f.to_string_lossy().into_owned())
 }
 
-const WIN: &str = "2.0,2.4";
+pub(super) const WIN: &str = "2.0,2.4";
 
 #[test]
 fn the_ratios_of_known_counts_and_the_verdicts_of_a_formula() {

@@ -1,0 +1,14 @@
+{
+  "note.rawiso.fig.title": "Title of the isotope figure of `raw isotopes`; {mz} = the monoisotopic m/z asked, {a} and {b} = the window, in minutes.",
+  "note.rawiso.fig.formula": "Second line of the figure: the formula and the adduct compared with, and the m/z of that ion ({formula}, {adduct}, {mz}).",
+  "note.rawiso.fig.trace.m": "Label of the trace of the first bin; {mz} = the whole mass of the bin.",
+  "note.rawiso.fig.trace.m1": "Label of the trace of the second bin; {mz} = the whole mass of the bin.",
+  "note.rawiso.fig.trace.m2": "Label of the trace of the third bin; {mz} = the whole mass of the bin.",
+  "note.rawiso.fig.peak": "Under a trace label: its highest intensity in the window ({v}).",
+  "note.rawiso.fig.region.peak": "Legend of the shaded region of the peak of M; {a} and {b} = its start and end, in minutes.",
+  "note.rawiso.fig.observed": "Observed ratio with its counting sigma ({r}, {s}).",
+  "note.rawiso.fig.observedOnly": "Observed ratio when it has no sigma ({r}).",
+  "note.rawiso.fig.expected": "Ratio expected from the formula ({e}).",
+  "note.rawiso.fig.z": "Distance of the observed ratio from the expected one, in sigma ({z}).",
+  "note.rawiso.fig.band": "Legend of the band around the expected ratio; {k} = the z limit under which a ratio is consistent."
+}
