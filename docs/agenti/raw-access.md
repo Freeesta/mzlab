@@ -15,7 +15,7 @@ route `/api/rawinfo`), `rawxic.rs`, `rawxic_judge.rs`, `rawxic_json.rs` (route `
 - `ion_quantum`: `ionstat::quantum` on the probe intensities (rule `min_positive_or_step`, the one of the S/N; it reads, it changes no S/N). `cps` is set only when
   the quantum is accepted (`status` `ok`); `continuous` (a profile that is not ion counts: `warn.raw.noQuantum`) and `none` give `cps` null with the `candidate`.
 - `spectrum_type`: `label` the declared type of the probe scans, `data` the detector of `spectrum_type.rs` (the runs of `Runs`): a centroid label on continuous runs
-  is profile data, a profile label on sparse points is centroid data; `agree` false gives `warn.raw.labelMismatch` (file, label, data, `runs_share`).
+  is profile data, a profile label on sparse points is centroid data; `agree` false gives `warn.raw.labelMismatch` (file, label, data, `runs_share`); `short_runs_share` is the share of points in runs of 3 (the peak-width cue, 20 % cut).
 - `mass_offset`: `{"status":"not_measured","how":"--offset-ion MZ[@RT]"}`, or with `--offset-ion` the `mzcal::estimate` evidence (`measured`, `da`, `evidence`).
 - `warnings`, then `provenance`: program, version, commit, engine (index format, quantum rule), the command as given, the files with SHA-256, the parameters
   with defaults resolved, the automatic choices, the citation. No cache member: stdout is the same with and without `--cache` (stderr says built or reused).

@@ -16,8 +16,14 @@ const RUN_TOL: f64 = 0.25;
 /// A run is a profile only when its points are closer than this (Da): a unit-resolution peak is about 0.7 Da wide, so a Q1 trace sampled every 0.5 Da is
 /// still a profile, but one sampled every 1 Da or more is a stick spectrum (nominal masses, isolated counts), however regular.
 pub const MAX_STEP: f64 = 0.6;
-/// Below this share of the points in runs a level is sparse.
+/// Below this share of the points in runs a level is sparse (unless the short runs below say otherwise).
 pub const SPARSE_BELOW: f64 = 0.5;
+/// Peak-width cue: zero-suppressed unit-resolution peaks keep only three points (a 0.5 Da grid, FWHM 0.7 Da), too few for a run of `RUN_POINTS`. Three
+/// consecutive points on the same grid (same spacing rule, closer than `MAX_STEP`) are a short run: ion counts almost never line up that way.
+pub const SHORT_POINTS: usize = 3;
+/// A level with at least this share of its points in short runs is a profile, whatever its runs of `RUN_POINTS` say. Measured on synthetic files
+/// (`tests/spectrum_cue.rs`): ion counts reach 0.08 at 200 per scan, zero-suppressed profiles start at 0.27.
+pub const SHORT_SHARE: f64 = 0.2;
 /// A neighbour spacing under this (Da) is a fine grid: peaks of two or three points of a high-resolution profile have no run but are never ion counts.
 pub const FINE_STEP: f64 = 0.05;
 /// A level where this share of the neighbour spacings is fine is a high-resolution profile: `auto` never touches it. Low on purpose: zero-suppressed
@@ -160,10 +166,19 @@ impl TypeChoice {
 /// `(points in runs, points)` of one scan: a run is `RUN_POINTS` or more consecutive points closer than `MAX_STEP` whose spacing changes by at most
 /// `RUN_TOL` from one to the next.
 pub fn run_points(mz: &[f64]) -> (usize, usize) {
+    runs_of(mz, RUN_POINTS)
+}
+
+/// The same with `SHORT_POINTS` (the peak-width cue): every point of a run of `RUN_POINTS` is also in a short run.
+pub fn short_run_points(mz: &[f64]) -> (usize, usize) {
+    runs_of(mz, SHORT_POINTS)
+}
+
+fn runs_of(mz: &[f64], min_points: usize) -> (usize, usize) {
     let n = mz.len();
     // the points `from..to` as a run: long enough and on a fine grid
     let run = |from: usize, to: usize| -> usize {
-        if to - from >= RUN_POINTS && (mz[to - 1] - mz[from]) / ((to - from - 1) as f64) <= MAX_STEP
+        if to - from >= min_points && (mz[to - 1] - mz[from]) / ((to - from - 1) as f64) <= MAX_STEP
         {
             to - from
         } else {
@@ -239,6 +254,8 @@ pub fn choose(
 struct Level {
     scans: usize,
     inside: usize,
+    /// Points in short runs (`SHORT_POINTS`).
+    short: usize,
     total: usize,
     gaps: usize,
     fine: usize,
@@ -250,6 +267,7 @@ impl Level {
         let (inside, total) = run_points(mz);
         self.scans += 1;
         self.inside += inside;
+        self.short += short_run_points(mz).0;
         self.total += total;
         for w in mz.windows(2) {
             let d = w[1] - w[0];
@@ -260,10 +278,14 @@ impl Level {
         }
     }
 
-    /// Profile scans were seen, few of their points are in runs and the spacings are not those of a fine grid.
+    /// Profile scans were seen, few of their points are in runs or short runs and the spacings are not those of a fine grid.
     fn is_sparse(&self) -> bool {
         let fine_grid = self.fine > 0 && (self.fine as f64) >= FINE_SHARE * self.gaps as f64;
-        self.scans > 0 && (self.inside as f64) < SPARSE_BELOW * self.total as f64 && !fine_grid
+        let total = self.total as f64;
+        self.scans > 0
+            && (self.inside as f64) < SPARSE_BELOW * total
+            && (self.short as f64) < SHORT_SHARE * total
+            && !fine_grid
     }
 }
 
@@ -286,6 +308,10 @@ impl Runs {
     /// Share of the points in runs (`None` without points).
     pub fn runs_share(&self) -> Option<f64> {
         (self.0.total > 0).then(|| self.0.inside as f64 / self.0.total as f64)
+    }
+    /// Share of the points in short runs of `SHORT_POINTS` (`None` without points).
+    pub fn short_share(&self) -> Option<f64> {
+        (self.0.total > 0).then(|| self.0.short as f64 / self.0.total as f64)
     }
     /// Share of the neighbour spacings under `FINE_STEP` (`None` without spacings).
     pub fn fine_share(&self) -> Option<f64> {

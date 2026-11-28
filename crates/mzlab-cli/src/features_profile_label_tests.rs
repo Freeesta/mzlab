@@ -224,10 +224,10 @@ fn centroids_labelled_profile_are_reported_with_the_numbers_and_the_cut_offs() {
     assert!(on.centroided && keys(&on).iter().all(|k| *k != "warn.features.profileLabel"));
 }
 
-/// The limit of the detector, which is the one of `raw info`: zero-suppressed profile peaks of three points (a 0.5 Da grid, FWHM 0.7 Da) have no run of
-/// four points, so they read as sparse. The notice gives the numbers (a third of the points in runs, no fine spacing) and `--centroid on` decides.
+/// Zero-suppressed profile peaks of three points (a 0.5 Da grid, FWHM 0.7 Da) have no run of four points, but a third or more of their points are in
+/// short runs of three (the peak-width cue): they read as a profile, are centroided and get the ordinary note. The detector is the one of `raw info`.
 #[test]
-fn zero_suppressed_three_point_peaks_read_as_sparse_and_the_numbers_say_so() {
+fn zero_suppressed_three_point_peaks_are_a_profile_by_the_peak_width_cue() {
     let k = Kind {
         step: 0.5,
         fwhm: 0.7,
@@ -236,7 +236,65 @@ fn zero_suppressed_three_point_peaks_read_as_sparse_and_the_numbers_say_so() {
     };
     let v = verdict(k, Switch::Auto);
     let c = v.check.clone().unwrap();
-    assert!(c.sparse && !v.centroided, "{c:?}");
+    assert!(!c.sparse && v.centroided, "{c:?}");
     assert!((20..50).contains(&c.runs_pct) && c.fine_pct == 0, "{c:?}");
-    assert!(verdict(k, Switch::On).centroided);
+    assert!(c.short_pct >= 20 && c.short_pct > c.runs_pct, "{c:?}");
+    assert_eq!(keys(&v), vec!["note.features.centroided"]);
+    assert!(verdict(k, Switch::Off).check.is_some());
+}
+
+/// One detector: for every kind of file here, `raw info` (`rawinfo::spectrum_type` on the same probe) says `centroid` exactly when the label check says
+/// sparse, and the notice of a mislabelled file carries the cue's numbers and cut.
+#[test]
+fn raw_info_and_the_label_check_classify_alike_and_the_notice_has_the_cue() {
+    let three = Kind {
+        step: 0.5,
+        fwhm: 0.7,
+        suppressed: true,
+        label: true,
+    };
+    for (what, k) in [
+        ("fine grid", FINE),
+        ("coarse narrow", COARSE_NARROW),
+        ("three-point peaks", three),
+        ("mislabelled centroids", MISLABELLED),
+    ] {
+        let dir = std::env::temp_dir().join(format!(
+            "mzlab_label_raw_{}_{}",
+            what.replace(' ', "_"),
+            std::process::id()
+        ));
+        std::fs::create_dir_all(&dir).unwrap();
+        let (f, idx) = (dir.join("q1.mzML"), dir.join("0.mzidx"));
+        std::fs::write(&f, mzml(k)).unwrap();
+        crate::build_index_of(&f, "", &idx, mzlab_core::budget_auto::native_index_budget())
+            .unwrap();
+        let mut index = crate::open(&idx).unwrap();
+        let probe =
+            mzlab_core::rawinfo::probe_index(&mut index, 1, None, mzlab_core::rawinfo::PROBE)
+                .unwrap();
+        let (_, data, runs) = mzlab_core::rawinfo::spectrum_type(Some(&probe));
+        let c = label_check(&mut index).unwrap();
+        assert_eq!(data == "centroid", c.sparse, "{what}: {c:?}");
+        assert_eq!(
+            runs.short_share().map(|v| (v * 100.0).round() as usize),
+            Some(c.short_pct),
+            "{what}"
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+    let v = verdict(MISLABELLED, Switch::Auto);
+    let get = |k: &str| {
+        v.notices[0]
+            .1
+            .iter()
+            .find(|(q, _)| *q == k)
+            .map(|(_, v)| *v)
+    };
+    assert_eq!(
+        (get("short"), get("short_cut"), get("short_points")),
+        (Some(0), Some(20), Some(3))
+    );
+    assert!(mzlab_feat::lrscreen::label_reason(&v.check.unwrap())
+        .contains("0 % are in short runs of 3 points (a profile from 20 %)"));
 }

@@ -76,6 +76,7 @@ def test_a_profile_label_on_sparse_counts_is_left_alone_the_same_in_node_and_nat
         p = n[0]["params"]
         assert p["profile"] == p["scans"] and 0 < p["probed"] <= p["scans"] and p["points"] > 0 and p["runs"] == 0 and p["fine"] == 0, p
         assert (p["runs_cut"], p["fine_cut"], p["run_points"], p["run_step"], p["fine_step"]) == (50, 2, 4, 600, 50), p
+        assert (p["short_cut"], p["short_points"]) == (20, 3) and p["short"] < p["short_cut"], p
     # `centroid` off and `on` are the user's word: the label check does not speak for `off`, and `on` keeps the ordinary note
     assert all("warn.features.profileLabel" not in line for line in off_out.splitlines())
     assert all("warn.features.profileLabel" not in line and "note.features.centroided" in line for line in on_out.splitlines() if ".notes " in line)
