@@ -69,6 +69,8 @@ pub(crate) static RELATED: &[Rel] = &[
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
     r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 group isotope group spill-over spillover q1 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list all targets many masses every ion many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
+    r("table pair", "polarity pair positive negative both polarities acid acids amphoteric neutral mass [m+h]+ [m-h]- adduct match rt tolerance two methods feature tables", &["features.pair", "quant union", "features"]),
+    r("features.pair", "polarity pair positive negative both polarities acid acids amphoteric neutral mass [m+h]+ [m-h]- adduct match rt tolerance two methods feature tables", &["table pair", "features.union", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
     r("features.detect", "products lost below the height one ion split in two rows nominal resolution triple quadrupole qtrap profile preset floor grid", &["features", "features.align"]).ex("mzlab-cli flow run plan.json --in files/ --out out/ --set detect.preset=nominal"),
     r("features.gapfill", "duplicate rows split peak shoulder broad top parent peak same peak two rows merge dedup near duplicates overlap unit resolution", &["features", "features.align"])

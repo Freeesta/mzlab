@@ -16,7 +16,7 @@ const FEATURE_STEPS: [&str; 4] = [
     "features.ms2_link",
 ];
 
-const IDS: [&str; 21] = [
+const IDS: [&str; 22] = [
     "import.raw",
     "convert.mzml",
     "index.mzidx",
@@ -29,6 +29,7 @@ const IDS: [&str; 21] = [
     "features.group",
     "features.companions",
     "features.union",
+    "features.pair",
     "table.stats",
     "table.pca",
     "table.kmd",

@@ -31,3 +31,6 @@ fn union_job(r: &FileRunner, job: &Job) -> Result<Made> {
     made.extra = Some(("union", r.keep(doc, DataType::Report)?));
     Ok(made)
 }
+
+#[path = "flow_pair.rs"]
+pub(crate) mod pair;

@@ -26,6 +26,7 @@
           "features.estimate",
           "features.gapfill",
           "features.group",
+          "features.pair",
           "features.table",
           "features.union",
           "formula.ms1",
@@ -99,6 +100,7 @@
               "features.gapfill@1",
               "features.group@1",
               "features.ms2_link@1",
+              "features.pair@1",
               "features.table@1",
               "features.union@1",
               "formula.ms1@1",
@@ -207,6 +209,7 @@
               "features.gapfill@1",
               "features.group@1",
               "features.ms2_link@1",
+              "features.pair@1",
               "features.table@1",
               "features.union@1",
               "formula.ms1@1",
@@ -1362,6 +1365,46 @@
                     "minimum":0,
                     "default":0,
                     "description":"Seconds added on each side of the feature RT range to pair MS2 scans, 0 meaning one MS1 cycle."
+                  }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"features.pair@1"},
+              "name":{"enum":["rt_tol","mass_tol","mass_unit","pos_adducts","neg_adducts"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":60,
+                    "default":0.1,
+                    "description":"Largest RT difference of the two ions of a pair; the RT axes of the two methods are compared as they are, with no map"
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "maximum":1000,
+                    "default":5,
+                    "description":"Largest difference of the two neutral masses, in the unit below; a unit-mass table needs Da (0.4 is a usual choice)"
+                  },
+                  {
+                    "enum":["ppm","da"],
+                    "default":"ppm",
+                    "description":"The unit of the mass tolerance: ppm of the neutral mass, or Da"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M+H]+",
+                    "description":"Comma-separated adducts of the positive table: names of the adduct table ([M+H]+, [M+Na]+, [M+NH4]+, ...) or LABEL:SHIFT, the mass the adduct adds to M for a singly charged ion"
+                  },
+                  {
+                    "type":"string",
+                    "default":"[M-H]-",
+                    "description":"Comma-separated adducts of the negative table: names of the adduct table ([M-H]-, [M+HCOO]-, [M+Cl]-, ...) or LABEL:SHIFT (negative for a loss)"
                   }
                 ]
               }
@@ -3492,6 +3535,7 @@
                 "features.gapfill@1",
                 "features.group@1",
                 "features.ms2_link@1",
+                "features.pair@1",
                 "features.table@1",
                 "features.union@1",
                 "formula.ms1@1",

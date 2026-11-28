@@ -105,6 +105,7 @@ embed!(
     "noise-floor-1.json",
     "normative-build-1.json",
     "open-1.json",
+    "pair-1.json",
     "param-choices-1.json",
     "param-proposal-1.json",
     "peak-auto-1.json",

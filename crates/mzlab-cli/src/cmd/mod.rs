@@ -23,6 +23,7 @@ const JSON_FLAG: &[&str] = &[
     "flow defaults",
     "flow tables",
     "table compare",
+    "table pair",
     "quant targets",
     "quant union",
     "estimate",

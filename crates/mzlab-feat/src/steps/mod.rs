@@ -12,6 +12,7 @@ mod ident_formula;
 mod ident_screen;
 mod ident_spectra;
 mod moiety;
+mod pair;
 pub use ident_spectra::table_match;
 pub use moiety::moiety;
 mod qcreport;
@@ -64,6 +65,7 @@ pub fn registry() -> Vec<Step> {
         group::group(),
         companions::companions(),
         union::union(),
+        pair::pair(),
         stats::stats(),
         stats::pca(),
         stats::kmd(),

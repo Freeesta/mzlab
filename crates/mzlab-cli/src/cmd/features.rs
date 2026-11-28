@@ -247,8 +247,7 @@ pub(crate) static TABLE: &[Entry] = &[Entry::new(
     crate::table_compare_cmd::run,
 )
 .schema("compare/1")
-.exits(&[0, 2, 4, 5, 6])
-.examples(&["mzlab-cli table compare f.csv --ref t0*"]),
+.exits(&[0, 2, 4, 5, 6]),
 Entry::new(
     "table row",
     "mzlab-cli table row TABLE.mzfeat --id N [--samples FILE.json] [--traces --index DIR] [--ppm P] [--out PATH]   a feature's row, XICs, MS1, MS2",
@@ -264,6 +263,13 @@ Entry::new(
 .schema("feature-slots/1")
 .exits(&[0, 2, 4, 5, 6]),
 Entry::new(
+    "table pair",
+    "mzlab-cli table pair POS.csv NEG.csv [--set NAME=VALUE...] [--json] [--out PATH]   polarity feature pairs by mass, RT",
+    crate::table_compare_cmd::pair::run_cmd,
+)
+.schema("pair/1")
+.exits(&[0, 2, 3, 4, 6]),
+Entry::new(
     "quant targets",
     "mzlab-cli quant targets --targets FILE INPUT... [--da D] [--min-sn N] [--offset 0|DA|auto|auto:MZ[@RT]] [--blank-pattern GLOBS] [--rt-ref off|auto|ID[@RT]] [--sample LIST] [--set NAME=VALUE...] [--log PATH] [--format csv|json] [--json] [--dry-run] [--out PATH] [--workers N]   targets integrated in every file",
     crate::quant_targets_cmd::run,
@@ -276,13 +282,11 @@ Entry::new(
     crate::quant_union_cmd::run,
 )
 .schema("union/1")
-.exits(&[0, 2, 3, 4, 6])
-.examples(&["mzlab-cli quant union a.csv b.csv --rt-warp piecewise"]),
+.exits(&[0, 2, 3, 4, 6]),
 Entry::new(
     "estimate",
     "mzlab-cli estimate FILE... [--axis da|ppm] [--polarity +|-] [--emit-set PLAN.json] [--json] [--out PATH]   detection parameters measured on the data",
     crate::estimate_cmd::run,
 )
 .schema("estimate/1")
-.exits(&[0, 1, 2, 3, 4, 5, 6])
-.examples(&["mzlab-cli estimate MZML/*.mzML --axis da"])];
+.exits(&[0, 1, 2, 3, 4, 5, 6])];

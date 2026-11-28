@@ -184,3 +184,6 @@ pub fn run(args: Vec<String>) -> Outcome {
         Ok(t) => crate::emit(t, &j.out),
     }
 }
+
+#[path = "table_pair_cmd.rs"]
+pub(crate) mod pair;

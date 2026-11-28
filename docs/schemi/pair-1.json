@@ -1,0 +1,238 @@
+{
+ "$schema": "https://json-schema.org/draft/2020-12/schema",
+ "$id": "pair/1",
+ "title": "pair/1: the [M+H]+ and [M-H]- features of two polarity methods paired by neutral mass and RT",
+ "description": "The answer of `mzlab-cli table pair --json` and of the `features.pair` Flow step (same bytes in the site and the app): every positive row is paired with every negative row whose neutral mass (from the adduct lists, user-editable) agrees within `mass_tol` and whose RT agrees within `rt_tol`; `csv` is the same table as text. Rows left without a partner are in `unmatched`; every automatic choice (the rule, the adduct lists, the sign of the mass error, how `mutual` is decided) is in `choices`. Nothing is refused for a finding; identification of the compounds is out of scope. Code: crates/mzlab-feat/src/polarity_pair/.",
+ "type": "object",
+ "required": [
+  "schema",
+  "params",
+  "counts",
+  "pairs",
+  "unmatched",
+  "choices",
+  "csv"
+ ],
+ "properties": {
+  "schema": {
+   "const": "pair/1"
+  },
+  "params": {
+   "type": "object",
+   "required": [
+    "rt_tol",
+    "mass_tol",
+    "mass_unit",
+    "pos_adducts",
+    "neg_adducts"
+   ],
+   "properties": {
+    "rt_tol": {
+     "type": "number",
+     "description": "RT agreement of the two rows, min."
+    },
+    "mass_tol": {
+     "type": "number",
+     "description": "Neutral-mass agreement, in `mass_unit`."
+    },
+    "mass_unit": {
+     "enum": [
+      "ppm",
+      "da"
+     ]
+    },
+    "pos_adducts": {
+     "type": "string",
+     "description": "The positive adducts used, as written in the request (catalog names or LABEL:SHIFT, comma separated)."
+    },
+    "neg_adducts": {
+     "type": "string",
+     "description": "The negative adducts used, same form."
+    }
+   }
+  },
+  "counts": {
+   "type": "object",
+   "required": [
+    "pos_rows",
+    "neg_rows",
+    "pairs",
+    "mutual",
+    "pos_unmatched",
+    "neg_unmatched"
+   ],
+   "properties": {
+    "pos_rows": {
+     "type": "integer"
+    },
+    "neg_rows": {
+     "type": "integer"
+    },
+    "pairs": {
+     "type": "integer"
+    },
+    "mutual": {
+     "type": "integer"
+    },
+    "pos_unmatched": {
+     "type": "integer"
+    },
+    "neg_unmatched": {
+     "type": "integer"
+    }
+   }
+  },
+  "pairs": {
+   "type": "array",
+   "description": "Every pair within both tolerances, by neutral mass.",
+   "items": {
+    "type": "object",
+    "required": [
+     "pos",
+     "neg",
+     "rule",
+     "neutral_mass",
+     "err_da",
+     "err_ppm",
+     "rt_pos",
+     "rt_neg",
+     "drt",
+     "dist",
+     "mutual",
+     "pos_partners",
+     "neg_partners"
+    ],
+    "properties": {
+     "pos": {
+      "type": "string",
+      "description": "Id of the positive row."
+     },
+     "neg": {
+      "type": "string",
+      "description": "Id of the negative row."
+     },
+     "rule": {
+      "type": "string",
+      "description": "The adducts that made the pair, e.g. `[M+H]+ / [M-H]-`."
+     },
+     "neutral_mass": {
+      "type": "number",
+      "description": "Mean of the two neutral masses, Da."
+     },
+     "err_da": {
+      "type": "number",
+      "description": "Neutral mass of the negative row minus that of the positive row, Da."
+     },
+     "err_ppm": {
+      "type": "number",
+      "description": "The same, ppm of `neutral_mass`."
+     },
+     "rt_pos": {
+      "type": "number",
+      "description": "min"
+     },
+     "rt_neg": {
+      "type": "number",
+      "description": "min"
+     },
+     "drt": {
+      "type": "number",
+      "description": "RT of the negative row minus RT of the positive row, min."
+     },
+     "dist": {
+      "type": "number",
+      "description": "Distance used to choose the nearest partner: the mass and RT errors scaled by their tolerances."
+     },
+     "mutual": {
+      "type": "boolean",
+      "description": "True when each row is the nearest partner of the other."
+     },
+     "pos_partners": {
+      "type": "integer",
+      "description": "Pairs the positive row is in."
+     },
+     "neg_partners": {
+      "type": "integer",
+      "description": "Pairs the negative row is in."
+     }
+    }
+   }
+  },
+  "unmatched": {
+   "type": "object",
+   "required": [
+    "pos",
+    "neg"
+   ],
+   "properties": {
+    "pos": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "id",
+       "mz",
+       "rt"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "mz": {
+        "type": "number"
+       },
+       "rt": {
+        "type": "number"
+       }
+      }
+     }
+    },
+    "neg": {
+     "type": "array",
+     "items": {
+      "type": "object",
+      "required": [
+       "id",
+       "mz",
+       "rt"
+      ],
+      "properties": {
+       "id": {
+        "type": "string"
+       },
+       "mz": {
+        "type": "number"
+       },
+       "rt": {
+        "type": "number"
+       }
+      }
+     }
+    }
+   }
+  },
+  "choices": {
+   "type": "array",
+   "items": {
+    "type": "object",
+    "required": [
+     "what"
+    ],
+    "properties": {
+     "what": {
+      "enum": [
+       "rule",
+       "adducts",
+       "mass_error",
+       "mutual"
+      ]
+     }
+    }
+   }
+  },
+  "csv": {
+   "type": "string",
+   "description": "Header pos_id,neg_id,rule,neutral_mass,err_da,err_ppm,rt_pos,rt_neg,drt,mutual; the unmatched rows last with rule `unmatched`."
+  }
+ }
+}

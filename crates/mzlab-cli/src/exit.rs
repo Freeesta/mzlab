@@ -90,6 +90,9 @@ const INTEGRITY_PREFIXES: &[&str] = &[
     "err.union.table",
     "err.union.empty",
     "err.union.request",
+    "err.pair.table",
+    "err.pair.empty",
+    "err.pair.request",
 ];
 const DATA_KEYS: &[&str] = &[
     "err.pda.none",
