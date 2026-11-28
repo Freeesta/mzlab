@@ -147,8 +147,8 @@ try:
             lp = long_at(MAP, w[0] * 0.5, w[1] * 0.5); assert rc and lp == rc, ("map: a long press opens the menu of the right click", rc, lp)
         step("map: point actions, separator, panel actions; a long press = right click", map_scope)
         def early_click():
-            ctx = r.b.new_context(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce"); pg2 = ctx.new_page(); held = []
-            pg2.route("**/panel-menu.js", lambda route: held.append(route))      # the lazy file is held: the right click comes before it has loaded
+            ctx = r.b.new_context(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce", service_workers="block"); pg2 = ctx.new_page(); held = []      # no service worker: it would answer before the route sees the request
+            ctx.route("**/panel-menu.js", lambda route: held.append(route))      # the lazy file is held: the right click comes before it has loaded
             pg2.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
             pg2.goto(f"http://127.0.0.1:{r.port}/"); stage(pg2, [mz(f) for f in FILES]); pg2.click("text=Load data"); ready(pg2)
             open_kind(pg2, "full"); ready(pg2); wait_for_js(pg2, SP + "&&" + SP + "._a"); wait_for_js(pg2, "!window.PANELMENU")
@@ -169,4 +169,5 @@ try:
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()
 for s in steps: print(" ", s)
+r.errs[:] = [e for e in r.errs if "can escape its sandboxing" not in str(e)]   # Ketcher iframe, known (same filter as e2e_ricerca)
 r.report()
