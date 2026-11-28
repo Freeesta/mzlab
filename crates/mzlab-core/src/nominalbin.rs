@@ -139,7 +139,7 @@ pub fn subtract_bins(a: &[Bin], b: &[Bin], factor: f64, clip: bool) -> Vec<Bin> 
         ..x.clone()
     }));
     out.retain(|x| x.y != 0.0 && (!clip || x.y > 0.0));
-    out.sort_by(|p, q| p.centre.total_cmp(&q.centre));
+    crate::sortc::slice_by(&mut out, |p, q| p.centre.total_cmp(&q.centre));
     out
 }
 
