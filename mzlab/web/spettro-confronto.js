@@ -14,7 +14,7 @@ const CSS = `<style>#spcmp{width:min(980px,96vw);max-width:96vw}#spcmp .sides{di
   #spcmp label{display:flex;gap:6px;align-items:center;flex-wrap:wrap}#spcmp input[data-num]{width:84px}#spcmp input[data-f=off]{width:150px}#spcmp .qbar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin:6px 0}
   #spcmp table{border-collapse:collapse;width:100%}#spcmp td,#spcmp th{padding:3px 8px;border-bottom:1px solid var(--line);text-align:left;font-size:12px}#spcmp td.num,#spcmp th.num{text-align:right;font-variant-numeric:tabular-nums}
   #spcmp .tbl{max-height:240px;overflow:auto;border:1px solid var(--line);border-radius:6px}#spcmp .cos{font-size:28px;font-weight:600;font-variant-numeric:tabular-nums}#spcmp .warn{color:var(--warn)}#spcmp .err{color:var(--bad)}
-  #spcmp .lists{display:flex;gap:12px;flex-wrap:wrap}#spcmp .lists>div{flex:1 1 280px}</style>`;
+  #spcmp .lists{display:flex;gap:12px;flex-wrap:wrap}#spcmp .lists>div{flex:1 1 280px}#spcmp canvas.mirror{display:block;width:100%;height:280px;border:1px solid var(--line);border-radius:6px;margin:8px 0 4px}</style>`;
 
 /** The precursors a file lists for its MS² scans, ascending, those within 0.6 Da counted once. @param {any} f */
 const precursorsOf = f => {
@@ -61,6 +61,51 @@ async function engine(params, sides) {
   return (await W_.LIB.call("compare", { params, sides })).text;
 }
 
+/** The bars of the mirror from the document: A above the axis, B below, each as a share of its own base peak; `m` marks a matched ion (both sides draw it, joined).
+ * @param {any} doc @returns {{ side: string, mz: number, y: number, rel: number, m: boolean }[]} */
+const barsOf = doc => {
+  const top = (/** @type {number[]} */ ys) => maxOf(ys, 0) || 1, ta = top([...doc.matched.map((/** @type {any} */ r) => r.a), ...doc.only_a.map((/** @type {any} */ r) => r.y)]), tb = top([...doc.matched.map((/** @type {any} */ r) => r.b), ...doc.only_b.map((/** @type {any} */ r) => r.y)]);
+  return [...doc.matched.map((/** @type {any} */ r) => ({ side: "a", mz: r.mz_a, y: r.a, rel: r.a / ta, m: true })), ...doc.only_a.map((/** @type {any} */ r) => ({ side: "a", mz: r.mz, y: r.y, rel: r.y / ta, m: false })),
+    ...doc.matched.map((/** @type {any} */ r) => ({ side: "b", mz: r.mz_b, y: r.b, rel: r.b / tb, m: true })), ...doc.only_b.map((/** @type {any} */ r) => ({ side: "b", mz: r.mz, y: r.y, rel: r.y / tb, m: false }))];
+};
+
+/** Draws the mirror on the canvas `cv`: matched ions in one colour with a dot on the tip and a line between the two bars, the ions only one side has thinner in another colour
+ * (Okabe-Ito blue and vermilion, so the two differ by width and the dot as well as by hue). What is drawn is also in `cv.dataset.bars` for the test, and the data table is `TDATI`'s.
+ * @param {HTMLCanvasElement} cv @param {any} doc */
+function mirror(cv, doc) {
+  const bars = barsOf(doc), A = bars.filter(b => b.side === "a"), B = bars.filter(b => b.side === "b"), nm = doc.matched.length;
+  cv.setAttribute("aria-label", t("spcmp.mirror.aria"));
+  W_.TDATI.describe(cv, t("spcmp.mirror.desc", { a: A.length, b: B.length, n: nm }));
+  W_.TDATI.addButton(cv, () => ({ title: t("spcmp.mirror.aria"), head: [t("spcmp.mirror.col.side"), t("spcmp.mirror.col.state"), t("spcmp.col.mz"), t("spcmp.col.int"), t("tdati.col.rel")], rowHeader: true,
+    rows: bars.map(b => [b.side.toUpperCase(), t(b.m ? "spcmp.mirror.matched" : "spcmp.mirror.only"), W_.TDATI.num(b.mz, 4), W_.TDATI.num(b.y, 4), W_.TDATI.num(b.rel * 100, 1)]) }));
+  cv.dataset.bars = JSON.stringify(bars.map(b => [b.side, b.mz, +b.rel.toFixed(4), b.m ? 1 : 0]));
+  if (!bars.length) return;
+  const s = setup(cv), g = s.g, W = s.W, H = s.H, ml = 44, mr = 14, mt = 22, mb = 30, mid = mt + (H - mt - mb) / 2, half = (H - mt - mb) / 2 - 14;
+  const mz = bars.map(b => b.mz), lo = Math.floor(minOf(mz) / 10) * 10 - 5, hi = Math.ceil(maxOf(mz) / 10) * 10 + 5, X = (/** @type {number} */ m) => ml + (m - lo) / (hi - lo) * (W - ml - mr);
+  const hit = css("--lv1"), miss = css("--lv3b"), ink = css("--ink"), mut = css("--muted"), line = css("--line");
+  g.clearRect(0, 0, W, H); g.fillStyle = css("--panel"); g.fillRect(0, 0, W, H);
+  g.font = fpx(12);
+  // the line between the two bars of a matched ion
+  g.save(); g.globalAlpha = 0.55; g.lineWidth = 1; g.strokeStyle = hit;
+  doc.matched.forEach((/** @type {any} */ r, /** @type {number} */ i) => { g.beginPath(); g.moveTo(X(r.mz_a), mid - A[i].rel * half); g.lineTo(X(r.mz_b), mid + B[i].rel * half); g.stroke(); });
+  g.restore();
+  for (const b of bars) {
+    const dir = b.side === "a" ? 1 : -1, x = X(b.mz), tip = mid - dir * b.rel * half, c = b.m ? hit : miss;
+    g.strokeStyle = c; g.fillStyle = c; g.lineWidth = b.m ? 2.5 : 1.3; g.beginPath(); g.moveTo(x, mid); g.lineTo(x, tip); g.stroke();
+    if (b.m) { g.beginPath(); g.arc(x, tip, 3, 0, 2 * Math.PI); g.fill(); }
+    if (b.rel > 0.08) { g.textAlign = "center"; g.fillText(text(b.mz), x, dir > 0 ? tip - 6 : tip + 15); }
+  }
+  g.strokeStyle = line; g.lineWidth = 1; g.beginPath(); g.moveTo(ml, mid); g.lineTo(W - mr, mid); g.stroke();
+  g.strokeStyle = mut; g.fillStyle = mut; g.textAlign = "center"; g.beginPath(); g.moveTo(ml, H - mb + 6); g.lineTo(W - mr, H - mb + 6); g.stroke();
+  const step = [1, 2, 5, 10, 20, 25, 50, 100, 200].find(v => (hi - lo) / v <= 9) || 500;
+  for (let v = Math.ceil(lo / step) * step; v <= hi; v += step) { g.beginPath(); g.moveTo(X(v), H - mb + 6); g.lineTo(X(v), H - mb + 10); g.stroke(); g.fillText(String(v), X(v), H - mb + 22); }
+  g.textAlign = "right"; for (const [v, y] of [["100", mid - half], ["50", mid - half / 2], ["0", mid], ["50", mid + half / 2], ["100", mid + half]]) g.fillText(String(v), ml - 6, +y + 4);
+  g.fillStyle = ink; g.textAlign = "left"; g.fillText("A · " + (doc.a.name || ""), ml + 4, mt - 6); g.fillText("B · " + (doc.b.name || ""), ml + 4, H - mb - 2);
+  g.textAlign = "right"; g.fillStyle = hit; g.fillText(t("spcmp.mirror.key.matched", { n: nm }), W - mr - 4, mt - 6); g.fillStyle = miss; g.fillText(t("spcmp.mirror.key.only"), W - mr - 4, H - mb - 2);
+  g.save(); g.fillStyle = mut; g.textAlign = "center"; g.translate(12, mid); g.rotate(-Math.PI / 2); g.fillText(t("spcmp.mirror.rel"), 0, 0); g.restore();
+  /** @type {any} */ (cv)._mg = { X, mid, half };
+}
+
 /** @param {any} doc */
 function show(doc) {
   const side = (/** @type {string} */ s) => doc[s];
@@ -83,11 +128,16 @@ function show(doc) {
   return `<div class="cos" role="status">${t("spcmp.cosine")} ${doc.cosine.toFixed(4)}</div>
     <p class="sm">${t("spcmp.summary", { n: doc.n_matched, tol: text(p.tol), ce: text(p.ce_tol) })} <span class="muted">${EHt(dflt("tol") + dflt("ce_tol"))}</span></p>
     ${warns ? `<ul>${warns}</ul>` : ""}
+    <canvas class="mirror" id="spcmp-cv"></canvas>
     <h4>${t("spcmp.off.h")}</h4><ul class="sm" id="spcmp-offs">${evid("a")}${evid("b")}</ul>
     <div class="tbl"><table><caption class="sr-only">${t("spcmp.sides")}</caption><tr><th></th><th>${t("spcmp.col.file")}</th><th class="num">${t("spcmp.col.prec")}</th><th class="num">${t("spcmp.col.ce")}</th><th class="num">${t("spcmp.col.scans")}</th><th class="num">${t("spcmp.col.bins")}</th><th class="num">${t("spcmp.col.explained")}</th></tr>${sideRow("a")}${sideRow("b")}</table></div>
     <h4>${t("spcmp.matched")}</h4>${doc.matched.length ? `<div class="tbl"><table><tr><th class="num">${t("spcmp.col.mzA")}</th><th class="num">${t("spcmp.col.mzB")}</th><th class="num">${t("spcmp.col.intA")}</th><th class="num">${t("spcmp.col.intB")}</th></tr>${doc.matched.map((/** @type {any} */ m) => `<tr><td class="num">${text(m.mz_a)}</td><td class="num">${text(m.mz_b)}</td><td class="num">${text(m.a)}</td><td class="num">${text(m.b)}</td></tr>`).join("")}</table></div>` : `<p class="sm muted">${t("spcmp.none")}</p>`}
     <div class="lists"><div><h4>${t("spcmp.onlyA")}</h4>${un(doc.only_a)}</div><div><h4>${t("spcmp.onlyB")}</h4>${un(doc.only_b)}</div></div>`;
 }
+
+/** the drawing of the open card, run again when the window is resized (the canvas takes the width of the card) */
+let redraw = () => {};
+window.addEventListener("resize", () => redraw());
 
 /** Opens the card on the MS² spectrum panel `p`: side A is its selection, side B the same selection in another file of the tab when there is one. @param {any} p */
 function open(p) {
@@ -121,6 +171,9 @@ function open(p) {
   }
   const msg = (/** @type {string} */ m, bad = false) => { const e = /** @type {HTMLElement} */ (dlg.querySelector("#spcmp-msg")); e.textContent = m; e.classList.toggle("err", bad); };
   const out = /** @type {HTMLElement} */ (dlg.querySelector("#spcmp-out"));
+  /** @type {any} */ let last = null;
+  const draw = () => { const cv = /** @type {HTMLCanvasElement | null} */ (dlg.querySelector("#spcmp-cv")); if (last && cv && dlg.open) mirror(cv, last); };
+  redraw = draw;
   const go = async () => {
     const a = readSide(dlg, "a"), b = readSide(dlg, "b");
     if (![a.prec, a.a, a.b, b.prec, b.a, b.b].every(Number.isFinite)) return msg(t("spcmp.check"), true);
@@ -131,7 +184,8 @@ function open(p) {
     msg(t("spcmp.working")); out.innerHTML = "";
     try {
       const sides = `{"a":${await sideOf(a)},"b":${await sideOf(b)}}`;
-      out.innerHTML = show(JSON.parse(await engine(JSON.stringify(par), sides)));
+      const doc = JSON.parse(await engine(JSON.stringify(par), sides));
+      out.innerHTML = show(doc); last = doc; draw();
       msg("");
     } catch (e_) { msg(t("spcmp.error", { message: /** @type {Error} */ (e_).message }), true); }
   };

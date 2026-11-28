@@ -1,5 +1,7 @@
 {
   "spcmp.error": "Message of the card that compares two MS2 spectra when the spectrum or the comparison fails; {message} = the engine's text.",
+  "spcmp.mirror.desc": "Spoken description of the mirror plot in the MS2 comparison card; {a} = number of ions of spectrum A drawn above, {b} = number of ions of spectrum B drawn below, {n} = number of matched ions joined by lines.",
+  "spcmp.mirror.key.matched": "Key at the top right of the mirror plot in the MS2 comparison card; {n} = number of matched ions.",
   "spcmp.off.apex": "Evidence of an automatic m/z offset in the comparison card; {rt} = retention time in minutes of the apex of the known ion.",
   "spcmp.off.auto": "Line of the offsets list of the MS2 comparison card for a side whose offset was measured on a known ion; {side} = A or B, {da} = the offset in Da, {mz} = m/z of the ion, {status} = found, found but wide, or not found, {detail} = the evidence (apex time, spread, scans, signal).",
   "spcmp.off.autoNear": "As the automatic-offset line when a time was given; {side} = A or B, {da} = the offset in Da, {mz} = m/z of the ion, {rt} = the time in minutes it was looked for near, {status} = found, found but wide, or not found, {detail} = the evidence.",
