@@ -19,7 +19,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 |---|---|---|---|
 | ION-TABLE-FULLSCAN | `docs/coda/prompt/ION-TABLE-FULLSCAN.md` | - | `peak table FILE... --ions` for full-scan files (EMS, EPI, Q1): the scan type and the fill time read from the scans, today only via `trace xic --ions` then `--traces` |
 | ION-TABLE-SUMS | `docs/coda/prompt/ION-TABLE-SUMS.md` | - | the `--sums` row of `peak table --ions`: its ion cells (empty today) as the sum of the ions of the rows that share a factor |
-| MANIONS-WASM-CAP | `docs/coda/prompt/MANIONS-WASM-CAP.md` | - | set the measured size and cap of the lazy `manions` wasm module from the CI size step (`tools/moduli/manions.toml` holds a placeholder) |
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | - | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; decided 26 Nov: the per-file recipe everywhere (bytes change only where the estimates differ; log which recipe from which file) |
