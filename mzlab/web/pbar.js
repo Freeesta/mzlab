@@ -145,8 +145,8 @@
     if (t) { rove(t); t.focus(); } else { b.tabIndex = -1; b.focus(); }
   }
   AZIONI.register({ id: "pbar.focus", group: "view", views: ["*"], menu: false, iconKey: "side", shortcut: { key: "p", shift: true, where: "view", label: "scorc.pbar" }, name: () => T("scorc.pbar"), tip: () => T("scorc.pbar.tip"), available: () => !!host()?.offsetParent, run: focusBar });
-  // Esc in the bar: the sheet closes first, then the focus goes back to the chart of the selected panel
-  ESC.registra({ id: "pbar", prio: 25, aperto: () => (more || !!host()?.contains(document.activeElement)), chiudi: () => { if (more) setMore(false, true); else { const c = E.active?.cv; if (c) c.focus(); } } });
+  // Esc in the bar (not while a panel is expanded: Esc then collapses it): the sheet closes first, then the focus goes back to the chart of the selected panel
+  ESC.registra({ id: "pbar", prio: 25, aperto: () => !document.querySelector(".pnl.max") && (more || !!host()?.contains(document.activeElement)), chiudi: () => { if (more) setMore(false, true); else { const c = E.active?.cv; if (c) c.focus(); } } });
   // a state button of any panel changed (the header twins keep their class): redraw the dot chips; a new panel joins as a child of #dpanels
   { const st = document.getElementById("dpanels"); if (st) new MutationObserver(() => later()).observe(st, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-pressed"] }); }
   document.addEventListener("focusin", e => {   // focus inside a panel selects it

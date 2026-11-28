@@ -29,12 +29,10 @@ try:
             sp = pg.evaluate("({r0:E.panels[1].r0,r1:E.panels[1].r1})"); assert sp["r0"] < c2 < sp["r1"], sp
         step("active panel: arrows move scan by scan, spectrum follows", arrows)
         def files():
-            pg.mouse.click(5, 5)           # outside panels (page header area) does not deactivate; click on the empty board does
-            pg.evaluate("setActive(null)"); pg.evaluate("soloFile(E.files[E.cur])"); f0 = pg.evaluate("E.cur")
-            pg.keyboard.press("ArrowRight"); pg.wait_for_timeout(600)
-            assert pg.evaluate("E.cur") != f0
-            pg.keyboard.press("ArrowLeft"); pg.wait_for_timeout(1500); assert pg.evaluate("E.cur") == f0
-        step("no active panel: arrows change file", files)
+            # the panel bar is always on: pbar.js `sync` selects the first panel whenever none is active, so «no active panel» cannot occur while panels are open
+            pg.mouse.click(5, 5); pg.evaluate("setActive(null)")
+            wait_for_js(pg, "E.active === tabPanels().filter(q => q.el).sort(LAYOUT.ordine)[0]")
+        step("no active panel is not possible: the bar selects the first panel", files)
         def zoom():
             i = pg.evaluate("E.panels.findIndex(p=>p.type==='spec')"); pg.evaluate(f"E.panels[{i}].zoom=null"); pg.wait_for_timeout(300)
             a = pt(pg, i, None); w = pg.evaluate(f"E.panels[{i}]._a.W")
