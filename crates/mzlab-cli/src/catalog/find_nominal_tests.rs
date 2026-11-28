@@ -29,3 +29,26 @@ fn the_words_of_the_nominal_question_reach_the_estimate_and_the_detect_preset_am
         );
     }
 }
+
+const BINNED: &[&str] = &[
+    "nominal bins of a spectrum minus a blank",
+    "subtract a blank from a spectrum cut into nominal bins",
+    "residue at the wrong bin after subtracting a blank",
+    "sum of the scans of a window in nominal bins",
+];
+
+#[test]
+fn the_words_of_a_blank_subtracted_or_summed_binned_spectrum_reach_spectrum_get_among_the_first_three(
+) {
+    for task in BINNED {
+        let got: Vec<String> = search(&words(task))
+            .into_iter()
+            .take(3)
+            .map(|(it, _, _)| it.name)
+            .collect();
+        assert!(
+            got.iter().any(|g| g == "spectrum get"),
+            "{task:?}: spectrum get not in {got:?}"
+        );
+    }
+}

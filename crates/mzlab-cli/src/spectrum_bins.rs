@@ -6,6 +6,8 @@ use mzlab_core::error::{Error, Result};
 use mzlab_core::json::{parse, write_value, Out, Value};
 use mzlab_core::nominalbin::Rule;
 
+use super::minus::Minus;
+use super::sum::SumOpt;
 use super::{asked, query, scalar_members, text_of, Asked, At};
 use crate::extract::{self, Parsed, Sample};
 
@@ -16,12 +18,9 @@ pub(crate) struct BinOpt {
 }
 
 /// The flags of a request: `None` without `--bin`; a usage message for a rule that is not known, an offset that is not a number or `auto:MZ[@RT]`, a
-/// `--mz-offset` with no `--bin`, or a mix with `--minus` or `--sum` (their spectra are not binned).
-pub(crate) fn options(
-    p: &Parsed,
-    minus: bool,
-    sum: bool,
-) -> std::result::Result<Option<BinOpt>, String> {
+/// `--mz-offset` with no `--bin`, or a mix with `--peak auto` (its sides are subtracted by nominal mass, not by bin). `--minus` and `--sum` are
+/// binned: the offset is taken off and the cut made on each side first, and a blank is subtracted bin by bin.
+pub(crate) fn options(p: &Parsed, peak: bool) -> std::result::Result<Option<BinOpt>, String> {
     let Some(rule) = p.get("--bin") else {
         return match p.get("--mz-offset") {
             Some(_) => Err("--mz-offset goes with --bin: it moves the bins".into()),
@@ -31,9 +30,9 @@ pub(crate) fn options(
     if Rule::parse(rule).is_none() {
         return Err(format!("err.spectrum.rebin value={rule}"));
     }
-    if minus || sum {
+    if peak {
         return Err(
-            "--bin is not for --minus or --sum (a difference or a sum is not cut into bins)".into(),
+            "--bin is not for --peak auto (its sides are subtracted by nominal mass)".into(),
         );
     }
     if let Some(o) = p.get("--mz-offset") {
@@ -55,8 +54,16 @@ fn member(v: &Value, key: &str) -> String {
 /// The offset lines of a document that carries `mz_offset_da` and `mz_offset` (the route's answer, or a side of `spectrum compare`): what was taken off
 /// and how it was found, and the warning of an estimate that did not go cleanly.
 pub(crate) fn offset_lines(name: &str, v: &Value) -> String {
-    let da = v.get("mz_offset_da").and_then(Value::f64).unwrap_or(0.0);
-    let ev = v.get("mz_offset");
+    offset_lines_of(name, v, "")
+}
+
+/// `offset_lines` for the members `{prefix}mz_offset_da` and `{prefix}mz_offset` (`blank_` for the blank of a `--minus`).
+fn offset_lines_of(name: &str, v: &Value, prefix: &str) -> String {
+    let da = v
+        .get(&format!("{prefix}mz_offset_da"))
+        .and_then(Value::f64)
+        .unwrap_or(0.0);
+    let ev = v.get(&format!("{prefix}mz_offset"));
     let num = |k: &str| {
         ev.and_then(|e| e.get(k))
             .and_then(Value::f64)
@@ -95,15 +102,43 @@ pub(crate) fn offset_lines(name: &str, v: &Value) -> String {
 }
 
 /// The stderr lines: the rule, the offset that was taken off and how it was found, and the warning of an estimate that did not go cleanly.
-fn notes(name: &str, v: &Value) -> String {
+fn notes(name: &str, blank: Option<&str>, v: &Value) -> String {
     let rule = v.get("rule").and_then(Value::str).unwrap_or("");
     let width = v.get("width_da").and_then(Value::f64).unwrap_or(0.0);
-    format!(
+    let mut s = format!(
         "note: bins {rule}: half-open [bin - {}, bin + {}) on the m/z minus the offset\n{}",
         width / 2.0,
         width / 2.0,
         offset_lines(name, v)
-    )
+    );
+    if let Some(b) = blank {
+        s += "note: blank: each side is cut into bins first, then the blank's bins are subtracted (bin_then_subtract)\n";
+        s += &offset_lines_of(b, v, "blank_");
+    }
+    s
+}
+
+/// The route's answer and the `minus` evidence member (with a leading comma, empty without a blank).
+fn answer(
+    s: &mut Sample,
+    at: &At,
+    minus: &mut Option<Minus>,
+    pairs: &[(&'static str, String)],
+    (window, level): ((f64, f64), u8),
+) -> Result<(String, String)> {
+    if let Some(m) = minus {
+        // a blank is subtracted by the engine on the bins of both sides (`specdiff`), not on their points
+        let single = !matches!(at, At::Window(..));
+        let (t, e) = super::minus::answer(s, m, pairs, window, single, level)?;
+        return Ok((t, format!(",{e}")));
+    }
+    // as the site and the app: `mzml_route` first (it reads the spacing of a single-precision HR profile level from the file), then the index alone
+    let q = query(pairs);
+    let t = match s.routes.mzml_route("/api/spectrum", &q, &mut s.mzml.r)? {
+        Some(t) => Some(t),
+        None => s.routes.handle("/api/spectrum", &q)?,
+    };
+    Ok((t.ok_or_else(|| Error::new("err.scan.none"))?, String::new()))
 }
 
 /// One spectrum as bins: the document or CSV, and the lines for the terminal.
@@ -114,30 +149,37 @@ pub(crate) fn get(
     chan: Option<&str>,
     csv: bool,
     b: &BinOpt,
+    (minus, sum): (&mut Option<Minus>, &Option<SumOpt>),
 ) -> Result<(String, String)> {
     let Asked {
         level,
         auto,
         resolved,
         mut pairs,
-        ..
+        window,
     } = asked(s, at, level, chan)?;
+    // the evidence of a sum reads the window as the spectrum does, before `mode` joins the query
+    let sum_ev = (sum.as_ref())
+        .map(|o| super::sum::evidence(s, &pairs, &o.fill_ms))
+        .transpose()?;
+    if sum.is_some() {
+        pairs.push(("mode", "sum".into()));
+    }
     pairs.push(("rebin", b.rule.clone()));
     if let Some(o) = &b.offset {
         pairs.push(("mzoff", o.clone()));
     }
-    // as the site and the app: `mzml_route` first (it reads the spacing of a single-precision HR profile level from the file), then the index alone
-    let q = query(&pairs);
-    let text = match s.routes.mzml_route("/api/spectrum", &q, &mut s.mzml.r)? {
-        Some(t) => Some(t),
-        None => s.routes.handle("/api/spectrum", &q)?,
-    }
-    .ok_or_else(|| Error::new("err.scan.none"))?;
+    let (text, minus_ev) = answer(s, at, minus, &pairs, (window, level))?;
     let bad = || Error::new("error.badIndex");
     let col = |k: &str| extract::tokens(&text, k).ok_or_else(bad);
     let (bin, mz, y, pts) = (col("bin")?, col("mz")?, col("y")?, col("points")?);
     let v = parse(text.as_bytes())?;
-    let notes = notes(&s.name, &v);
+    let mut notes = notes(&s.name, minus.as_ref().map(|m| m.sample.name.as_str()), &v);
+    let mut sum_tail = String::new();
+    if sum_ev.is_some() {
+        let (e, n) = super::sum::tail(sum_ev.as_deref(), at, (csv, chan.is_some()), &text)?;
+        (sum_tail, notes) = (e, notes + &n);
+    }
     if csv {
         let mut o = "bin,mz,counts,points\n".to_string();
         for i in 0..bin.len() {
@@ -169,7 +211,7 @@ pub(crate) fn get(
         auto.map_or(String::new(), |a| format!(",\"level_auto\":{a}"))
     );
     o.raw(&format!(
-        "],\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{scan},\"answer\":{{{}}}}}}}",
+        "],\"evidence\":{{\"route\":\"/api/spectrum\",\"query\":{},\"scan\":{scan},\"answer\":{{{}}}{minus_ev}{sum_tail}}}}}",
         extract::jstr(&text_of(&pairs)),
         scalar_members(&text)?
     ));

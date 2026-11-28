@@ -23,7 +23,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
 | ISOTOPES-SPILL-RAW | `docs/coda/prompt/ISOTOPES-SPILL-RAW.md` | - | spill-over verdict in `raw isotopes` from the Q1 scan itself: the +1 channel against M inside the peak, with the shape correlation, for a file with no feature table |
 | TP-GENERATE-M2-OBSERVED | `docs/coda/prompt/TP-GENERATE-M2-OBSERVED.md` | - | feed the observed parent M+2/M of `raw isotopes` to the `m2_ref` of the `tp.generate` formula filter, logged, instead of a typed number |
-| NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | FLOW-TABLE-DISK | `docs/coda/prompt/FLOW-TABLE-DISK.md` | - | the facts (rows, files, polarity) of a `.mzfeat` opened from disk in the Flow list, from a head slice and `table_entry` |

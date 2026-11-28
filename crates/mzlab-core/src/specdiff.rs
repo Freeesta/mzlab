@@ -2,10 +2,11 @@
 //! another one (`App.spectrum` with `bg`, `Item.spectrum`, `differenza.subtract_spectrum`). The answer is drawn as lines (`diff`), never as a
 //! profile. `Ok(None)` = Python's (a request it must refuse, a profile level the index cannot answer).
 
-use crate::error::Result;
+use crate::error::{Error, Result};
 use crate::idxread::ReadAt;
 use crate::iteminfo::hr_profile;
 use crate::json::Out;
+use crate::nominalbin::{self, Rule};
 use crate::profspec::{rint, window_tail};
 use crate::routes::{Query, Routes};
 use crate::specpeaks::nominal;
@@ -26,6 +27,8 @@ pub struct DiffReq {
     factor: f64,
     ppm: f64,
     clip: bool,
+    /// `rebin` and `mzoff` of the request: each side is cut into bins (its own offset taken off) BEFORE the subtraction.
+    rebin: Option<(Rule, Option<String>)>,
 }
 
 impl DiffReq {
@@ -50,6 +53,13 @@ impl<R: ReadAt> Routes<R> {
         let hr_flag = q.get("hr") != Some("0");
         let precursor = q.num("precursor")?;
         let (tol, _) = self.window_tol(level, precursor, hr_flag);
+        let rebin = match q.some("rebin") {
+            Some(t) => {
+                let rule = Rule::parse(t).ok_or_else(|| Error::new("err.spectrum.rebin").with("value", t.to_string()))?;
+                Some((rule, q.some("mzoff").map(String::from)))
+            }
+            None => None,
+        };
         Ok(Some(DiffReq {
             level,
             window: (rt0.min(rt1), rt0.max(rt1)),
@@ -63,6 +73,7 @@ impl<R: ReadAt> Routes<R> {
             factor: q.num("bgf")?.unwrap_or(1.0),
             ppm: q.num("bgtol")?.unwrap_or(5.0),
             clip: q.get("bgclip").unwrap_or("1") == "1",
+            rebin,
         }))
     }
 
@@ -106,6 +117,9 @@ impl<R: ReadAt> Routes<R> {
 /// The answer for `req`: `bg` = the routes of the background file (`None` = the file itself).
 pub fn spectrum_diff<R: ReadAt>(main: &mut Routes<R>, bg: Option<&mut Routes<R>>, req: &DiffReq) -> Result<Option<String>> {
     let Some(m) = main.mean_window(req, req.window, req.filt.as_deref())? else { return Ok(None) };
+    if let Some((rule, mzoff)) = &req.rebin {
+        return binned_diff(main, bg, req, m, (*rule, mzoff.as_deref()));
+    }
     let (mut mz, mut y) = m.b.as_ref().map_or((vec![], vec![]), |b| (b.mz.clone(), b.y.clone()));
     if !mz.is_empty() {
         let r = match bg {
@@ -130,6 +144,31 @@ pub fn spectrum_diff<R: ReadAt>(main: &mut Routes<R>, bg: Option<&mut Routes<R>>
     }
     o.raw("}");
     Ok(Some(o.0))
+}
+
+/// `rebin` with a background: the window and the blank are each cut into bins (each with its own `mzoff`, resolved on its own file) and the bins are
+/// subtracted, factor and clip as for lines. Cutting first is the point: at unit resolution the two files split one fragment between two integers
+/// differently, and a difference taken on the points leaves residues at the wrong bin. High resolution is `err.spectrum.rebin.hr`.
+fn binned_diff<R: ReadAt>(main: &mut Routes<R>, bg: Option<&mut Routes<R>>, req: &DiffReq, m: Mean, (rule, mzoff): (Rule, Option<&str>)) -> Result<Option<String>> {
+    if m.hr_on {
+        return Err(Error::new("err.spectrum.rebin.hr"));
+    }
+    let rb = main.rebin_with(rule, mzoff)?;
+    let a = m.b.as_ref().map_or_else(Vec::new, |b| nominalbin::rebin(&b.mz, &b.y, rule, rb.off.da));
+    let (blank, brb) = match bg {
+        Some(other) => (other.mean_window(req, req.bg_window, None)?, other.rebin_with(rule, mzoff)?),
+        None => (main.mean_window(req, req.bg_window, None)?, main.rebin_with(rule, mzoff)?),
+    };
+    let Some(blank) = blank else { return Ok(None) };
+    if blank.hr_on {
+        return Err(Error::new("err.spectrum.rebin.hr"));
+    }
+    let b = blank.b.as_ref().filter(|b| b.n > 0).map_or_else(Vec::new, |b| nominalbin::rebin(&b.mz, &b.y, rule, brb.off.da));
+    let bins = nominalbin::subtract_bins(&a, &b, req.factor, req.clip);
+    let mut x = Out::default();
+    x.raw(",\"diff\":true,\"order\":\"bin_then_subtract\",\"blank_mz_offset_da\":").num(brb.off.da).raw(",\"blank_mz_offset\":").raw(&brb.off.evidence_json());
+    x.raw(",\"blank_scans\":").int(blank.b.as_ref().map_or(0, |b| b.n) as i64);
+    Ok(Some(nominalbin::bins_doc(m.b.as_ref().unwrap_or(&Binned::none()), &rb, &bins, &x.0)))
 }
 
 /// `differenza.subtract_spectrum` with `(factor, unit, ppm, clip)`: lines only where the difference is not zero (and positive with `clip`), by m/z.
