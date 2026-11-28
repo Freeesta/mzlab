@@ -60,9 +60,19 @@ For an agent running on the user's computer (Claude Code, Claude Cowork or other
 6. **Results**: in `RUN` one file per port (`<instance>.<ext>`), `plan.json` (canonical plan with the `--set`), `prov.json` (`prov/1`) and `report.json` (`run-report/2`: status, times and parameters of each instance); `mzlab-cli flow report RUN` rewrites the `run-report/2`. `mzlab-cli flow tables RUN --json` lists its feature tables, one `tables/1` entry per `.mzfeat` (rows, files, polarity, the step that made it).
 7. **Fix**: rerun in the same `RUN` with other `--set`: the cache redoes only the steps that change (`cached` in `prov/1`); `--fresh` redoes everything.
 
-**Loop hint**: the 10th `peak auto-lr`, or `flow run` of a plan with `tp.dig_lr`, from one parent process (a script or shell loop) prints `note.cli.repeat.targets` or `note.cli.repeat.dig` on stderr once, naming the one call (`quant targets`, one Dig run); stdout and exit code never change. The count is a file per parent and command in the temp folder (`MZLAB_STATE_DIR`; atomic appends; a pause over 10 min starts again; a day-old file is swept). Unix only. `MZLAB_NO_HINTS` set to any value silences it (`repeat_hint.rs`, tests `repeat_hint_tests.rs`, `tests/repeat_hint.rs`).
+**Loop hint**: the 10th `peak auto-lr`, or `flow run` of a plan with `tp.dig_lr`, from one parent process (a script or shell loop) prints `note.cli.repeat.targets` or `note.cli.repeat.dig` on stderr once, naming the one call (`quant targets`, one Dig run); stdout and exit code never change.
+The count is a file per parent and command in the temp folder (`MZLAB_STATE_DIR`; atomic appends; a pause over 10 min starts again; a day-old file is swept).
+The parent is tagged by id and start time: `/proc` on Unix, the process creation time on Windows (`repeat_hint_win.rs`); elsewhere there is no tag and no hint.
+`MZLAB_NO_HINTS` set to any value silences it (`repeat_hint.rs`, tests `repeat_hint_tests.rs`, `tests/repeat_hint.rs`).
 
 The same hint (`note.cli.repeat.xic`, `note.cli.repeat.rawxic`) comes at the 10th one-mass `trace xic` or `raw xic` of a loop and names `--mz M1,M2,...` / `--sweep LO:HI:STEP` (a list or a sweep is never counted).
+
+Plans run one by one have a family each (`Rule::steps`, first match wins, `tp.dig_lr` first), counted apart:
+`quant.targets` (`quant targets FILE... --targets T.csv`, key `targets`),
+`chrom.transitions` (`peak table FILE... --auto`, `note.cli.repeat.peaks`),
+`features.detect`/`features.table`/`features.align` (one `flow run PLAN --in FOLDER`, or `features FILE...`, `note.cli.repeat.features`),
+`convert.mzml`/`import.raw`/`spectra.centroid` (`file convert INPUT... --out FOLDER`, `note.cli.repeat.convert`).
+A plan of no family is never counted. To add a family: a `Rule` with its `steps`, its lang key and context line, and a case in `tests/repeat_hint.rs`.
 
 ## Six chains (tested)
 Chains 1-5 follow; the sixth, a whole kinetic LR campaign from vendor files to the kinetics per condition, is `recipes.md` (test: `crates/mzlab-cli/src/workflow_kinetic_tests.rs`). Each chain is a test on synthetic data in `crates/mzlab-cli/src/workflow_tests.rs` or that file: every call exits 0 and the call count below is asserted. Add `--cache DIR` (or `MZLAB_CACHE`) to the file commands of a chain that reads the same files twice; `file index FILE...` builds the indexes first (`cli-agenti.md`).

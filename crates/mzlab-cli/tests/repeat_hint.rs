@@ -1,6 +1,6 @@
 //! The hint of a loop of calls through the real binary: the tenth `peak auto-lr`, and the tenth `flow run` of a Dig plan, from one parent say once on stderr
 //! which one call replaces the loop, also when the calls run in parallel; stdout, the exit code and the first nine calls are untouched, and `MZLAB_NO_HINTS`
-//! silences it.
+//! silences it. Every plan family of `flow run` (`Rule::steps`) is counted by its steps.
 
 use std::process::Command;
 
@@ -212,6 +212,89 @@ fn the_tenth_one_mass_xic_call_says_the_list_route_and_changes_nothing_else() {
         "0.3",
     ];
     let said: Vec<String> = (0..12).map(|_| run("list", &list, false).1).collect();
+    assert!(
+        said.iter().all(|s| !s.contains("note.cli.repeat")),
+        "{said:?}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// Each family of `flow run` plans says its own hint at the tenth run, once; stdout and the exit code are the same as without it, and a plan of no family
+/// is never counted. The plans are not valid on purpose (one step, no inputs): the runs stay fast and the error is the same bytes every time.
+#[test]
+fn the_tenth_flow_run_of_each_family_says_its_one_call_and_changes_nothing_else() {
+    let d = std::env::temp_dir().join(format!("mzlab_repeat_fam_{}", std::process::id()));
+    let _ = std::fs::remove_dir_all(&d);
+    std::fs::create_dir_all(&d).unwrap();
+    let run = |state: &str, plan: &str, silent: bool| {
+        let mut c = Command::new(env!("CARGO_BIN_EXE_mzlab-cli"));
+        c.args(["flow", "run"])
+            .arg(d.join(plan))
+            .env("MZLAB_STATE_DIR", d.join(state))
+            .env_remove("MZLAB_NO_HINTS");
+        if silent {
+            c.env("MZLAB_NO_HINTS", "1");
+        }
+        let o = c.output().unwrap();
+        (
+            o.stdout,
+            String::from_utf8_lossy(&o.stderr).into_owned(),
+            o.status.code(),
+        )
+    };
+    let cases = [
+        (
+            "quant.targets",
+            "note.cli.repeat.targets",
+            "quant targets FILE... --targets",
+        ),
+        (
+            "chrom.transitions",
+            "note.cli.repeat.peaks",
+            "peak table FILE... --auto",
+        ),
+        (
+            "features.detect",
+            "note.cli.repeat.features",
+            "flow run PLAN.json --in FOLDER",
+        ),
+        (
+            "convert.mzml",
+            "note.cli.repeat.convert",
+            "file convert INPUT... --out FOLDER",
+        ),
+    ];
+    for (step, key, names) in cases {
+        let plan = format!("{step}.json");
+        std::fs::write(
+            d.join(&plan),
+            format!(r#"{{"steps":[{{"id":"s","step":"{step}@1"}}]}}"#),
+        )
+        .unwrap();
+        let all: Vec<_> = (1..=11).map(|_| run(step, &plan, false)).collect();
+        for (k, o) in all.iter().enumerate() {
+            assert_eq!(o.1.contains(key), k == 9, "{step} call {}: {}", k + 1, o.1);
+            assert_eq!(
+                (&o.0, o.2),
+                (&all[0].0, all[0].2),
+                "{step}: stdout and exit code are the same"
+            );
+        }
+        assert!(all[9].1.contains(names), "{}", all[9].1);
+        let off: Vec<_> = (0..12)
+            .map(|_| run(&format!("{step}_off"), &plan, true))
+            .collect();
+        assert!(
+            off.iter().all(|o| !o.1.contains("note.cli.repeat")),
+            "{step}"
+        );
+    }
+    std::fs::write(
+        d.join("none.json"),
+        r#"{"steps":[{"id":"s","step":"table.stats@1"}]}"#,
+    )
+    .unwrap();
+    let said: Vec<_> = (0..12).map(|_| run("none", "none.json", false).1).collect();
     assert!(
         said.iter().all(|s| !s.contains("note.cli.repeat")),
         "{said:?}"

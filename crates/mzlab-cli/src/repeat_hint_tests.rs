@@ -116,11 +116,7 @@ fn only_a_looped_command_has_a_rule() {
     std::fs::create_dir_all(&d).unwrap();
     let (dig, other) = (d.join("dig.json"), d.join("other.json"));
     std::fs::write(&dig, r#"{"steps":[{"id":"d","step":"tp.dig_lr@1"}]}"#).unwrap();
-    std::fs::write(
-        &other,
-        r#"{"steps":[{"id":"d","step":"features.detect@1"}]}"#,
-    )
-    .unwrap();
+    std::fs::write(&other, r#"{"steps":[{"id":"d","step":"table.stats@1"}]}"#).unwrap();
     let of = |p: &Path| {
         rule_of(&args(&[
             "flow",
@@ -208,4 +204,141 @@ fn a_looped_single_mass_xic_has_a_rule_and_a_list_or_sweep_has_none() {
         r.contains("raw xic FILE... --mz M1,M2,...") && r.ends_with("(note.cli.repeat.rawxic)"),
         "{r}"
     );
+}
+
+/// Each plan family of `flow run` has a rule by its steps; a plan with none of them, or an unreadable plan, has none; `tp.dig_lr` wins over the others.
+#[test]
+fn a_flow_plan_has_the_rule_of_its_family() {
+    let d = dir("fam");
+    std::fs::create_dir_all(&d).unwrap();
+    let of = |name: &str, steps: &[&str]| {
+        let body: Vec<String> = steps
+            .iter()
+            .enumerate()
+            .map(|(i, s)| format!(r#"{{"id":"s{i}","step":"{s}@1"}}"#))
+            .collect();
+        let f = d.join(name);
+        std::fs::write(&f, format!(r#"{{"steps":[{}]}}"#, body.join(","))).unwrap();
+        rule_of(&args(&[
+            "flow",
+            "run",
+            &f.display().to_string(),
+            "--out",
+            "R",
+        ]))
+        .map(|r| r.command)
+    };
+    assert_eq!(
+        of("a.json", &["quant.targets"]),
+        Some("flow run quant.targets")
+    );
+    assert_eq!(
+        of("b.json", &["index.mzidx", "chrom.transitions"]),
+        Some("flow run chrom.transitions")
+    );
+    assert_eq!(
+        of(
+            "c.json",
+            &["index.mzidx", "features.detect", "features.align"]
+        ),
+        Some("flow run features")
+    );
+    assert_eq!(of("d.json", &["convert.mzml"]), Some("flow run convert"));
+    assert_eq!(
+        of("e.json", &["import.raw", "spectra.centroid"]),
+        Some("flow run convert")
+    );
+    assert_eq!(
+        of("f.json", &["features.detect", "tp.dig_lr"]),
+        Some("tp.dig_lr")
+    );
+    assert_eq!(
+        of("g.json", &["table.stats"]),
+        None,
+        "a step that is not looped"
+    );
+    assert_eq!(
+        of("h.json", &["features.detectx"]),
+        None,
+        "the step id is whole"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}
+
+/// The lines of the new families name the one call and end with their key; every call they name exists.
+#[test]
+fn the_family_lines_name_a_call_that_exists() {
+    let by = |c: &str| RULES.iter().find(|r| r.command == c).unwrap();
+    for (rule, names, key) in [
+        (
+            "flow run chrom.transitions",
+            "peak table FILE... --auto",
+            "note.cli.repeat.peaks",
+        ),
+        (
+            "flow run features",
+            "flow run PLAN.json --in FOLDER",
+            "note.cli.repeat.features",
+        ),
+        (
+            "flow run convert",
+            "file convert INPUT... --out FOLDER",
+            "note.cli.repeat.convert",
+        ),
+        (
+            "flow run quant.targets",
+            "quant targets FILE... --targets",
+            "note.cli.repeat.targets",
+        ),
+    ] {
+        let l = line(by(rule), 10);
+        assert!(
+            l.contains(names) && l.contains("10 times") && l.ends_with(&format!("({key})")),
+            "{l}"
+        );
+    }
+    for c in [
+        ["peak", "table"],
+        ["file", "convert"],
+        ["features", "--help"],
+        ["flow", "run"],
+    ] {
+        let help = if c[1] == "--help" {
+            vec![c[0], "--help"]
+        } else {
+            vec![c[0], c[1], "--help"]
+        };
+        assert_eq!(crate::execute(&args(&help)).code, 0, "{c:?}");
+    }
+    // the words of each family lead to the call its line names
+    for (rule, call) in [
+        ("flow run chrom.transitions", "peak table"),
+        ("flow run features", "features (command)"),
+        ("flow run convert", "file convert"),
+    ] {
+        let out = crate::execute(&args(&["commands", "--find", by(rule).find]));
+        let t = String::from_utf8_lossy(&out.stdout).into_owned();
+        assert!(t.contains(call), "{rule}: {t}");
+    }
+    let mut states: Vec<&str> = RULES.iter().map(|r| r.command).collect();
+    states.sort_unstable();
+    states.dedup();
+    assert_eq!(
+        states.len(),
+        RULES.len(),
+        "one count per rule: the commands differ"
+    );
+}
+
+/// The parent of a test process is tagged by its id and start moment (`/proc` on Unix; the Windows module has its own test).
+#[cfg(unix)]
+#[test]
+fn the_parent_is_tagged_by_its_id_and_start() {
+    let tag = parent_tag().unwrap();
+    let (id, start) = tag.split_once('-').unwrap();
+    assert!(
+        id.parse::<u32>().unwrap() > 0 && start.parse::<u64>().unwrap() > 0,
+        "{tag}"
+    );
+    assert_eq!(parent_tag().as_deref(), Some(tag.as_str()), "stable");
 }

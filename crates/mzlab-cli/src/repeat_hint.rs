@@ -3,8 +3,8 @@
 //! of one parent tells a loop from a single call: one append-only file per parent and command in the temp folder (every call appends one byte, so
 //! parallel calls never lose a count) and a marker made with `create_new`, so the hint is said exactly once. The static routes (help, `related`,
 //! the task table) need no state and are the main ones; this is the nudge for a loop that never read them. Stdout and the exit code never change,
-//! `MZLAB_NO_HINTS` set to any value silences it. Unix only (the parent is
-//! tagged by its id and `/proc` start time; elsewhere there is no hint). Called by the binary (`main.rs`), never by `execute`.
+//! `MZLAB_NO_HINTS` set to any value silences it. The parent is tagged by its id and start time: `/proc` on Unix, `repeat_hint_win.rs` on Windows
+//! (elsewhere there is no tag and no hint). Called by the binary (`main.rs`), never by `execute`.
 
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -25,6 +25,8 @@ pub struct Rule {
     pub key: &'static str,
     /// Words for `commands --find`.
     pub find: &'static str,
+    /// For a `flow run` family: the Flow steps (ids) that mark a plan as belonging to it; empty for a command rule.
+    pub steps: &'static [&'static str],
 }
 
 const RULES: &[Rule] = &[
@@ -32,25 +34,54 @@ const RULES: &[Rule] = &[
         command: "peak auto-lr",
         key: "note.cli.repeat.targets",
         find: "many targets files area",
+        steps: &[],
     },
     Rule {
         command: "tp.dig_lr",
         key: "note.cli.repeat.dig",
         find: "dig kinetics series",
+        steps: &["tp.dig_lr"],
     },
     Rule {
         command: "trace xic",
         key: "note.cli.repeat.xic",
         find: "many masses sweep",
+        steps: &[],
     },
     Rule {
         command: "raw xic",
         key: "note.cli.repeat.rawxic",
         find: "many masses every file",
+        steps: &[],
+    },
+    Rule {
+        command: "flow run quant.targets",
+        key: "note.cli.repeat.targets",
+        find: "many targets files area",
+        steps: &["quant.targets"],
+    },
+    Rule {
+        command: "flow run chrom.transitions",
+        key: "note.cli.repeat.peaks",
+        find: "peaks every file transitions",
+        steps: &["chrom.transitions"],
+    },
+    Rule {
+        command: "flow run features",
+        key: "note.cli.repeat.features",
+        find: "feature table many files",
+        steps: &["features.detect", "features.table", "features.align"],
+    },
+    Rule {
+        command: "flow run convert",
+        key: "note.cli.repeat.convert",
+        find: "convert many files mzml",
+        steps: &["convert.mzml", "import.raw", "spectra.centroid"],
     },
 ];
 
-/// The rule of a command line: `peak auto-lr ...`, or `flow run PLAN` whose plan holds a `tp.dig_lr` step.
+/// The rule of a command line: `peak auto-lr ...`, a one-mass `xic`, or `flow run PLAN` whose plan holds a step of a family (`Rule::steps`; the first
+/// family in `RULES` that matches wins, `tp.dig_lr` before the others).
 pub fn rule_of(args: &[String]) -> Option<&'static Rule> {
     let at = |i: usize| args.get(i).map(String::as_str);
     match (at(0), at(1)) {
@@ -60,7 +91,9 @@ pub fn rule_of(args: &[String]) -> Option<&'static Rule> {
             let text = std::fs::read_to_string(plan)
                 .ok()
                 .filter(|t| t.len() < 4_000_000)?;
-            text.contains("\"tp.dig_lr@").then(|| &RULES[1])
+            RULES
+                .iter()
+                .find(|r| r.steps.iter().any(|s| text.contains(&format!("\"{s}@"))))
         }
         (Some("trace"), Some("xic")) => {
             (one_mass(args) && !args.iter().any(|a| a == "--sweep")).then(|| &RULES[2])
@@ -151,7 +184,7 @@ pub fn line(rule: &Rule, n: u64) -> String {
 /// The parent process as a name for its state: the id and, where the system tells it, the moment it started, so that a later process that gets the
 /// same id has a count of its own.
 #[cfg(unix)]
-fn parent_tag() -> String {
+fn parent_tag() -> Option<String> {
     let id = std::os::unix::process::parent_id();
     let started = std::fs::read_to_string(format!("/proc/{id}/stat"))
         .ok()
@@ -160,7 +193,12 @@ fn parent_tag() -> String {
             rest.split_whitespace().nth(19).map(String::from)
         })
         .unwrap_or_else(|| "0".into());
-    format!("{id}-{started}")
+    Some(format!("{id}-{started}"))
+}
+
+#[cfg(windows)]
+fn parent_tag() -> Option<String> {
+    win::parent_tag()
 }
 
 fn state_dir() -> PathBuf {
@@ -174,22 +212,26 @@ pub fn hint(args: &[String]) -> Option<String> {
     if std::env::var_os("MZLAB_NO_HINTS").is_some() {
         return None;
     }
-    #[cfg(unix)]
+    #[cfg(any(unix, windows))]
     {
         let rule = rule_of(args)?;
         let now = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .ok()?
             .as_secs();
-        let t = tick(&state_dir(), &parent_tag(), rule, now)?;
+        let t = tick(&state_dir(), &parent_tag()?, rule, now)?;
         t.say.then(|| format!("{}\n", line(rule, t.n)))
     }
-    #[cfg(not(unix))]
+    #[cfg(not(any(unix, windows)))]
     {
         let _ = args;
         None
     }
 }
+
+#[cfg(windows)]
+#[path = "repeat_hint_win.rs"]
+mod win;
 
 #[cfg(test)]
 #[path = "repeat_hint_tests.rs"]
