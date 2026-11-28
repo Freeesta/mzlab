@@ -1,12 +1,11 @@
 // @ts-strict
 "use strict";
-// Peak table of the spectrum panel (button «Tabella picchi»): a small popover with the peak list the chart draws (p._a.data[0].d), the facts of the spectrum
+// Peak table of the spectrum panel (button «Tabella picchi», the action `panel.tabp` of azioni-barra.js): a small popover with the peak list the chart draws (p._a.data[0].d), the facts of the spectrum
 // and four controls (threshold, max rows, sort, only labelled). Output: COPY (TSV + html on the clipboard, or Ctrl/Cmd+C on the table) and CSV (also in the panel download menu).
 // Classic helpers h and raw (html-sicuro.js) build every HTML string. Numbers are data: I18N.num, always with the decimal point. Classic helpers used by name: E, I18N. State per panel in p._tp.
 (() => {
   /** @param {string} k @param {any} [v] */
   const T = (k, v) => I18N.t(k, v);
-  const IC = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true" focusable="false"><rect x="1.5" y="2.5" width="13" height="11" rx="1.2"/><path d="M1.5 6h13M1.5 9.7h13M6 6v7.5"/></svg>';
   /** @param {any} p */
   const st = p => p._tp || (p._tp = { thr: 2, max: 50, sort: "mz", lab: false, pop: null, tm: 0 });
   /** the facts of the spectrum shown: [label, value] @param {any} p */
@@ -116,15 +115,7 @@
     render(p);
     /** @type {HTMLElement} */ (pop.querySelector('[data-f="thr"]')).focus();
   }
-  /** the toolbar button, in its own group before the «⋯» menu @param {any} p */
-  function wire(p) {
-    if (p.el.querySelector('[data-a="tabp"]')) return;
-    const b = document.createElement("button"); b.type = "button"; b.className = "bt tpb"; b.dataset.a = "tabp"; b.title = T("tabp.btn.title"); b.setAttribute("aria-label", T("tabp.btn.title"));
-    b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-expanded", "false"); b.innerHTML = IC; b.onclick = () => open(p);
-    const g = document.createElement("span"); g.className = "tbg"; g.append(b);
-    const mb = p.el.querySelector('.tbs [data-a="more"]'); if (mb) mb.before(g); else p.el.querySelector(".tbs")?.append(g);
-  }
   /** after every drawing: the table follows the scan; a spectrum with no peaks closes it @param {any} p */
   function sync(p) { const s = p._tp; if (s && s.pop) render(p); }
-  window.TABPICCHI = { wire, sync, rows, facts, open, close, save, item, tsv };
+  window.TABPICCHI = { sync, rows, facts, open, close, save, item, tsv };
 })();

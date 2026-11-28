@@ -3,18 +3,23 @@
 // Panel header buttons as registry actions (barra, scope "panel") and ONE renderer, AZIONI.bar; AZIONI.refresh (was syncTb) redraws their state from the panel p.
 // The shared panel bar (pbar.js) draws the same actions with AZIONI.bar(c, host, pb): `pb` groups them; rows with `bonly` exist only there.
 (() => {
-  const T = (/** @type {string} */ k) => I18N.t(k), G = ["xb", "v", "l", "s", "i", "t", "x", "o"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
+  const T = (/** @type {string} */ k) => I18N.t(k), G = ["xb", "v", "l", "s", "i", "t", "x", "o", "xp", "tp"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
   /** map zoom and gestures: the commands of mappa.js (the header keeps its .mznav) @param {string} id */
   const nav = id => ({ bonly: 1, run: (/** @type {Ctx} */ c) => MAPPA.runCmd(id, MAPPA.ad2(c.p, null)) });
   const navIc = (/** @type {string} */ id) => () => MAPPA.SV(MAPPA.ICO[/** @type {any} */ (AZIONI.get(id)).ic]);
+  const IC_LENS = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>', IC_TAB = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true" focusable="false"><rect x="1.5" y="2.5" width="13" height="11" rx="1.2"/><path d="M1.5 6h13M1.5 9.7h13M6 6v7.5"/></svg>';
+  /** the Shift key of the click (one more trace); the XWC band is opened by xwc.js, loaded on first use (eventi.js) */
+  const shift = (/** @type {Ctx} */ c) => !!(c.e && c.e.shiftKey), uv = (/** @type {Ctx} */ c) => !!c.p.uv, xw = (/** @type {Ctx} */ c) => xwc().then((/** @type {any} */ m) => m.press(c.p, shift(c))), lens = (/** @type {Ctx} */ c) => !!window.XICBTN && XICBTN.lens.ok(c.p);
   const mode = (/** @type {string} */ m) => (/** @type {Ctx} */ c) => c.p._mode(m);
   /** @typedef {any} Ctx
-   * @typedef {{ toggle?: number, bonly?: number, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
+   * @typedef {{ toggle?: number, bonly?: number, hid?: number, bid?: string, visible?: (c: Ctx) => boolean, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
   // [data-a, views, header group, title key, aria key ("=": the title), text or icon, class, Opt]
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
-    ["xicb", ["spec"], "xb", "xicbtn.title", "xicbtn.aria", "XIC", "bt xbb", { toggle: 1 }],
-    ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: ' hidden aria-haspopup="dialog" aria-expanded="false"' }],
+    ["xicb", ["spec"], "xb", "xicbtn.title", "xicbtn.aria", "XIC", "bt xbb", { toggle: 1, run: c => XICBTN.press(c.p, shift(c)) }],
+    ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: ' hidden aria-haspopup="dialog" aria-expanded="false"', run: c => XICBTN.openPop(c.p) }],
+    ["xwc", ["spec"], "xb", "panel.wl.title", "", "XWC", "bt xbb", { visible: uv, at: ' type="button"', run: xw }],
+    ["xwcs", ["spec"], "xb", "xwc.pop.open", "=", "▾", "bt xbl", { bid: "xwcl", visible: uv, at: ' type="button" hidden aria-haspopup="dialog" aria-expanded="false"', run: c => xwc().then((/** @type {any} */ m) => m.pop(c.p, c.b)) }],
     ["izoom", LENS, "v", "panel.izoom.title", "", () => IC_ZOOM, "bt", { checked: c => c.p.imode === "zoom", run: mode("zoom") }],
     ["fit", ALL, "v", "panel.fit.title", "", () => IC_FIT, "bt", { at: " disabled", run: c => { const p = c.p; pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); } }],
     ["mapzin", ["map"], "v", "cmd.mapzin.tip", "cmd.mapzin.name", navIc("mapzin"), "bt", nav("mapzin")],
@@ -35,8 +40,11 @@
       run: c => { const p = c.p; pushFields(p, "history.smooth"); p.smooth = !p.smooth; AZIONI.refresh(c); draw(p); uiSave(); } }],
     ["log", LENS, "t", "ctl.log.title", "ctl.log.aria", () => T("ctl.log"), "bt tgl", { toggle: 1, at: ' type="button"', checked: c => !!c.p.log, available: c => !(MS(c) || (c.p.type === "chrom" && c.p.kind === "pda")), tip: c => T(MS(c) ? "ctl.noMs2" : "ctl.log.title"),
       run: c => { const p = c.p; COMMANDS.run("panel.source", p, () => { p.log = !p.log; }); AZIONI.refresh(c); draw(p); uiSave(); } }],
-    ["xic", ["chrom"], "x", "panel.xic.title", "", "XIC", "bt", { available: c => !MS(c), ti0: c => T(MS(c) ? "panel.xic.off" : "panel.xic.title"), run: c => c.p.kind === "pda" ? wlOpen(c.p) : openXic(null, { after: c.p }) }],
+    ["xic", ["chrom"], "x", "panel.xic.title", "", c => c.p.kind === "pda" ? "XWC" : "XIC", "bt", { available: c => !MS(c), ti0: c => T(c.p.kind === "pda" ? "panel.wl.title" : MS(c) ? "panel.xic.off" : "panel.xic.title"), run: c => c.p.kind === "pda" ? xw(c) : openXic(null, { after: c.p }) }],
+    ["xwcl", ["chrom"], "x", "xwc.pop.open", "=", "▾", "bt xbl", { at: ' type="button" hidden aria-haspopup="dialog" aria-expanded="false"', run: c => xwc().then((/** @type {any} */ m) => m.pop(c.p, c.b)) }],
     ["dl", ALL, "o", "panel.dl.title", "=", () => IC_DL.replace(";margin-right:4px", ""), "bt", { run: c => dlMenu(c.p, c.e) }],
+    ["xicp", ["spec"], "xp", "xiclens.toggle", "=", IC_LENS, "bt xbp", { toggle: 1, hid: 1, visible: c => !uv(c), checked: c => !!UIP.xicLens && lens(c), available: lens, run: () => XICBTN.setLens(!UIP.xicLens) }],
+    ["tabp", ["spec"], "tp", "tabp.btn.title", "=", IC_TAB, "bt tpb", { at: ' type="button" aria-haspopup="dialog" aria-expanded="false"', run: c => TABPICCHI.open(c.p) }],
     ["more", ALL, "e", "panel.more.title", "=", "⋯", "bt hmb", { at: ' type="button" hidden aria-haspopup="true" aria-expanded="false"', after: () => h`<span class="hmore" hidden role="group" aria-label="${T("panel.more.title")}"></span>` }],
     ["max", ALL, "e", "panel.max.title", "", () => IC_FS, "bt fsb", { run: c => c.p._setMax(!c.p.el.classList.contains("max")) }],
     ["close", ALL, "e", "panel.close", "", "&times;", "x", { nodata: 1, run: c => closePanelWithUndo(c.p) }],
@@ -45,7 +53,7 @@
   /** the attributes and the content of one button @param {any} a @param {any} c */
   const html = (a, c, shared) => {
     const ok = !a.available || a.available(c), on = a.checked ? !!a.checked(c) : false, tip = (a.tip || a.ti0 || (() => T(a.ti)))(c), al = a.al === "=" ? tip : a.al ? T(a.al) : "", tag = a.tag || "button", tx = typeof a.tx === "function" ? a.tx(c) : a.tx;
-    return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : shared ? " hidden" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
+    return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : shared || a.hid ? " hidden" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
   };
   /** wires the buttons of the actions `l` found in `host` @param {any[]} l @param {any} c @param {HTMLElement} host */
   const wire = (l, c, host) => {
@@ -58,10 +66,7 @@
   AZIONI.bar = (c, host, pb) => {
     const l = AZIONI.list(c, "barra").filter(a => pb ? pb.of(a) : !a.bonly), g = (/** @type {string} */ k) => l.filter(a => (pb ? pb.of(a) : a.bar) === k).map(a => html(a, c, pb)).join("");
     host.innerHTML = pb ? pb.groups.map((/** @type {string[]} */ [k, t]) => { const s = g(k); return s ? pb.wrap(k, t, s) : ""; }).join("") : G.map(k => { const s = g(k); return s ? h`<span class="tbg">${raw(s)}</span>` : ""; }).join("") + g("e");
-    for (const a of l) {
-      const b = /** @type {HTMLElement | null} */ (host.querySelector(a.nodata ? ".x" : `[data-a="${a.bid}"]`));
-      if (b && a.run) b[a.tag ? "onchange" : "onclick"] = (/** @type {Event} */ e) => AZIONI.run(a.id, { ...c, e, b });
-    }
+    wire(l, c, host);
   };
   /** the state of the buttons from the panel (checked → on, aria-pressed; available → disabled; tip → title) @param {any} c {view, p} */
   AZIONI.refresh = c => {
@@ -69,7 +74,7 @@
     for (const a of AZIONI.list(c, "barra")) {
       const b = /** @type {HTMLButtonElement | null} */ (el.querySelector(a.nodata ? ".x" : `.tbs [data-a="${a.bid}"]`)); if (!b) continue;
       const ok = !a.available || a.available(c), on = !!a.checked && a.checked(c) && ok;
-      if (a.available) b.disabled = !ok;
+      if (a.available) { if (a.hid) b.hidden = !ok; else b.disabled = !ok; }
       if (a.checked) { b.classList.toggle("on", on); if (a.toggle) b.setAttribute("aria-pressed", String(on)); }
       if (a.tip) b.title = a.tip(c);
     }

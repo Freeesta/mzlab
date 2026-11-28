@@ -63,7 +63,7 @@ export async function series(p, fl) {
 
 // ---------------------------------------------------------------- the popover: λ and bandwidth; Enter opens (Shift+Enter: one more trace), Esc closes
 /** @param {any} p @param {HTMLElement} lb the arrow */
-async function pop(p, lb) {
+export async function pop(p, lb) {
   if (p._xwPop) { close(p); return; }
   const f = await fileOf(p), j = f && await propose(f.k);
   if (!f || !j) return;
@@ -100,16 +100,6 @@ function close(p) {
   const l = p.el.querySelector('[data-a="xwcl"]'); if (l) { l.setAttribute("aria-expanded", "false"); l.focus({ preventScroll: true }); }
 }
 
-/** The arrow of the split button, after the main part. @param {any} p @param {HTMLElement} b */
-function arrow(p, b) {
-  let l = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xwcl"]'));
-  if (l) return l;
-  l = document.createElement("button"); l.className = "bt xbl"; l.dataset.a = "xwcl"; l.type = "button"; l.textContent = "▾";
-  l.setAttribute("aria-haspopup", "dialog"); l.setAttribute("aria-expanded", "false"); l.title = T("xwc.pop.open"); l.setAttribute("aria-label", T("xwc.pop.open"));
-  l.onclick = () => pop(p, /** @type {HTMLElement} */ (l));
-  b.after(l);
-  return l;
-}
 /** Shows the split button where a file of the panel has a matrix: a TWC-only file (a DAD trace, no matrix) gets none. @param {any} p @param {HTMLElement} b @param {HTMLElement} l @param {boolean} on */
 async function show(p, b, l, on) {
   const has = on && !!(await fileOf(p));
@@ -117,24 +107,16 @@ async function show(p, b, l, on) {
   if (!has) close(p);
 }
 
-/** The XIC button of a chromatogram panel (wlCtl): on a DAD panel it is the XWC split button; on another kind the plain XIC button. @param {any} p */
+/** The XIC button of a chromatogram panel (wlCtl): on a DAD panel the XWC split button (the actions `panel.xic` and `panel.xwcl`, azioni-barra.js), on another kind the plain XIC button. @param {any} p */
 export function dress(p) {
-  const b = /** @type {any} */ (p.el.querySelector('[data-a="xic"]'));
-  if (!b) return;
-  const pda = p.kind === "pda", l = arrow(p, b);
-  if (!b._xw) { const o = b.onclick; b._xw = true; b.onclick = (/** @type {MouseEvent} */ e) => p.kind === "pda" ? press(p, e.shiftKey) : o && o.call(b, e); }
-  show(p, b, l, pda);
+  const b = /** @type {any} */ (p.el.querySelector('[data-a="xic"]')), l = p.el.querySelector('[data-a="xwcl"]');
+  if (!b || !l) return;
+  b._xw = true;
+  show(p, b, l, p.kind === "pda");
 }
 
-/** The XWC split button of a UV spectrum (uv-spettro.js draw), in its XIC group. @param {any} p */
+/** The XWC split button of a UV spectrum (the actions `panel.xwc` and `panel.xwcs`; uv-spettro.js draw). @param {any} p */
 export function dressSpec(p) {
-  let b = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xwc"]'));
-  if (!b) {
-    const grp = p.el.querySelector('[data-a="xicb"]')?.closest(".tbg");
-    if (!grp) return;
-    b = document.createElement("button"); b.className = "bt xbb"; b.dataset.a = "xwc"; b.type = "button"; b.textContent = "XWC"; b.title = T("panel.wl.title");
-    b.onclick = e => press(p, e.shiftKey);
-    grp.append(b);
-  }
-  show(p, b, arrow(p, b), true);
+  const b = p.el.querySelector('[data-a="xwc"]'), l = p.el.querySelector('[data-a="xwcl"]');
+  if (b && l) show(p, b, l, true);
 }
