@@ -183,6 +183,7 @@ mod rawxic_json;
 pub mod rawscan;
 pub mod rawiso;
 mod rawiso_fig;
+mod rawiso_fig_draw;
 mod rawiso_found;
 mod rawiso_json;
 #[cfg(test)]

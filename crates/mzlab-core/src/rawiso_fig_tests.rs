@@ -86,7 +86,11 @@ fn figure_takes_only_one_and_every_text_key_has_a_text() {
         e.err().map(|e| e.key.to_string()).as_deref(),
         Some("err.raw.isotopes.param")
     );
-    let src = include_str!("rawiso_fig.rs");
+    let src = [
+        include_str!("rawiso_fig.rs"),
+        include_str!("rawiso_fig_draw.rs"),
+    ]
+    .concat();
     let keys: Vec<&str> = src
         .split('"')
         .filter(|s| s.starts_with("note.rawiso.fig.") && !s.contains(' ') && !s.ends_with('.'))

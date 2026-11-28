@@ -4,198 +4,8 @@
 //! here, so the site, the app and the CLI write the same bytes); colours are Okabe-Ito on white, as the other static figures.
 
 use crate::rawiso::Ask;
+use crate::rawiso_fig_draw::*;
 use crate::rawiso_found::{Found, Ratio, Test};
-
-const CATALOG: &str = include_str!("../../../mzlab/web/lang/en/figure-raw.js");
-
-const INK: &str = "#1a1a1a";
-const MUTED: &str = "#595959";
-const GRID: &str = "#d9d9d9";
-const REGION: &str = "#cfe3f3";
-/// Okabe-Ito: blue (M), orange (M+1), bluish green (M+2).
-const TRACE: [&str; 3] = ["#0072B2", "#E69F00", "#009E73"];
-const OK: &str = "#009E73";
-const BAD: &str = "#D55E00";
-const MAYBE: &str = "#7f7f7f";
-
-const W_T: &str = "960";
-const LEFT: f64 = 180.0;
-const RIGHT: f64 = 930.0;
-const PANEL_H: f64 = 84.0;
-const TRACES_TOP: f64 = 74.0;
-const RATIO_ROW: f64 = 92.0;
-
-/// The text of `key` in the catalogue (one `"key": "text",` per line), its `{name}` filled in one pass; the key itself when it has no text.
-#[inline(never)]
-fn tx(key: &str, args: &[(&str, String)]) -> String {
-    let sign = ["\"", key, "\": \""].concat();
-    let Some(row) = CATALOG
-        .lines()
-        .find_map(|l| l.trim_start().strip_prefix(sign.as_str()))
-    else {
-        return key.to_string();
-    };
-    let row = row.trim_end();
-    let text = row.strip_suffix(',').unwrap_or(row);
-    let text = text.strip_suffix('"').unwrap_or(text);
-    let mut out = String::new();
-    let mut rest = text;
-    while let Some(i) = rest.find('{') {
-        out += &rest[..i];
-        let tail = &rest[i..];
-        match tail.find('}').map(|j| (&tail[1..j], j)) {
-            Some((name, j)) if args.iter().any(|(n, _)| *n == name) => {
-                out += args.iter().find(|(n, _)| *n == name).map_or("", |a| &a.1);
-                rest = &tail[j + 1..];
-            }
-            _ => {
-                out.push('{');
-                rest = &tail[1..];
-            }
-        }
-    }
-    out + rest
-}
-
-#[inline(never)]
-fn esc(s: &str) -> String {
-    let mut o = String::with_capacity(s.len());
-    for c in s.chars() {
-        match c {
-            '&' => o.push_str("&amp;"),
-            '<' => o.push_str("&lt;"),
-            '>' => o.push_str("&gt;"),
-            '"' => o.push_str("&quot;"),
-            _ => o.push(c),
-        }
-    }
-    o
-}
-
-/// `v` rounded to `d` decimals, written from integers (no float formatter is linked into the `.wasm`), trailing zeros dropped, never `-0`.
-#[inline(never)]
-fn fx(v: f64, d: usize) -> String {
-    let mut p = 1_u64;
-    for _ in 0..d {
-        p *= 10;
-    }
-    let n = (v * p as f64).round() as i64;
-    let (ip, fp) = (n.unsigned_abs() / p, n.unsigned_abs() % p);
-    let mut s = if n < 0 {
-        "-".to_string()
-    } else {
-        String::new()
-    };
-    s += &ip.to_string();
-    if fp > 0 {
-        s += ".";
-        let f = fp.to_string();
-        s += &"0".repeat(d - f.len());
-        s += f.trim_end_matches('0');
-    }
-    s
-}
-
-/// One self-closing element from its attributes (numbers already written by `fx`): one copy of the drawing code instead of a `format!` per shape.
-#[inline(never)]
-fn el(o: &mut String, tag: &str, at: &[(&str, &str)]) {
-    o.push('<');
-    o.push_str(tag);
-    for (k, v) in at {
-        o.push(' ');
-        o.push_str(k);
-        o.push_str("=\"");
-        o.push_str(v);
-        o.push('"');
-    }
-    o.push_str("/>\n");
-}
-
-/// A line from (x1, y1) to (x2, y2).
-fn seg(o: &mut String, p: [f64; 4], stroke: &str, extra: &[(&str, &str)]) {
-    let n = p.map(|v| fx(v, 1));
-    let mut at = vec![
-        ("x1", n[0].as_str()),
-        ("y1", n[1].as_str()),
-        ("x2", n[2].as_str()),
-        ("y2", n[3].as_str()),
-        ("stroke", stroke),
-    ];
-    at.extend_from_slice(extra);
-    el(o, "line", &at);
-}
-
-/// A filled rectangle.
-fn block(o: &mut String, r: [f64; 4], fill: &str, extra: &[(&str, &str)]) {
-    let n = r.map(|v| fx(v, 1));
-    let mut at = vec![
-        ("x", n[0].as_str()),
-        ("y", n[1].as_str()),
-        ("width", n[2].as_str()),
-        ("height", n[3].as_str()),
-        ("fill", fill),
-    ];
-    at.extend_from_slice(extra);
-    el(o, "rect", &at);
-}
-
-/// Decimals that show the span of an axis in about three significant figures.
-#[inline(never)]
-fn decimals(span: f64) -> usize {
-    [(10.0, 0), (1.0, 1), (0.1, 2), (0.01, 3), (0.001, 4)]
-        .iter()
-        .find(|(m, _)| span >= *m)
-        .map_or(5, |(_, d)| *d)
-}
-
-#[inline(never)]
-fn text(x: f64, y: f64, size: u32, fill: &str, anchor: &str, bold: bool, s: &str) -> String {
-    let mut o = String::from("<text");
-    for (k, v) in [
-        ("x", fx(x, 1)),
-        ("y", fx(y, 1)),
-        ("font-size", size.to_string()),
-        ("fill", fill.to_string()),
-        ("text-anchor", anchor.to_string()),
-    ] {
-        o += &[" ", k, "=\"", &v, "\""].concat();
-    }
-    if bold {
-        o += " font-weight=\"700\"";
-    }
-    o + ">" + &esc(s) + "</text>\n"
-}
-
-/// The word and the colour of a verdict; an undetermined one carries its reason.
-#[inline(never)]
-fn verdict_of(t: &Test) -> (String, &'static str) {
-    let word = match t.verdict {
-        "consistent" => tx("note.rawiso.fig.verdict.consistent", &[]),
-        "inconsistent" => tx("note.rawiso.fig.verdict.inconsistent", &[]),
-        _ => {
-            let why = match t.reason {
-                "no_m" => tx("note.rawiso.fig.reason.no_m", &[]),
-                "no_quantum" => tx("note.rawiso.fig.reason.no_quantum", &[]),
-                "too_few_counts" => tx("note.rawiso.fig.reason.too_few_counts", &[]),
-                "between_limits" => tx("note.rawiso.fig.reason.between_limits", &[]),
-                _ => tx("note.rawiso.fig.reason.no_sigma", &[]),
-            };
-            [
-                &tx("note.rawiso.fig.verdict.undetermined", &[]),
-                " (",
-                &why,
-                ")",
-            ]
-            .concat()
-        }
-    };
-    let colour = match t.verdict {
-        "consistent" => OK,
-        "inconsistent" => BAD,
-        _ => MAYBE,
-    };
-    (word, colour)
-}
 
 /// One trace panel: the points of the scans of the window, scaled to the highest of the panel, the region shaded behind.
 #[inline(never)]
@@ -285,6 +95,71 @@ fn time_axis(o: &mut String, win: (f64, f64), y: f64) {
     );
 }
 
+/// The observed point with its sigma bar (when there is one), in the colour of the verdict.
+fn marks(o: &mut String, at: (f64, f64), bar: (f64, f64), sigma: bool, colour: &str) {
+    let mid = at.1;
+    if sigma {
+        seg(
+            o,
+            [bar.0, mid, bar.1, mid],
+            colour,
+            &[("stroke-width", "2.5")],
+        );
+        for x in [bar.0, bar.1] {
+            seg(
+                o,
+                [x, mid - 6.0, x, mid + 6.0],
+                colour,
+                &[("stroke-width", "2.5")],
+            );
+        }
+    }
+    let (cx, cy) = (fx(at.0, 1), fx(mid, 1));
+    el(
+        o,
+        "circle",
+        &[
+            ("cx", &cx),
+            ("cy", &cy),
+            ("r", "5"),
+            ("fill", colour),
+            ("stroke", "#ffffff"),
+            ("stroke-width", "1.5"),
+        ],
+    );
+}
+
+/// The words beside a ratio: observed with sigma, expected, z.
+fn ratio_words(r: Ratio, exp: Option<f64>, test: Option<&Test>) -> String {
+    let observed = match r.sigma {
+        Some(sg) => tx(
+            "note.rawiso.fig.observed",
+            &[("r", fx(r.r, 4)), ("s", fx(sg, 4))],
+        ),
+        None => tx("note.rawiso.fig.observedOnly", &[("r", fx(r.r, 4))]),
+    };
+    let mut words = vec![observed];
+    if let Some(e) = exp {
+        words.push(tx("note.rawiso.fig.expected", &[("e", fx(e, 4))]));
+    }
+    if let Some(z) = test.and_then(|t| t.z) {
+        words.push(tx("note.rawiso.fig.z", &[("z", fx(z, 2))]));
+    }
+    words.join("  ·  ")
+}
+
+/// The axis of a ratio row: the line, five ticks and their numbers.
+fn ratio_axis(o: &mut String, (lo, hi): (f64, f64), y1: f64) {
+    seg(o, [LEFT, y1, RIGHT, y1], MUTED, &[]);
+    let d = decimals((hi - lo) / 12.0);
+    for i in 0..=4 {
+        let v = lo + (hi - lo) * f64::from(i) / 4.0;
+        let x = LEFT + (RIGHT - LEFT) * f64::from(i) / 4.0;
+        seg(o, [x, y1, x, y1 + 4.0], MUTED, &[]);
+        *o += &text(x, y1 + 15.0, 10, MUTED, "middle", false, &fx(v, d));
+    }
+}
+
 /// One ratio row: the axis, the band of the consistent ratios around the expected one, the expected mark, the observed point with its sigma bar and the words.
 #[allow(clippy::too_many_arguments)]
 #[inline(never)]
@@ -299,15 +174,8 @@ fn ratio_row(
 ) {
     *o += &text(LEFT - 8.0, top + 14.0, 12, INK, "end", true, name);
     let Some(r) = obs else {
-        *o += &text(
-            LEFT,
-            top + 14.0,
-            12,
-            MUTED,
-            "start",
-            false,
-            &tx("note.rawiso.fig.ratio.none", &[]),
-        );
+        let none = tx("note.rawiso.fig.ratio.none", &[]);
+        *o += &text(LEFT, top + 14.0, 12, MUTED, "start", false, &none);
         return;
     };
     let s = r.sigma.unwrap_or(0.0);
@@ -335,14 +203,7 @@ fn ratio_row(
         );
         block(o, [a, y0, b - a, y1 - y0], REGION, &[]);
     }
-    seg(o, [LEFT, y1, RIGHT, y1], MUTED, &[]);
-    let d = decimals((hi - lo) / 12.0);
-    for i in 0..=4 {
-        let v = lo + (hi - lo) * f64::from(i) / 4.0;
-        let x = LEFT + (RIGHT - LEFT) * f64::from(i) / 4.0;
-        seg(o, [x, y1, x, y1 + 4.0], MUTED, &[]);
-        *o += &text(x, y1 + 15.0, 10, MUTED, "middle", false, &fx(v, d));
-    }
+    ratio_axis(o, (lo, hi), y1);
     if let Some(e) = exp {
         let x = x_of(e);
         seg(
@@ -353,44 +214,13 @@ fn ratio_row(
         );
     }
     let colour = test.map_or(TRACE[0], |t| verdict_of(t).1);
-    if s > 0.0 {
-        let (a, b) = (x_of(r.r - s), x_of(r.r + s));
-        seg(o, [a, mid, b, mid], colour, &[("stroke-width", "2.5")]);
-        for x in [a, b] {
-            seg(
-                o,
-                [x, mid - 6.0, x, mid + 6.0],
-                colour,
-                &[("stroke-width", "2.5")],
-            );
-        }
-    }
-    el(
+    marks(
         o,
-        "circle",
-        &[
-            ("cx", &fx(x_of(r.r), 1)),
-            ("cy", &fx(mid, 1)),
-            ("r", "5"),
-            ("fill", colour),
-            ("stroke", "#ffffff"),
-            ("stroke-width", "1.5"),
-        ],
+        (x_of(r.r), mid),
+        (x_of(r.r - s), x_of(r.r + s)),
+        s > 0.0,
+        colour,
     );
-    let observed = match r.sigma {
-        Some(sg) => tx(
-            "note.rawiso.fig.observed",
-            &[("r", fx(r.r, 4)), ("s", fx(sg, 4))],
-        ),
-        None => tx("note.rawiso.fig.observedOnly", &[("r", fx(r.r, 4))]),
-    };
-    let mut words = vec![observed];
-    if let Some(e) = exp {
-        words.push(tx("note.rawiso.fig.expected", &[("e", fx(e, 4))]));
-    }
-    if let Some(z) = test.and_then(|t| t.z) {
-        words.push(tx("note.rawiso.fig.z", &[("z", fx(z, 2))]));
-    }
     *o += &text(
         LEFT,
         top + 14.0,
@@ -398,12 +228,62 @@ fn ratio_row(
         INK,
         "start",
         false,
-        &words.join("  ·  "),
+        &ratio_words(r, exp, test),
     );
     if let Some(t) = test {
         let (w, c) = verdict_of(t);
         *o += &text(RIGHT, top + 14.0, 12, c, "end", true, &w);
     }
+}
+
+/// Title, subtitle (the formula) and the legend of the shaded region; returns the region to shade.
+fn heading(o: &mut String, ask: &Ask, f: &Found) -> Option<(f64, f64)> {
+    let title = tx(
+        "note.rawiso.fig.title",
+        &[
+            ("mz", fx(ask.mz, 4)),
+            ("a", fx(ask.rt.0, 2)),
+            ("b", fx(ask.rt.1, 2)),
+        ],
+    );
+    *o += &["<title>", &esc(&title), "</title>\n"].concat();
+    *o += &text(LEFT - 8.0, 26.0, 16, INK, "start", true, &title);
+    let sub = match &f.expected {
+        Some(e) => tx(
+            "note.rawiso.fig.formula",
+            &[
+                ("formula", e.formula.clone()),
+                ("adduct", e.adduct.clone()),
+                ("mz", fx(e.mz, 4)),
+            ],
+        ),
+        None => tx("note.rawiso.fig.noFormula", &[]),
+    };
+    *o += &text(LEFT - 8.0, 46.0, 12, MUTED, "start", false, &sub);
+    let region = f.region.as_ref().map(|r| (r.lo, r.hi));
+    let legend = match &f.region {
+        Some(r) if r.source == "peak" => tx(
+            "note.rawiso.fig.region.peak",
+            &[("a", fx(r.lo, 2)), ("b", fx(r.hi, 2))],
+        ),
+        Some(_) => tx("note.rawiso.fig.region.window", &[]),
+        None => tx("note.rawiso.fig.nodata", &[]),
+    };
+    let lx = fx(RIGHT - 14.0 - 6.0 - 6.0 * legend.chars().count() as f64, 1);
+    el(
+        o,
+        "rect",
+        &[
+            ("x", &lx),
+            ("y", "54"),
+            ("width", "14"),
+            ("height", "10"),
+            ("fill", REGION),
+            ("stroke", GRID),
+        ],
+    );
+    *o += &text(RIGHT, 63.0, 11, INK, "end", false, &legend);
+    region
 }
 
 /// The figure of one sample: `rt` and `y` are the whole sweep of the three bins (the window is cut here), `f` what was counted.
@@ -429,51 +309,7 @@ pub(crate) fn svg(ask: &Ask, f: &Found, rt: &[f64], y: &[Vec<f64>], centres: [f6
         "rect",
         &[("width", W_T), ("height", &hs), ("fill", "#ffffff")],
     );
-    let title = tx(
-        "note.rawiso.fig.title",
-        &[
-            ("mz", fx(ask.mz, 4)),
-            ("a", fx(ask.rt.0, 2)),
-            ("b", fx(ask.rt.1, 2)),
-        ],
-    );
-    o += &["<title>", &esc(&title), "</title>\n"].concat();
-    o += &text(LEFT - 8.0, 26.0, 16, INK, "start", true, &title);
-    let sub = match &f.expected {
-        Some(e) => tx(
-            "note.rawiso.fig.formula",
-            &[
-                ("formula", e.formula.clone()),
-                ("adduct", e.adduct.clone()),
-                ("mz", fx(e.mz, 4)),
-            ],
-        ),
-        None => tx("note.rawiso.fig.noFormula", &[]),
-    };
-    o += &text(LEFT - 8.0, 46.0, 12, MUTED, "start", false, &sub);
-    let region = f.region.as_ref().map(|r| (r.lo, r.hi));
-    let legend = match &f.region {
-        Some(r) if r.source == "peak" => tx(
-            "note.rawiso.fig.region.peak",
-            &[("a", fx(r.lo, 2)), ("b", fx(r.hi, 2))],
-        ),
-        Some(_) => tx("note.rawiso.fig.region.window", &[]),
-        None => tx("note.rawiso.fig.nodata", &[]),
-    };
-    let lx = fx(RIGHT - 14.0 - 6.0 - 6.0 * legend.chars().count() as f64, 1);
-    el(
-        &mut o,
-        "rect",
-        &[
-            ("x", &lx),
-            ("y", "54"),
-            ("width", "14"),
-            ("height", "10"),
-            ("fill", REGION),
-            ("stroke", GRID),
-        ],
-    );
-    o += &text(RIGHT, 63.0, 11, INK, "end", false, &legend);
+    let region = heading(&mut o, ask, f);
     let labels = [
         tx("note.rawiso.fig.trace.m", &[("mz", fx(centres[0], 0))]),
         tx("note.rawiso.fig.trace.m1", &[("mz", fx(centres[1], 0))]),
