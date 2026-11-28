@@ -30,9 +30,16 @@ pub fn series_recipe(
     let mut ix = open_one(read, 0, sizes[0])?;
     let mut r = recipe_for(text, &mut ix)?;
     let (mut facts, mut kinds, mut wanted) = (Vec::new(), Vec::new(), Vec::new());
+    // a unit-resolution series fills each file at the floor its own profile gave (`run::with_file_floors`, the rule of `flow run`)
+    let mut floors = Vec::new();
     for (k, &size) in sizes.iter().enumerate() {
         if k > 0 {
             ix = open_one(read, k, size)?;
+            if r.detect.axis.is_da() {
+                floors.push(recipe_for(text, &mut ix)?.fill.floor);
+            }
+        } else {
+            floors.push(r.fill.floor);
         }
         let f = file_facts(&ix);
         let name = ix.source.get("name").and_then(|v| v.str()).unwrap_or("");
@@ -42,6 +49,9 @@ pub fn series_recipe(
     }
     mzlab_feat::nature::one_kind(&kinds)?;
     r.screen.centroid_files = wanted;
+    if r.detect.axis.is_da() {
+        r.screen.set_file_floors(floors);
+    }
     Ok((r, facts))
 }
 

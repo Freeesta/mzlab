@@ -89,12 +89,14 @@ pub(crate) fn mzml(seed: u64) -> Vec<u8> {
     w.finish().unwrap()
 }
 
-fn fixture(tag: &str) -> (PathBuf, Vec<(String, Vec<u8>)>) {
+/// `varied`: each file has its own noise (and so its own estimates); otherwise the three files are the same, so that a count of rows is exact.
+fn fixture(tag: &str, varied: bool) -> (PathBuf, Vec<(String, Vec<u8>)>) {
     let dir = std::env::temp_dir().join(format!("mzlab_cli_nom_{tag}_{}", std::process::id()));
     let _ = std::fs::remove_dir_all(&dir);
     std::fs::create_dir_all(dir.join("data")).unwrap();
-    let files: Vec<(String, Vec<u8>)> =
-        (0..3u64).map(|k| (format!("n{k}.mzML"), mzml(5))).collect();
+    let files: Vec<(String, Vec<u8>)> = (0..3u64)
+        .map(|k| (format!("n{k}.mzML"), mzml(if varied { 5 + k } else { 5 })))
+        .collect();
     for (n, b) in &files {
         std::fs::write(dir.join("data").join(n), b).unwrap();
     }
@@ -138,7 +140,7 @@ fn rows_near(dir: &std::path::Path, mz: f64) -> usize {
 
 #[test]
 fn the_nominal_preset_gives_the_same_bytes_in_flow_run_the_app_and_the_browser_runner() {
-    let (dir, files) = fixture("parity");
+    let (dir, files) = fixture("parity", true);
     let run = |tag: &str, set: &[&str]| {
         let out = dir.join(tag);
         let (plan, data) = (dir.join("plan.json"), dir.join("data"));
@@ -180,7 +182,7 @@ fn the_nominal_preset_gives_the_same_bytes_in_flow_run_the_app_and_the_browser_r
 
 #[test]
 fn the_nominal_preset_keeps_the_low_mass_products_and_one_row_per_ion() {
-    let (dir, _) = fixture("rows");
+    let (dir, _) = fixture("rows", false);
     let run = |tag: &str, set: &[&str]| {
         let out = dir.join(tag);
         let (plan, data) = (dir.join("plan.json"), dir.join("data"));
@@ -206,3 +208,6 @@ fn the_nominal_preset_keeps_the_low_mass_products_and_one_row_per_ion() {
     );
     let _ = std::fs::remove_dir_all(&dir);
 }
+
+#[path = "flow_recipe_tests.rs"]
+mod recipe;

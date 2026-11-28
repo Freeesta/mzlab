@@ -64,6 +64,25 @@ fn sink(out: &str, name: &str) -> Hashing<FileSink> {
     ))
 }
 
+/// The recipe the alignment of `files` runs with: the one of the first index and, on the unit axis, the gap-filling floor each file's own recipe gives
+/// (`Screen::file_floors`), as `series_recipe` of the `.wasm` does.
+fn series_recipe(recipe: &str, files: &[String]) -> mzlab_feat::recipe::Recipe {
+    let mut r = run::recipe_for(recipe, &mut open(&files[0])).expect("recipe");
+    if r.detect.axis.is_da() {
+        let floors = files
+            .iter()
+            .map(|p| {
+                run::recipe_for(recipe, &mut open(p))
+                    .expect("recipe")
+                    .fill
+                    .floor
+            })
+            .collect();
+        r.screen.set_file_floors(floors);
+    }
+    r
+}
+
 /// The pipeline under a budget, outputs to files; prints the same lines.
 #[allow(clippy::too_many_arguments)]
 fn budgeted(
@@ -77,7 +96,7 @@ fn budgeted(
     pmz: f64,
     prt: f64,
 ) {
-    let r = run::recipe_for(recipe, &mut open(&files[0])).expect("recipe");
+    let r = series_recipe(recipe, files);
     let budget = MemBudget::mb(mb);
     for p in files {
         let mut s = sink(out, &format!("{}.mzfeatf", base(p)));
@@ -167,7 +186,7 @@ fn main() {
             &files, &recipe, &out, budget_mb, &parent, &structure, &rules, pmz, prt,
         );
     }
-    let r = run::recipe_for(&recipe, &mut open(&files[0])).expect("recipe");
+    let r = series_recipe(&recipe, &files);
     let t0 = Instant::now();
     let mut stored = Vec::new();
     for p in &files {
