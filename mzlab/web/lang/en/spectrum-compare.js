@@ -55,5 +55,14 @@ I18N.add("en", {
   "spcmp.matched": "Matched ions",
   "spcmp.onlyA": "Only in A",
   "spcmp.onlyB": "Only in B",
-  "spcmp.none": "None"
+  "spcmp.none": "None",
+  "spcmp.mirror.aria": "Mirror plot of the two spectra: A above, B below",
+  "spcmp.mirror.desc": "Mirror plot: {a, plural, one {# ion} other {# ions}} of A above, {b, plural, one {# ion} other {# ions}} of B below, {n, plural, one {# matched ion} other {# matched ions}} joined by lines.",
+  "spcmp.mirror.col.side": "Spectrum",
+  "spcmp.mirror.col.state": "Ion",
+  "spcmp.mirror.matched": "Matched",
+  "spcmp.mirror.only": "Only in this spectrum",
+  "spcmp.mirror.key.matched": "Matched: {n}",
+  "spcmp.mirror.key.only": "Only in one spectrum",
+  "spcmp.mirror.rel": "Relative intensity (%)"
 });
