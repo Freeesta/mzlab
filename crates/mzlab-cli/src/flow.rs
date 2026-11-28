@@ -99,6 +99,7 @@ pub fn steps() -> Vec<Step> {
     all.extend([
         crate::flow_quant::quant_step(),
         crate::flow_curve::curve_step(),
+        crate::flow_curve::kinetics::kinetics_step(),
         crate::flow_massacc::massacc_step(),
         crate::flow_quant_targets::quant_targets_step(),
     ]);
@@ -420,6 +421,7 @@ fn all_executors() -> impl Iterator<Item = &'static (&'static str, Exec)> {
         .chain(crate::flow_group::EXECUTORS)
         .chain(crate::flow_companions::EXECUTORS)
         .chain(crate::flow_union::EXECUTORS)
+        .chain(crate::flow_curve::kinetics::EXECUTORS)
 }
 
 /// Does the native runner execute the step `id`?

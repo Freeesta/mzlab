@@ -12,14 +12,14 @@ use super::quant::{fields, param};
 const PEAK_OK: [&str; 2] = ["ok", "edge"];
 
 /// One CSV: its delimiter, lower-case header and rows with their line numbers.
-struct Csv {
-    d: char,
-    head: Vec<String>,
-    rows: Vec<(usize, Vec<String>)>,
+pub(super) struct Csv {
+    pub(super) d: char,
+    pub(super) head: Vec<String>,
+    pub(super) rows: Vec<(usize, Vec<String>)>,
 }
 
 impl Csv {
-    fn read(bytes: &[u8], bad: impl Fn(String) -> Error) -> Result<Csv> {
+    pub(super) fn read(bytes: &[u8], bad: impl Fn(String) -> Error) -> Result<Csv> {
         let text = String::from_utf8_lossy(bytes);
         let mut lines = text
             .lines()
@@ -35,11 +35,11 @@ impl Csv {
         let rows = lines.map(|(n, l)| (n, fields(l, d))).collect();
         Ok(Csv { d, head, rows })
     }
-    fn col(&self, name: &str) -> Option<usize> {
+    pub(super) fn col(&self, name: &str) -> Option<usize> {
         self.head.iter().position(|h| h == name)
     }
     /// A number of a cell; a decimal comma is read when the delimiter is not `,`. `Ok(None)` for an empty cell.
-    fn num(&self, s: &str) -> std::result::Result<Option<f64>, ()> {
+    pub(super) fn num(&self, s: &str) -> std::result::Result<Option<f64>, ()> {
         if s.is_empty() {
             return Ok(None);
         }
@@ -56,7 +56,7 @@ impl Csv {
     }
 }
 
-fn cell(f: &[String], c: Option<usize>) -> &str {
+pub(super) fn cell(f: &[String], c: Option<usize>) -> &str {
     c.and_then(|c| f.get(c)).map(String::as_str).unwrap_or("")
 }
 

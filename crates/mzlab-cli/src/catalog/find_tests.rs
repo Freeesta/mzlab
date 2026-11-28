@@ -100,6 +100,7 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
     ("record the provenance of a run", "flow record"),
     ("list the feature tables a run made", "flow tables"),
     ("calibration curve with LOD and LOQ", "quant.curve"),
+    ("first order rate constant of a time series", "quant.kinetics"),
     (
         "what is in the spectrum of a time window that is not in the background",
         "raw scan",

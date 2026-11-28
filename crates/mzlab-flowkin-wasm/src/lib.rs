@@ -1,0 +1,53 @@
+//! wasm-bindgen bridge of `quant.kinetics@1`: the text is `mzlab_ops::run::table::kinetics::kinetics_text`, the function `flow run` calls, so the browser and
+//! the CLI write the same bytes. A `.wasm` of its own (`flowkin`): inside `flowcal` the fit and its statistics grew that module +24 %, over the per-PR rule.
+//! Errors are JSON `{"error_key","params"}` strings.
+#![forbid(unsafe_code)]
+use mzlab_core::error::Error;
+use mzlab_core::json::{Out, Value};
+use mzlab_ops::run::table::kinetics;
+use wasm_bindgen::prelude::*;
+
+/// Stable version of the bridge: the page checks that the loaded `.wasm` is the one it was built with.
+const BRIDGE: &str = "flowkin/1";
+
+fn js_err(e: Error) -> JsValue {
+    JsValue::from_str(&e.to_json())
+}
+
+fn params_of(params_json: &str) -> std::result::Result<Vec<(String, Value)>, JsValue> {
+    Ok(
+        match mzlab_core::json::parse(params_json.as_bytes()).map_err(js_err)? {
+            Value::Obj(o) => o,
+            _ => Vec::new(),
+        },
+    )
+}
+
+#[wasm_bindgen]
+pub fn version() -> String {
+    BRIDGE.to_string()
+}
+
+/// `kinetics_text` for the browser: `uv` is empty when the step has no UV input; the answer is `{"kinetics": <kinetics-series/1 text>, "warnings": [<warn.* keys>]}`.
+#[wasm_bindgen]
+pub fn flow_kinetics(
+    params_json: &str,
+    areas: &[u8],
+    samples: &[u8],
+    uv: &[u8],
+) -> std::result::Result<String, JsValue> {
+    let params = params_of(params_json)?;
+    let (json, warnings) = kinetics::kinetics_text(&params, areas, samples, uv).map_err(js_err)?;
+    let mut o = Out::default();
+    o.raw("{\"kinetics\":");
+    o.str(&json);
+    o.raw(",\"warnings\":[");
+    for (k, w) in warnings.iter().enumerate() {
+        if k > 0 {
+            o.raw(",");
+        }
+        o.str(w);
+    }
+    o.raw("]}");
+    Ok(o.0)
+}

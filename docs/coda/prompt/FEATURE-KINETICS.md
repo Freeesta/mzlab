@@ -12,6 +12,6 @@ Read docs/coda/BRIEF.md.
 
 **Done means.** 1. `kin-series/1` in Rust (values, mean, SD, n, state per point; the SD choice logged). 2. The slot reuses the existing chart code and the data table (key T). 3. wasm + native + CLI byte test, agent catalogs.
 
-**Out of scope.** Fits of k (TIMESERIES).
+**Out of scope.** Fits of k (the step `quant.kinetics`).
 
 **Follow-ups.** Closing step of the brief: delete your row and this file; delete your id from the `needs first` cells; name each concrete follow-up in the PR body and add its row and prompt.
