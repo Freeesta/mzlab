@@ -20,7 +20,8 @@ C = "E.panels.find(q=>q.type==='chrom'&&q.kind==='pda'&&q.mz0==null)"
 UVS = "E.panels.filter(q=>q.uv)"
 def dbl(pg, sel_js, x):
     """double click on the panel `sel_js` at `x` of its x axis, in the middle of the plot"""
-    box = pg.evaluate(f"(()=>{{const p={sel_js};p.cv.scrollIntoView({{block:'center'}});const b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X({x}),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
+    pg.evaluate(f"{sel_js}.cv.scrollIntoView({{block:'center'}})"); frames(pg, 3)      # the layout settles (headers fitted, panel redrawn) before the point is measured
+    box = pg.evaluate(f"(()=>{{const p={sel_js},b=p.cv.getBoundingClientRect(),a=p._a;return {{x:b.x+a.X({x}),y:b.y+M.t+(a.H-M.t-M.b)/2}}}})()")
     pg.mouse.dblclick(box["x"], box["y"])
 r = Run(port=8869, wd="/tmp/wd_uv_overlay")
 try:

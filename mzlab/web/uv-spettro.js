@@ -116,7 +116,7 @@ export async function draw(p) {
   const d = ser[0].d, nm = ser[0].nm, y = ser[0].y;
   const full = [minOf(ser.map(s => s.nm[0])), maxOf(ser.map(s => s.nm[s.nm.length - 1]))], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let lo = 0, hi = 0; for (const s of ser) for (const v of s.y) { if (v < lo) lo = v; if (v > hi) hi = v; }
-  const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, hi + pad];
+  const pad = (hi - lo || 1) * (window.ETPK && ETPK.on(p, 1) ? 0.16 : 0.06), yfull = [lo < 0 ? lo - pad : 0, (hi + pad) / (1 - (p._legPad || 0))];      // _legPad: room above the curve when no corner is free for the boxed legend (legende.js)
   if (p.lock && p.lock.pending) { p.lock.y = yfull[1]; p.lock.pending = false; }
   const y0 = p.zoomY ? p.zoomY[0] : yfull[0], y1 = p.zoomY ? p.zoomY[1] : p.lock && p.lock.y != null ? p.lock.y : yfull[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b, X = (/** @type {number} */ v) => M.l + (v - x0) / (x1 - x0) * pw, Y = (/** @type {number} */ v) => H - M.b - (v - y0) / (y1 - y0) * ph;
@@ -141,7 +141,10 @@ export async function draw(p) {
       const rows = ser.length > 1 ? ser.map(s => `<div><i style="background:${s.f.color}"></i>${EH(s.f.label)} <b>${T("hov.mau", { v: s.y[near(s.nm, w)].toFixed(2) })}</b></div>`).join("") : `<div>${T("map.hov.mean")}: <b>${T("hov.mau", { v: y[i].toFixed(2) })}</b></div>`;
       return { px: X(nm[i]), html: `<b>${T("hov.nm", { v: nm[i].toFixed(0) })}</b>${rows}` }; } };
   if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima of the first sample (etichette-picchi.js)
-  p.leg.innerHTML = ser.map(s => h`<span><i style="background:${s.f.color}"></i>${s.f.label}</span>`).join(" ") + h` · <span>${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
+  p.leg.innerHTML = h`<span class="uvfl">${raw(ser.map(s => h`<span><i style="background:${s.f.color}"></i>${s.f.label}</span>`).join(" "))}</span><span class="uvsep"> · </span><span class="uvrt">${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = provenance(p, d.rt0);
+  g.save(); g.font = fpx(12); const tw = g.measureText(T("uv.axis.x")).width; g.restore();      // the legend on the title row stays right of the x title; what does not fit is cut, the file names first
+  p.leg.style.maxWidth = Math.max(0, W - M.r - 6 - ((M.l + W - M.r) / 2 + tw / 2 + 8)) + "px"; p.leg.classList.remove("uvnarrow");
+  if ([...p.leg.children].some(c => c.scrollWidth > c.clientWidth + 1)) p.leg.classList.add("uvnarrow");
   p.r0 = d.rt0; p.r1 = d.rt1;
 }
