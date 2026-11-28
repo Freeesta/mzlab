@@ -1,25 +1,29 @@
 // @ts-strict
 "use strict";
-// Panel header buttons as registry actions (barra, scope "panel") and ONE renderer, AZIONI.bar; AZIONI.refresh (was syncTb) redraws their state from the panel p.
-// The shared panel bar (pbar.js) draws the same actions with AZIONI.bar(c, host, pb): `pb` groups them; rows with `bonly` exist only there.
+// Panel header buttons as registry actions (barra, scope "panel") and ONE renderer, AZIONI.bar; AZIONI.refresh redraws their state from the panel p.
+// The shared bar (pbar.js) draws them too, AZIONI.bar(c, host, pb): `pb` groups them; `bonly` rows exist only there.
 (() => {
-  const T = (/** @type {string} */ k) => I18N.t(k), G = ["xb", "v", "l", "s", "i", "t", "x", "o", "xp", "tp"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
+  const T = (/** @type {string} */ k) => I18N.t(k), G = ["dd", "xb", "v", "l", "s", "i", "t", "x", "tb", "o", "xp", "tp"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
   /** map zoom and gestures: the commands of mappa.js (the header keeps its .mznav) @param {string} id */
   const nav = id => ({ bonly: 1, run: (/** @type {Ctx} */ c) => MAPPA.runCmd(id, MAPPA.ad2(c.p, null)) });
   const navIc = (/** @type {string} */ id) => () => MAPPA.SV(MAPPA.ICO[/** @type {any} */ (AZIONI.get(id)).ic]);
   const IC_LENS = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>', IC_TAB = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true" focusable="false"><rect x="1.5" y="2.5" width="13" height="11" rx="1.2"/><path d="M1.5 6h13M1.5 9.7h13M6 6v7.5"/></svg>';
-  /** the Shift key of the click (one more trace); the XWC band is opened by xwc.js, loaded on first use (eventi.js) */
+  /** Shift = one more trace; xwc.js loads on first use */
   const shift = (/** @type {Ctx} */ c) => !!(c.e && c.e.shiftKey), uv = (/** @type {Ctx} */ c) => !!c.p.uv, xw = (/** @type {Ctx} */ c) => xwc().then((/** @type {any} */ m) => m.press(c.p, shift(c))), lens = (/** @type {Ctx} */ c) => !!window.XICBTN && XICBTN.lens.ok(c.p);
+  const B = ' type="button"', P = ' aria-haspopup="dialog" aria-expanded="false"';
+  const W = (/** @type {string} */ n) => /** @type {any} */ (window)[n];
   const mode = (/** @type {string} */ m) => (/** @type {Ctx} */ c) => c.p._mode(m);
   /** @typedef {any} Ctx
-   * @typedef {{ toggle?: number, bonly?: number, hid?: number, bid?: string, visible?: (c: Ctx) => boolean, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
+   * @typedef {{ toggle?: number, bonly?: number, hid?: number, gh?: number, bid?: string, visible?: (c: Ctx) => boolean, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: (c: Ctx) => string, tip?: (c: Ctx) => string, checked?: (c: Ctx) => any, available?: (c: Ctx) => boolean, run?: (c: Ctx) => any }} Opt */
   // [data-a, views, header group, title key, aria key ("=": the title), text or icon, class, Opt]
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
+    ["ddaw", ["spec"], "dd", "dda.win.wait", "", "", "bt ddaw", { hid: 1, gh: 1, at: ' aria-haspopup="listbox" aria-expanded="false"', available: c => !!c.p._dws, run: c => W("DDAELENCO").open(c.p, c.b) }],
+    ["ms2tri", ["chrom", "xic"], "dd", "ctl.ms2tri.title", "ctl.ms2tri", () => T("dda.tri.btn"), "bt tgl hdkeep", { hid: 1, gh: 1, toggle: 1, at: B, available: c => !!c.p._tri, checked: c => !!c.p.ms2tri, run: c => W("DDAELENCO").flip(c.p) }],
     ["xicb", ["spec"], "xb", "xicbtn.title", "xicbtn.aria", "XIC", "bt xbb", { toggle: 1, run: c => XICBTN.press(c.p, shift(c)) }],
-    ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: ' hidden aria-haspopup="dialog" aria-expanded="false"', run: c => XICBTN.openPop(c.p) }],
-    ["xwc", ["spec"], "xb", "panel.wl.title", "", "XWC", "bt xbb", { visible: uv, at: ' type="button"', run: xw }],
-    ["xwcs", ["spec"], "xb", "xwc.pop.open", "=", "▾", "bt xbl", { bid: "xwcl", visible: uv, at: ' type="button" hidden aria-haspopup="dialog" aria-expanded="false"', run: c => xwc().then((/** @type {any} */ m) => m.pop(c.p, c.b)) }],
+    ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: " hidden" + P, run: c => XICBTN.openPop(c.p) }],
+    ["xwc", ["spec"], "xb", "panel.wl.title", "", "XWC", "bt xbb", { visible: uv, at: B, run: xw }],
+    ["xwcs", ["spec"], "xb", "xwc.pop.open", "=", "▾", "bt xbl", { bid: "xwcl", visible: uv, at: B + " hidden" + P, run: c => xwc().then((/** @type {any} */ m) => m.pop(c.p, c.b)) }],
     ["izoom", LENS, "v", "panel.izoom.title", "", () => IC_ZOOM, "bt", { checked: c => c.p.imode === "zoom", run: mode("zoom") }],
     ["fit", ALL, "v", "panel.fit.title", "", () => IC_FIT, "bt", { at: " disabled", run: c => { const p = c.p; pushZh(p); p.zoom = null; p.zoomY = null; if (p.type === "spec") p.lock = null; draw(p); uiSave(); } }],
     ["mapzin", ["map"], "v", "cmd.mapzin.tip", "cmd.mapzin.name", navIc("mapzin"), "bt", nav("mapzin")],
@@ -31,21 +35,22 @@
     ["rel", ["spec"], "s", "panel.rel.title", "", "%", "bt", { checked: c => !!specRel(c.p), run: c => { const p = c.p; COMMANDS.run("spec.display", p, () => { p.rel = !specRel(p); }); AZIONI.refresh(c); draw(p); uiSave(); } }],
     ["lock", ["spec"], "s", "lock.off.title", "=", () => IC_UNLOCK, "bt", { toggle: 1, run: c => toggleLock(c.p) }],
     ["iauto", LENS, "i", "panel.iauto.title", "", () => IC_AUTO, "bt", { checked: c => c.p.imode === "auto", run: mode("auto") }],
-    ["iall", LENS, "i", "panel.iall.title", "=", "&#9662;", "bt iall", { at: ' type="button" aria-haspopup="true"', run: c => intMenu(c.p, c.e) }],
+    ["iall", LENS, "i", "panel.iall.title", "=", "&#9662;", "bt iall", { at: B + ' aria-haspopup="true"', run: c => intMenu(c.p, c.e) }],
     ["iman", LENS, "i", "panel.iman.title", "", () => IC_MAN, "bt", { checked: c => c.p.imode === "man", run: mode("man") }],
     ["idel", LENS, "i", "panel.idel.title", "", () => IC_DEL_INT, "bt", { checked: c => c.p.imode === "idel", run: mode("idel") }],
     ["intf", LENS, "i", "panel.intf.title", "", "", "bt", { tag: "select", at: " hidden", run: c => { c.p.intf = c.e.target.value; } }],
     ["iclr", LENS, "i", "panel.iclr.title", "", () => T("panel.iclr"), "bt", { at: " hidden", run: c => { if (c.p.ints.length) delInts(c.p, [...c.p.ints]); } }],
-    ["smooth", LENS, "t", "ctl.smooth.title", "ctl.smooth", () => IC_SMOOTH, "bt tgs", { toggle: 1, at: ' type="button"', checked: c => !!c.p.smooth, tip: c => T(ESP.mrm({ type: c.p.type }) ? "ctl.mrm.smooth.title" : "ctl.smooth.title"),
+    ["smooth", LENS, "t", "ctl.smooth.title", "ctl.smooth", () => IC_SMOOTH, "bt tgs", { toggle: 1, at: B, checked: c => !!c.p.smooth, tip: c => T(ESP.mrm({ type: c.p.type }) ? "ctl.mrm.smooth.title" : "ctl.smooth.title"),
       run: c => { const p = c.p; pushFields(p, "history.smooth"); p.smooth = !p.smooth; AZIONI.refresh(c); draw(p); uiSave(); } }],
-    ["log", LENS, "t", "ctl.log.title", "ctl.log.aria", () => T("ctl.log"), "bt tgl", { toggle: 1, at: ' type="button"', checked: c => !!c.p.log, available: c => !(MS(c) || (c.p.type === "chrom" && c.p.kind === "pda")), tip: c => T(MS(c) ? "ctl.noMs2" : "ctl.log.title"),
+    ["log", LENS, "t", "ctl.log.title", "ctl.log.aria", () => T("ctl.log"), "bt tgl", { toggle: 1, at: B, checked: c => !!c.p.log, available: c => !(MS(c) || (c.p.type === "chrom" && c.p.kind === "pda")), tip: c => T(MS(c) ? "ctl.noMs2" : "ctl.log.title"),
       run: c => { const p = c.p; COMMANDS.run("panel.source", p, () => { p.log = !p.log; }); AZIONI.refresh(c); draw(p); uiSave(); } }],
     ["xic", ["chrom"], "x", "panel.xic.title", "", c => c.p.kind === "pda" ? "XWC" : "XIC", "bt", { available: c => !MS(c), ti0: c => T(c.p.kind === "pda" ? "panel.wl.title" : MS(c) ? "panel.xic.off" : "panel.xic.title"), run: c => c.p.kind === "pda" ? xw(c) : openXic(null, { after: c.p }) }],
-    ["xwcl", ["chrom"], "x", "xwc.pop.open", "=", "▾", "bt xbl", { at: ' type="button" hidden aria-haspopup="dialog" aria-expanded="false"', run: c => xwc().then((/** @type {any} */ m) => m.pop(c.p, c.b)) }],
+    ["xwcl", ["chrom"], "x", "xwc.pop.open", "=", "▾", "bt xbl", { at: B + " hidden" + P, run: c => xwc().then((/** @type {any} */ m) => m.pop(c.p, c.b)) }],
+    ["ticbg", ["chrom"], "tb", "ctl.ticbg.on", "=", "", "bt tgl", { hid: 1, gh: 1, toggle: 1, at: B + P, available: c => W("TICBG")?.applies(c.p), checked: c => !!W("TICBG")?.on(c.p), run: c => W("TICBG").press(c.p) }],
     ["dl", ALL, "o", "panel.dl.title", "=", () => IC_DL.replace(";margin-right:4px", ""), "bt", { run: c => dlMenu(c.p, c.e) }],
     ["xicp", ["spec"], "xp", "xiclens.toggle", "=", IC_LENS, "bt xbp", { toggle: 1, hid: 1, visible: c => !uv(c), checked: c => !!UIP.xicLens && lens(c), available: lens, run: () => XICBTN.setLens(!UIP.xicLens) }],
-    ["tabp", ["spec"], "tp", "tabp.btn.title", "=", IC_TAB, "bt tpb", { at: ' type="button" aria-haspopup="dialog" aria-expanded="false"', run: c => TABPICCHI.open(c.p) }],
-    ["more", ALL, "e", "panel.more.title", "=", "⋯", "bt hmb", { at: ' type="button" hidden aria-haspopup="true" aria-expanded="false"', after: () => h`<span class="hmore" hidden role="group" aria-label="${T("panel.more.title")}"></span>` }],
+    ["tabp", ["spec"], "tp", "tabp.btn.title", "=", IC_TAB, "bt tpb", { at: B + P, run: c => TABPICCHI.open(c.p) }],
+    ["more", ALL, "e", "panel.more.title", "=", "⋯", "bt hmb", { at: B + ' hidden aria-haspopup="true" aria-expanded="false"', after: () => h`<span class="hmore" hidden role="group" aria-label="${T("panel.more.title")}"></span>` }],
     ["max", ALL, "e", "panel.max.title", "", () => IC_FS, "bt fsb", { run: c => c.p._setMax(!c.p.el.classList.contains("max")) }],
     ["close", ALL, "e", "panel.close", "", "&times;", "x", { nodata: 1, run: c => closePanelWithUndo(c.p) }],
   ];
@@ -75,6 +80,7 @@
       const b = /** @type {HTMLButtonElement | null} */ (el.querySelector(a.nodata ? ".x" : `.tbs [data-a="${a.bid}"]`)); if (!b) continue;
       const ok = !a.available || a.available(c), on = !!a.checked && a.checked(c) && ok;
       if (a.available) { if (a.hid) b.hidden = !ok; else b.disabled = !ok; }
+      const g = a.gh && b.parentElement; if (g && g.hidden === !!ok) { g.hidden = !ok; fitHdSoon(c.p); }   // the group goes with its only button
       if (a.checked) { b.classList.toggle("on", on); if (a.toggle) b.setAttribute("aria-pressed", String(on)); }
       if (a.tip) b.title = a.tip(c);
     }

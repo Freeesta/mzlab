@@ -35,39 +35,28 @@ export async function series(p, fl) {
   }));
 }
 
-/** the button, made once in its own group before the download one; hidden on a trace the route does not serve @param {Bag} p */
+/** the button is the registry action `panel.ticbg` (azioni-barra.js); this wires its pointer and keys once and redraws its state when what the route serves or the switch changed @param {Bag} p */
 export function mount(p) {
-  let b = /** @type {HTMLButtonElement | null} */ (p.el && p.el.querySelector('[data-a="ticbg"]'));
-  if (!b && p.el) {
-    b = document.createElement("button");
-    b.type = "button"; b.className = "bt tgl"; b.dataset.a = "ticbg"; b.innerHTML = IC;
-    b.setAttribute("aria-haspopup", "dialog"); b.setAttribute("aria-expanded", "false");
-    wire(p, b);
-    const g = document.createElement("span"); g.className = "tbg"; g.append(b);
-    const dl = /** @type {(HTMLElement & Bag) | null | undefined} */ (p.el.querySelector('[data-a="dl"]')?.closest(".tbg"));
-    // a tight header may hold the download group in «⋯»: the button goes before the place it left, in the header (fitHd then moves it if needed), never into the menu untracked
-    const at = dl && dl.closest(".hmore") ? dl._ph : dl;
-    if (at) at.before(g); else p.el.querySelector(".tbs")?.append(g);
-    fitHdSoon(/** @type {any} */ (p));
-  }
+  const b = /** @type {HTMLButtonElement | null} */ (p.el && p.el.querySelector('[data-a="ticbg"]'));
   if (!b) return;
-  const g = /** @type {HTMLElement} */ (b.parentElement), show = applies(p), pressed = on(p);
-  if (g.hidden === show) { g.hidden = !show; fitHdSoon(/** @type {any} */ (p)); }
-  b.classList.toggle("on", pressed); b.setAttribute("aria-pressed", String(pressed));
-  const tip = T(pressed ? "ctl.ticbg.off" : "ctl.ticbg.on");
+  if (!b.dataset.w) { b.dataset.w = "1"; b.innerHTML = IC; wire(p, b); }   // the icon comes with this lazy module: the button is hidden until now
+  const sig = `${applies(p)}${on(p)}`, tip = T(on(p) ? "ctl.ticbg.off" : "ctl.ticbg.on");
+  if (p._tbSig !== sig) { p._tbSig = sig; AZIONI.refresh({ view: "chrom", p }); }
   if (b.title !== tip) { b.title = tip; b.setAttribute("aria-label", tip); }
 }
 
-/** click toggles; right click, a long press, ↓, Shift+F10 or the menu key open the options @param {Bag} p @param {HTMLButtonElement} b */
+/** the click of the action: toggles, unless it ends a long press that opened the options @param {Bag} p */
+export function press(p) {
+  if (p._tbLong) { p._tbLong = false; return; }
+  p.ticbg = { ...(p.ticbg || {}), on: !on(p) }; close(p); draw(p);
+}
+
+/** a long press, right click, ↓, Shift+F10 or the menu key open the options (the click itself is `press`) @param {Bag} p @param {HTMLButtonElement} b */
 function wire(p, b) {
-  let timer = 0, long = false;
+  let timer = 0;
   const stop = () => { clearTimeout(timer); timer = 0; };
-  b.addEventListener("pointerdown", e => { if (e.button !== 0) return; long = false; stop(); timer = window.setTimeout(() => { long = true; open(p, b); }, LONG_MS); });
+  b.addEventListener("pointerdown", e => { if (e.button !== 0) return; p._tbLong = false; stop(); timer = window.setTimeout(() => { p._tbLong = true; open(p, b); }, LONG_MS); });
   for (const t of ["pointerup", "pointerleave", "pointercancel"]) b.addEventListener(t, stop);
-  b.addEventListener("click", () => {
-    if (long) { long = false; return; }
-    p.ticbg = { ...(p.ticbg || {}), on: !on(p) }; close(p); draw(p);
-  });
   b.addEventListener("contextmenu", e => { e.preventDefault(); e.stopPropagation(); open(p, b); });
   b.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); open(p, b); } });
 }

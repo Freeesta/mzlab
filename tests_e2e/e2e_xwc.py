@@ -73,6 +73,22 @@ try:
             pg.evaluate("HISTORY.undo()")
             wait_for_js(pg, f"{XWC}._a && {XWC}._a.sr.length === 1 && !({XWC}.xw || []).length", timeout=30000)
         step("the added band is undone like any change of the panel's source", undo)
+        def pbar_popover():
+            pg.evaluate("(async () => { uipWrite(NOMI.KEY('pbar'), '1'); await loadScript('pbar.js'); PBAR.set(true); })()")   # the shared panel bar, as the setting turns it on (MZLAB_PBAR=1 does it for a whole run)
+            pg.evaluate(f"setActive({XWC})")
+            ARROW = "#pbar [data-a=xwcl]:not([hidden])"
+            wait_for_js(pg, f"!!document.querySelector('{ARROW}') && document.querySelector('#pbar .pbchip').textContent.startsWith({XWC}.num + ' ')", timeout=30000)
+            assert pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').offsetParent") is None, "the header arrow is not shown with the bar on"
+            pg.locator(ARROW).click()
+            wait_for_js(pg, f"!!{XWC}.el.querySelector('.xb-pop[role=dialog]') && document.activeElement.dataset.f === 'nm'")
+            got = pg.evaluate(f"(() => {{ const q = {XWC}.el.getBoundingClientRect(), b = {XWC}.el.querySelector('.xb-pop').getBoundingClientRect(); return {{ top: b.top - q.top, bottom: q.bottom - b.bottom, left: b.left - q.left, right: q.right - b.right, bar: document.querySelector('{ARROW}').getAttribute('aria-expanded'), hd: {XWC}.el.querySelector('[data-a=xwcl]').getAttribute('aria-expanded') }}; }})()")
+            assert got["top"] >= 0 and got["left"] >= 0 and got["right"] >= 0 and got["bottom"] >= 0, ("the popover is inside its panel", got)
+            assert got["bar"] == "true" and got["hd"] == "true", got
+            pg.keyboard.press("Escape")
+            wait_for_js(pg, f"!{XWC}.el.querySelector('.xb-pop') && document.activeElement === document.querySelector('{ARROW}')")
+            assert pg.evaluate(f"document.querySelector('{ARROW}').getAttribute('aria-expanded')") == "false" and pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').getAttribute('aria-expanded')") == "false"
+            pg.evaluate("uipWrite(NOMI.KEY('pbar'), '0'); PBAR.set(false)")
+        step("shared panel bar on: the XWC arrow opens the popover under the panel header, Esc closes it back on the bar arrow", pbar_popover)
         def spec():
             pg.evaluate(f"(() => {{ const q = {XWC}; q.sel = null; }})()")
             pg.evaluate(f"uvOpen({TWC}, {TWC}.k ?? E.files[0].k, {TRUE['b']['rt']}, {TRUE['b']['rt']})")

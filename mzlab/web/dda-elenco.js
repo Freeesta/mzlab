@@ -4,29 +4,25 @@
 // Also «▲ MS²», the switch of the triangles of the MS2 on the chromatogram of the trio (`tri`). Loaded by dda-marcatori.js on the first drawing of a DDA Full Scan; `I` is the inside of DDA. An MS2 is shown as acquired: no compound name.
 const T = (/** @type {string} */ k, /** @type {any} */ o = {}) => I18N.t(k, o);
 
-/** The button, made once, in its own group before the one of «XIC» in the header. @param {Bag} I @param {Bag} p @returns {HTMLButtonElement} */
-function button(I, p) {
-  const old = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="ddaw"]'));
-  if (old) return old;
-  const b = document.createElement("button");
-  b.className = "bt ddaw"; b.dataset.a = "ddaw"; b.setAttribute("aria-haspopup", "listbox"); b.setAttribute("aria-expanded", "false");
-  for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); });   // Space presses it: the walk over the scans must not take it
-  b.onclick = () => { if (b.getAttribute("aria-disabled") !== "true") open(I, p, b); };
-  const g = document.createElement("span"); g.className = "tbg"; g.append(b);       // a group of its own: a tight header moves it into «⋯» (fitHd), «XIC» stays
-  const xg = p.el.querySelector('[data-a="xicb"]')?.closest(".tbg");
-  if (xg) xg.before(g); else p.el.querySelector(".hd")?.append(g);
-  fitHdSoon(p);
+let II = /** @type {Bag | null} */ (null);   // the inside of DDA, given by the last sync: the registry action `panel.ddaw` (azioni-barra.js) opens the list through `open` below
+
+/** The button is the registry action `panel.ddaw`, hidden until the first sync; here its Space key is kept from the walk over the scans, once. @param {Bag} p @returns {HTMLButtonElement | null} */
+function button(p) {
+  const b = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="ddaw"]'));
+  if (b && !b.dataset.w) { b.dataset.w = "1"; for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); }); }   // Space presses it: the walk over the scans must not take it
   return b;
 }
 /** The text of the button for the answer of the window (null = not here yet); `why` = the reason of an empty MS2 panel.
  * @param {Bag} I @param {Bag} p @param {Bag | null} w @param {string} why */
 export function sync(I, p, w, why) {
-  const b = button(I, p), n = w ? w.n : 0, one = w && w.ms1 === 1, txt = T("dda.win.btn", { n });
+  II = I; const b = button(p); if (!b) return;
+  const n = w ? w.n : 0, one = w && w.ms1 === 1, txt = T("dda.win.btn", { n });
   const cut = w && w.pintCut ? ". " + T("dda.win.cut", { n: w.pintCut }) : "";             // past these parents the precursor intensities stay unread
   const tip = (!w ? T("dda.win.wait") : !n ? why : one ? T("dda.win.one") : T("dda.win.avg", { n: w.ms1 })) + (n ? cut : "");
   if (b.textContent !== txt) { b.textContent = txt; fitHdSoon(p); }
   if (b.title !== tip) { b.title = tip; b.setAttribute("aria-label", txt + ". " + tip); }
   b.setAttribute("aria-disabled", String(!n));
+  if (!p._dws) { p._dws = true; AZIONI.refresh({ view: "spec", p }); }              // the action shows its button (and its group) from now on
 }
 /** @param {Bag} p */
 function close(p) {
@@ -35,8 +31,9 @@ function close(p) {
   pop.remove();
   const b = p.el.querySelector('[data-a="ddaw"]'); if (b) b.setAttribute("aria-expanded", "false");
 }
-/** The list under the button. @param {Bag} I @param {Bag} p @param {HTMLButtonElement} b */
-function open(I, p, b) {
+/** The list under the button (the run of `panel.ddaw`). @param {Bag} p @param {HTMLButtonElement} b */
+export function open(p, b) {
+  const I = II; if (!I) return;
   const w = p._dw; if (!w || !w.n) return;
   if (p.el.querySelector(".dw-pop")) { close(p); return; }
   const s2 = I.target(p), dec = HR.prof(E.files[s2 ? s2.k : p.k], 2).dec, f = E.files[p.k], D = f && I.ready(f.k), dia = !!(D && window.DDAMARK && window.DDAMARK.dia(f));
@@ -83,18 +80,12 @@ function choose(I, p, q) {
   I.selectMs2(s2, q.sid[b], { parent: false, zoom: false });
   const bt = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="ddaw"]')); if (bt) bt.focus();
 }
-/** «▲ MS²» first among the buttons of the chromatogram (or followed XIC) of the trio: the triangles of the MS2 scans, otherwise only in its «Intervallo» box.
+/** «▲ MS²» (the action `panel.ms2tri`, first among the buttons of the chromatogram or followed XIC of the trio): shown from now on, its pressed state from the panel.
  * @param {Bag | null} c */
 export function tri(c) {
   if (!c || !c.el) return;
-  let b = /** @type {HTMLButtonElement | null} */ (c.el.querySelector('[data-a="ms2tri"]'));
-  if (!b) {
-    const at = c.el.querySelector(".hd .tbs"); if (!at) return;
-    b = document.createElement("button"); b.type = "button"; b.className = "bt tgl hdkeep"; b.dataset.a = "ms2tri"; b.textContent = T("dda.tri.btn");
-    b.title = T("ctl.ms2tri.title"); b.setAttribute("aria-label", T("ctl.ms2tri"));
-    b.onclick = () => { c.ms2tri = !c.ms2tri; ctl(c); draw(c); uiSave(); tri(c); };
-    const g = document.createElement("span"); g.className = "tbg"; g.append(b); at.prepend(g); fitHdSoon(c);          // a group of its own that a tight header keeps in sight (fitHd)
-  }
-  const on = String(!!c.ms2tri); if (b.getAttribute("aria-pressed") !== on) { b.setAttribute("aria-pressed", on); b.classList.toggle("on", !!c.ms2tri); }
+  c._tri = true; AZIONI.refresh({ view: c.type, p: c });
 }
-window.DDAELENCO = { sync, tri };
+/** The click of `panel.ms2tri`. @param {Bag} c */
+export function flip(c) { c.ms2tri = !c.ms2tri; ctl(c); draw(c); uiSave(); tri(c); }
+window.DDAELENCO = { sync, tri, open, flip };
