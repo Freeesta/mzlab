@@ -250,6 +250,8 @@ pub struct LabelCheck {
     /// Share of the probed points that sit in runs of a profile peak, and of the neighbour spacings of a fine grid, in whole percent.
     pub runs_pct: usize,
     pub fine_pct: usize,
+    /// Share of the probed points in short runs of three (the peak-width cue), whole percent.
+    pub short_pct: usize,
     /// The points are sparse ion counts (no run, no fine grid): centroids under a profile label.
     pub sparse: bool,
 }
@@ -443,6 +445,8 @@ pub fn spectrum_type_json(p: Option<&Probe>) -> String {
         .opt(runs.runs_share().map(|v| round(v, 4)));
     o.raw(",\"fine_share\":")
         .opt(runs.fine_share().map(|v| round(v, 4)));
+    o.raw(",\"short_runs_share\":")
+        .opt(runs.short_share().map(|v| round(v, 4)));
     o.raw(",\"profile_scans\":")
         .int(p.map_or(0, |p| p.n_profile) as i64);
     o.raw(",\"level_scans\":")
