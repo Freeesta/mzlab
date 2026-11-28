@@ -111,6 +111,10 @@ pub fn hypo_params(get: &dyn Fn(&str) -> Option<Value>) -> HypoParams {
         max_suspects: num("max_suspects").map_or(d.max_suspects, |v| v as usize),
         other_polarity: flag("other_polarity", d.other_polarity),
         nominal: flag("nominal", d.nominal),
+        formula_filter: flag("formula_filter", d.formula_filter),
+        filter_steps: num("filter_steps").map_or(d.filter_steps, |v| v as u8),
+        m2_tol: num("m2_tol").unwrap_or(d.m2_tol),
+        m2_ref: num("m2_ref"),
     }
 }
 

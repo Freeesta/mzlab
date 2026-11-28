@@ -5,6 +5,8 @@
 // A group shows only when the kind has an action in it, and an action that is not available for the panel is hidden, never greyed (the rule of AZIONI.clean for the menus).
 // The header buttons of every panel stay in the DOM (hidden by CSS, html[data-pbar]): their state is copied to the bar, and a button without its own action runs the header one.
 // Expand is in the bar (Output) and in the header, close only in the header. A panel whose smoothing, log scale or zoom link is not the default shows a small dot chip in its header (the state of the others stays visible).
+// Phone (under 600 px, PHONE_W of barra.js): one scrollable row with the 4 tools of the kind that matter most (PRI, in that order, 44 px targets) and a «More» button; the rest of the tools are the same buttons shown in a bottom sheet (CSS, data-more), so state and handlers are never copied.
+// Keyboard: Shift+P (registry action pbar.focus) moves the focus into the bar, arrows move, Esc closes the sheet or gives the focus back to the chart of the selected panel (ESC priority 25). The panel is announced in #sb-live when the selection changes.
 // Classic script, uses by name: E, Q, setActive, tabPanels, plotFiles, ptitleP, fitHdSoon, fitHdNow, LAYOUT, AZIONI, I18N, FRAME, ESP.
 (() => {
   /** @typedef {any} Pannello */
@@ -14,9 +16,12 @@
   /** the groups of the bar: View, Analyse, Extract, Output, each labelled, drawn only when the kind has an action in it */
   const GRP = { of: (/** @type {any} */ a) => a.bid === "more" || a.nodata ? "" : a.bid === "par" ? "a" : PB[a.bar] || "", groups: [["v", "pbar.g.view"], ["a", "pbar.g.analyse"], ["x", "pbar.g.extract"], ["o", "pbar.g.output"]],
     wrap: (/** @type {string} */ k, /** @type {string} */ t, /** @type {string} */ s) => h`<span class="tbg" role="group" data-pg="${k}" aria-label="${T(t)}"><span class="tbl" aria-hidden="true">${T(t)}</span>${raw(s)}</span>` };
+  /** the tools of the row at phone width, by kind, in order (the first ROW that are shown win); every other tool is in the sheet */
+  const PRI = /** @type {Record<string, string[]>} */ ({ chrom: ["fit", "iauto", "xic", "dl", "smooth"], xic: ["fit", "iauto", "dl", "smooth"], mrm: ["fit", "iauto", "dl", "smooth"], spec: ["fit", "xicb", "rul", "dl"], map: ["fit", "mapzin", "mapzout", "dl"] }), ROW = 4;
+  const PHONE = matchMedia("(max-width:599px)"), SEL = ".pbtools button, .pbtools select, .pbmore";
   /** @type {Pannello | null} */ let shown = null;
   /** @type {MutationObserver | null} */ let mo = null;
-  let on = false, raf = 0, said = "";
+  let on = false, raf = 0, said = "", more = false;
   const host = () => /** @type {HTMLElement | null} */ (document.getElementById("pbar"));
   const first = () => /** @type {Pannello | undefined} */ (tabPanels().filter((/** @type {Pannello} */ q) => q.el).sort(LAYOUT.ordine)[0]);
   const hdr = (/** @type {Pannello} */ p) => /** @type {HTMLElement | null} */ (p.el.querySelector(".tbs"));
@@ -45,6 +50,7 @@
       if (s.tagName === "SELECT") /** @type {HTMLSelectElement} */ (t).value = /** @type {HTMLSelectElement} */ (s).value;
     }
     for (const g of /** @type {NodeListOf<HTMLElement>} */ (b.querySelectorAll(".pbtools .tbg"))) { const e = ![...g.querySelectorAll("[data-a]")].some(x => !(/** @type {HTMLElement} */ (x)).hidden); if (g.hidden !== e) g.hidden = e; }   // a group with nothing to show is not drawn
+    phone(p);
   }
   /** the states that differ from the default, as [id, text key]: smoothing is on by default but for the SIM/MRM panels @param {Pannello} p */
   const odd = p => {
@@ -72,15 +78,33 @@
     if (said !== txt) { if (said) live(T("pbar.say", { n: l.n, name })); said = txt; }
   }
   /** one tab stop: the first enabled tool takes it, the arrows move it (APG toolbar) */
-  const tools = () => /** @type {HTMLElement[]} */ ([...(host()?.querySelectorAll(".pbtools button, .pbtools select") || [])].filter(t => !t.hidden && !(/** @type {HTMLButtonElement} */ (t)).disabled));
-  const rove = (/** @type {HTMLElement | null} */ cur) => { const l = tools(), c = cur && l.includes(cur) ? cur : l[0]; host()?.querySelectorAll(".pbtools button, .pbtools select").forEach(t => { /** @type {HTMLElement} */ (t).tabIndex = t === c ? 0 : -1; }); };
+  const tools = () => /** @type {HTMLElement[]} */ ([...(host()?.querySelectorAll(SEL) || [])].filter(t => !t.hidden && !(/** @type {HTMLButtonElement} */ (t)).disabled && (more || !t.hasAttribute("data-pm"))));
+  const rove = (/** @type {HTMLElement | null} */ cur) => { const l = tools(), c = cur && l.includes(cur) ? cur : l[0]; host()?.querySelectorAll(SEL).forEach(t => { /** @type {HTMLElement} */ (t).tabIndex = t === c ? 0 : -1; }); };
+  /** the bottom sheet with every tool (phone only) opens or closes; the focus goes to its first tool, or back to «More» @param {boolean} v @param {boolean} [back] */
+  function setMore(v, back) {
+    const b = host(); if (!b) return; more = v && PHONE.matches;
+    if (more) b.dataset.more = "1"; else delete b.dataset.more;
+    const mb = /** @type {HTMLElement | null} */ (b.querySelector(".pbmore")), sc = /** @type {HTMLElement | null} */ (b.querySelector(".pbscrim"));
+    mb?.setAttribute("aria-expanded", String(more)); if (sc) sc.hidden = !more;
+    if (more) { const t = tools().find(x => x !== mb); if (t) { rove(t); t.focus(); } } else if (back && mb) { rove(mb); mb.focus(); }
+  }
+  /** phone: the first ROW tools of the kind (PRI) stay in the row in that order (CSS order from --po), the others get data-pm and live in the sheet; wide: nothing is marked @param {Pannello} p */
+  function phone(p) {
+    const b = host(); if (!b) return;
+    const ph = on && PHONE.matches, all = /** @type {HTMLElement[]} */ ([...b.querySelectorAll(".pbtools [data-a]")]), mb = /** @type {HTMLElement | null} */ (b.querySelector(".pbmore"));
+    b.classList.toggle("phone", ph);
+    const row = ph ? (PRI[p.type] || ["fit", "dl"]).map(i => all.find(t => t.dataset.a === i && !t.hidden)).filter(Boolean).slice(0, ROW) : [];
+    for (const t of all) { const i = row.indexOf(t); t.toggleAttribute("data-pm", ph && i < 0); if (ph && i >= 0) t.style.setProperty("--po", String(i)); else t.style.removeProperty("--po"); }
+    if (mb) mb.hidden = !(ph && all.some(t => t.hasAttribute("data-pm") && !t.hidden));
+    if (more && (!ph || (mb && mb.hidden))) setMore(false);
+  }
   /** the bar for the panel p (null: the hint) */
   function render(/** @type {Pannello | null} */ p) {
     const b = host(); if (!b) return;
     if (mo) { mo.disconnect(); mo = null; }
-    shown = p; said = p ? said : "";
+    shown = p; said = p ? said : ""; more = false; delete b.dataset.more;
     if (!p) { b.innerHTML = h`<span class="pbhint">${T("pbar.hint")}</span>`; b.setAttribute("aria-label", T("pbar.aria.none")); delete b.dataset.pair; return; }
-    b.innerHTML = h`<span class="pbchip" title="${T("pbar.chip.title")}"></span><span class="pbtools"></span>`;
+    b.innerHTML = h`<span class="pbchip" title="${T("pbar.chip.title")}"></span><span class="pbtools" id="pbtools"></span><button type="button" class="bt pbmore" hidden aria-expanded="false" aria-controls="pbtools" title="${T("pbar.more.title")}">${T("pbar.more")}</button><div class="pbscrim" hidden></div>`;
     AZIONI.bar({ view: p.type, p }, /** @type {HTMLElement} */ (b.querySelector(".pbtools")), GRP);
     const tb = /** @type {HTMLElement} */ (b.querySelector(".pbtools"));
     for (const t of /** @type {NodeListOf<HTMLElement>} */ (tb.querySelectorAll("[data-a]"))) {   // a button without its own action runs the header twin (the XIC button of a spectrum)
@@ -102,7 +126,7 @@
   function set(/** @type {boolean} */ v) {
     on = v; document.documentElement.toggleAttribute("data-pbar", v);
     const b = host(); if (!b) return;
-    b.hidden = !v; shown = null; if (mo) { mo.disconnect(); mo = null; }
+    b.hidden = !v; shown = null; more = false; delete b.dataset.more; if (mo) { mo.disconnect(); mo = null; }
     if (v) sync(); else { b.textContent = ""; for (const q of E.panels) dots(q); }
     for (const q of E.panels) if (q.el) fitHdNow(q);   // the tool groups leave the header or come back: fit it again
   }
@@ -112,12 +136,26 @@
     if (j < 0) return; e.preventDefault(); rove(l[j]); l[j].focus();
   };
   host()?.addEventListener("keydown", key);
+  host()?.addEventListener("click", e => {   // «More» opens the sheet, a tool used in it closes it, a tap outside closes it
+    const t = /** @type {Element} */ (e.target);
+    if (t.closest(".pbmore")) setMore(!more, true); else if (t.closest(".pbscrim")) setMore(false, true); else if (more && t.closest(".pbtools [data-a]") && !t.closest("select")) setMore(false);
+  });
+  PHONE.addEventListener("change", () => { if (on && shown) phone(shown); });
+  /** the focus into the bar (key Shift+P): the tool that holds the tab stop, or the bar itself when it has none */
+  function focusBar() {
+    const b = host(); if (!on || !b || !b.offsetParent) return;
+    const l = tools(), t = l.find(x => x.tabIndex === 0) || l[0];
+    if (t) { rove(t); t.focus(); } else { b.tabIndex = -1; b.focus(); }
+  }
+  AZIONI.register({ id: "pbar.focus", group: "view", views: ["*"], menu: false, iconKey: "side", shortcut: { key: "p", shift: true, where: "view", label: "scorc.pbar" }, listed: () => on, name: () => T("scorc.pbar"), tip: () => T("scorc.pbar.tip"), available: () => on && !!host()?.offsetParent, run: focusBar });
+  // Esc in the bar: the sheet closes first, then the focus goes back to the chart of the selected panel
+  ESC.registra({ id: "pbar", prio: 25, aperto: () => on && (more || !!host()?.contains(document.activeElement)), chiudi: () => { if (more) setMore(false, true); else { const c = E.active?.cv; if (c) c.focus(); } } });
   // a state button of any panel changed (the header twins keep their class): redraw the dot chips; a new panel joins as a child of #dpanels
   { const st = document.getElementById("dpanels"); if (st) new MutationObserver(() => later()).observe(st, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-pressed"] }); }
   document.addEventListener("focusin", e => {   // focus inside a panel selects it
     if (!on) return; const el = /** @type {Element} */ (e.target).closest?.(".pnl"); if (!el) return;
     const q = E.panels.find((/** @type {Pannello} */ x) => x.el === el); if (q && q !== E.active) setActive(q);
   });
-  window.PBAR = { sync, set, on: () => on, height: () => (on && host() && !host()?.hidden ? host()?.offsetHeight || 0 : 0), KEY };
+  window.PBAR = { sync, set, focus: focusBar, on: () => on, height: () => (on && host() && !host()?.hidden ? host()?.offsetHeight || 0 : 0), KEY };
   set((() => { try { return localStorage.getItem(KEY) === "1"; } catch (_) { return false; } })());
 })();

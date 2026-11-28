@@ -356,3 +356,55 @@ fn suspects_are_filtered_cut_and_labelled() {
         .unwrap();
     assert_eq!(both.sources, SRC_RULE | SRC_SUSPECT);
 }
+
+fn filtered(steps: u8, m2_ref: Option<f64>, imp: &[Imported]) -> Registry {
+    let inp = Inputs {
+        imported: imp,
+        ..none()
+    };
+    let p = HypoParams {
+        formula_filter: true,
+        filter_steps: steps,
+        m2_ref,
+        ..HypoParams::default()
+    };
+    generate(&rules(), &inp, &p).unwrap()
+}
+
+#[test]
+fn the_formula_filter_is_off_by_default_and_logs_what_it_drops() {
+    let imp = [Imported {
+        name: "far".into(),
+        formula: "C6H12O6".into(),
+        mass: None,
+    }];
+    let inp = Inputs {
+        imported: &imp,
+        ..none()
+    };
+    let off = generate(&rules(), &inp, &HypoParams::default()).unwrap();
+    assert!(off.filter.is_none() && !off.to_json().contains("\"filter\""));
+    let on = filtered(2, None, &imp);
+    let f = on.filter.as_ref().unwrap();
+    // the unrelated sugar is not reachable and has no Cl or S: it is out for both reasons, counted once as unreachable
+    assert!(on.hyps.iter().all(|h| h.formula != "C6H12O6"));
+    assert_eq!(f.seen, f.kept + f.unreachable + f.m2_off);
+    assert_eq!(f.kept, on.len());
+    assert!(f.unreachable >= 1 && f.m2_source == "parent_formula");
+    assert!(on.to_json().contains("\"filter\":{\"steps\":2"));
+    // fewer steps keep no more, the same bytes twice, an observed ratio is the one used
+    assert!(filtered(1, None, &imp).len() <= on.len());
+    assert_eq!(sha(&on), sha(&filtered(2, None, &imp)));
+    let obs = filtered(2, Some(0.0), &imp);
+    assert_eq!(obs.filter.as_ref().unwrap().m2_source, "observed");
+    // with an observed ratio of 0 only formulas without Cl or S (M+2/M within 0.1 of 0) stay
+    assert!(obs.len() < on.len());
+    assert!(obs.hyps.iter().all(|h| {
+        let c: Vec<(String, i64)> = elements::parse_formula(&h.formula)
+            .unwrap()
+            .into_iter()
+            .map(|(e, n)| (e, n as i64))
+            .collect();
+        mzlab_core::composition::isotope_ratios(&c).1 <= 0.1
+    }));
+}

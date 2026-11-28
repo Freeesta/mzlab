@@ -84,6 +84,8 @@ I18N.add("en", {
   "pbar.g.analyse": "Analyse",
   "pbar.g.extract": "Extract",
   "pbar.g.output": "Output",
+  "pbar.more": "More",
+  "pbar.more.title": "More tools for this panel",
   "pbar.say": "Panel {n} selected, {name}",
   "pbar.dot.group": "Settings of this panel that are not the default",
   "pbar.dot.smoothoff": "smoothing off",

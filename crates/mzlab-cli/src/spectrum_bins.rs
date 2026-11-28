@@ -126,10 +126,13 @@ pub(crate) fn get(
     if let Some(o) = &b.offset {
         pairs.push(("mzoff", o.clone()));
     }
-    let text = s
-        .routes
-        .handle("/api/spectrum", &query(&pairs))?
-        .ok_or_else(|| Error::new("err.scan.none"))?;
+    // as the site and the app: `mzml_route` first (it reads the spacing of a single-precision HR profile level from the file), then the index alone
+    let q = query(&pairs);
+    let text = match s.routes.mzml_route("/api/spectrum", &q, &mut s.mzml.r)? {
+        Some(t) => Some(t),
+        None => s.routes.handle("/api/spectrum", &q)?,
+    }
+    .ok_or_else(|| Error::new("err.scan.none"))?;
     let bad = || Error::new("error.badIndex");
     let col = |k: &str| extract::tokens(&text, k).ok_or_else(bad);
     let (bin, mz, y, pts) = (col("bin")?, col("mz")?, col("y")?, col("points")?);

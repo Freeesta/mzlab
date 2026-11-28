@@ -303,6 +303,8 @@ I18N.add("en", {
   "scorc.schermo.tip": "Takes the panel to full screen and back to where it was.",
   "scorc.apri.tip": "Chooses the files to open.",
   "scorc.esporta.tip": "Exports the report of the session.",
+  "scorc.pbar": "Panel tools",
+  "scorc.pbar.tip": "Focus the panel bar: arrows move, Enter acts, Esc goes back to the chart",
   "scorc.pannelli": "Show or hide side panels",
   "scorc.pannelli.tip": "Hides the side bar and brings it back as it was",
   "scorc.filePrec": "Previous file",

@@ -21,9 +21,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-TABLE-SUMS | `docs/coda/prompt/ION-TABLE-SUMS.md` | - | the `--sums` row of `peak table --ions`: its ion cells (empty today) as the sum of the ions of the rows that share a factor |
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
-| ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
-| SPECTRUM-COMPARE-MIRROR | `docs/coda/prompt/SPECTRUM-COMPARE-MIRROR.md` | - | site card of `spectrum compare`: a mirror plot of the two spectra with its data table |
-| NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
+| ISOTOPES-SPILL-RAW | `docs/coda/prompt/ISOTOPES-SPILL-RAW.md` | - | spill-over verdict in `raw isotopes` from the Q1 scan itself: the +1 channel against M inside the peak, with the shape correlation, for a file with no feature table |
+| TP-GENERATE-M2-OBSERVED | `docs/coda/prompt/TP-GENERATE-M2-OBSERVED.md` | - | feed the observed parent M+2/M of `raw isotopes` to the `m2_ref` of the `tp.generate` formula filter, logged, instead of a typed number |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
@@ -89,5 +88,4 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | MENU-LABELS-LEFTOVERS | `docs/coda/prompt/MENU-LABELS-LEFTOVERS.md` | - | short wording (no articles) for aria names of menu entries, dialog and side-panel button labels, and help text that quotes an old entry name |
 | WIFF-OPEN-INSTANT | `docs/coda/prompt/WIFF-OPEN-INSTANT.md` | - | after the index ahead, Open selected still opens each index in the engine (`lrOpen`, `native_attach`, about 240 ms for 4 samples): open it while the dialog is open so Open is instant |
 | PBAR-REMOVE-OLD | `docs/coda/prompt/PBAR-REMOVE-OLD.md` | - | panel toolbar slice: default `qqq.pbar` on and delete the per-panel tool rows and their overflow code |
-| PBAR-PHONE-KEYS | `docs/coda/prompt/PBAR-PHONE-KEYS.md` | - | panel toolbar slice: the bar at 390 px and its keyboard use |
 | TIP-SINGLE-FILE-LEGEND | `docs/coda/prompt/TIP-SINGLE-FILE-LEGEND.md` | needs owner decision: whether a single-file session drops the file name from the legends and other readouts too | the chromatogram hover box drops the file name with one file loaded; the legend chips, the XIC lens and the peak label box still repeat it |

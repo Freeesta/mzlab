@@ -67,7 +67,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("chrom.transitions", "sim srm mrm target list targeted integrate quantify snr state detected absent channels triple quadrupole many files batch", &["peak table", "quant.curve", "trace xic"]),
     r("table.filter", "blank subtraction subtract threshold background ions remove drop ions also in the blank sample carryover contaminant matrix blank ratio filter qc cv replicate", &["table compare", "features.align"]),
     r("features.group", "correlated correlation ions isotopes adducts in-source fragments group compound neutral mass", &["ion pattern", "ion match", "features.align"]),
-    r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
+    r("features.companions", "companions companion co-eluting coeluting adducts in-source fragments isotopes m+1 m+2 group isotope group spill-over spillover q1 unit mass nominal low resolution edges", &["features.group", "ion match", "features.align"]),
     r("features.union", "union join series conditions replicates one target list all targets many masses every ion many files campaign align rt map", &["quant union", "quant.targets", "features.align"]),
     r("features.align", "align table samples families ions", &["features.group", "features.gapfill"]),
     r("features.detect", "products lost below the height one ion split in two rows nominal resolution triple quadrupole qtrap profile preset floor grid", &["features", "features.align"]).ex("mzlab-cli flow run plan.json --in files/ --out out/ --set detect.preset=nominal"),
@@ -76,7 +76,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("spectra.centroid", "centroid profile peak picking spectra", &["convert.mzml", "spectrum get"]),
     r("tp.dig_lr", "kinetics kinetic series time course dig degradation transformation products parent unit low resolution one ion noise floor roles dark control standard samples.json", &["sample table", "sample pair", "sample import", "tp.generate", "table compare"])
         .bulk("one run digs the whole series: every file in index, one table; other settings: rerun in the same --out with --set (cached)"),
-    r("tp.generate", "hypotheses transformation products candidates suspects parent", &["tp.dig_lr", "tp.filter", "tp.network"]),
+    r("tp.generate", "hypotheses transformation products candidates suspects parent formula filter reachable steps m+2 ratio", &["tp.dig_lr", "tp.filter", "tp.network"]),
     r("tp.network", "pathway network scheme products draw", &["mol draw", "structure.render"]),
     r("structure.render", "draw modification structure product", &["mol draw", "tp.network"]),
     r("export.table_csv", "export table csv", &["export.mztab", "features"]),
