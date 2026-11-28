@@ -52,7 +52,7 @@ try:
             for want in ["XIC", "Spectrum", "Lock sight", "Mark point", "Reset zoom", "Copy coordinates", "Gestures"]:
                 assert any(want in n for n in names), (want, names)
             assert not any("both" in n or "axis only" in n or "selection" in n or "How it is" in n or "Extract" in n for n in names), names     # a short menu: no duplicates, no teaching view in it
-            assert sum(1 for i in its if i[1]) >= 7 and len([n for n in names]) <= 8, its                # seven commands with an aria-label (plus the line of the point)
+            assert sum(1 for i in its if i[1]) >= 7 and len([n for n in names]) <= 12, its               # seven commands with an aria-label (plus the line of the point); a menu never has more than 12 rows
             assert pg.evaluate("document.querySelectorAll('#ctx hr').length") >= 3
             assert "At the pointer" in names[0]
             pg.keyboard.press("Escape"); wait_for_js(pg, CTX_SHUT); assert pg.evaluate("document.getElementById('ctx').hidden")

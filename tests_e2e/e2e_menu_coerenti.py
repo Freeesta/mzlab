@@ -101,7 +101,7 @@ try:
           for(const k of kids){ if(k.tagName==='HR'){prevHr=true;continue}
             const id=idOf(k),a=id&&AZIONI.get(id),sc=id==='menu.more'?'panel':a?a.scope:null;
             if(sc==='panel'){ if(!panel&&sawPoint)sep=prevHr; panel=true } else if(sc==='point'){ sawPoint=true; if(panel)bad.push(id) }
-            if(a&&a.shortcut&&!k.classList.contains('mrow')){const kb=k.querySelector('.kb');if(!kb)keyless.push(id);else if(kb.textContent!==AZIONI.keyText(a.shortcut))badKey.push(id)}
+            if(a&&a.shortcut&&!k.classList.contains('mrow')){const kb=k.dataset.key;if(!kb)keyless.push(id);else if(kb!==AZIONI.keyText(a.shortcut))badKey.push(id)}
             prevHr=false }
           return {top:rows.length,bad,sep,panel,keyless,badKey,labels:rows.map(k=>k.getAttribute('aria-label')||k.textContent),more:!!m.querySelector('[data-azione="menu.more"]')}})()"""
         def shape(P, x=None, y=None):
