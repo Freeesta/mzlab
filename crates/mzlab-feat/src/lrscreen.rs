@@ -238,6 +238,10 @@ pub struct Cuts {
     /// The peak-width cue: sparse only below this share (percent) of the points in short runs of this many points.
     pub short_pct: usize,
     pub short_points: usize,
+    /// A short run's points are at least this far apart on average (mDa).
+    pub short_step_mda: usize,
+    /// Points in short runs a profile needs at least.
+    pub short_min: usize,
 }
 
 pub fn cuts() -> Cuts {
@@ -252,6 +256,8 @@ pub fn cuts() -> Cuts {
         fine_step_mda: mda(t::FINE_STEP),
         short_pct: pct(t::SHORT_SHARE),
         short_points: t::SHORT_POINTS,
+        short_step_mda: mda(t::SHORT_MIN_STEP),
+        short_min: t::SHORT_MIN_POINTS,
     }
 }
 
@@ -377,8 +383,8 @@ pub fn adjusted<R: ReadAt>(index: &mut Index<R>, mut r: Recipe) -> Result<Recipe
 pub fn label_reason(c: &LabelCheck) -> String {
     let k = cuts();
     format!(
-        "{} of {} MS1 scans are labelled profile but their points are sparse ion counts: of {} points in {} scans probed, {} % are in runs (at least {} points, {} mDa apart at most; sparse below {} %) and {} % of the {} spacings are under {} mDa (a fine grid from {} %) and {} % are in short runs of {} points (a profile from {} %); centroid skipped; centroid=on forces it, file convert --spectrum centroid relabels",
-        c.profile, c.scans, c.points, c.probed, c.runs_pct, k.run_points, k.run_step_mda, k.runs_pct, c.fine_pct, c.spacings, k.fine_step_mda, k.fine_pct, c.short_pct, k.short_points, k.short_pct
+        "{} of {} MS1 scans are labelled profile but their points are sparse ion counts: of {} points in {} scans probed, {} % are in runs (at least {} points, {} mDa apart at most; sparse below {} %) and {} % of the {} spacings are under {} mDa (a fine grid from {} %) and {} % are in short runs of {} points at least {} mDa apart (a profile from {} % and {} points); centroid skipped; centroid=on forces it, file convert --spectrum centroid relabels",
+        c.profile, c.scans, c.points, c.probed, c.runs_pct, k.run_points, k.run_step_mda, k.runs_pct, c.fine_pct, c.spacings, k.fine_step_mda, k.fine_pct, c.short_pct, k.short_points, k.short_step_mda, k.short_pct, k.short_min
     )
 }
 

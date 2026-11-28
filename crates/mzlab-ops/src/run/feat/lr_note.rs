@@ -71,6 +71,8 @@ fn label_params(c: &mzlab_feat::lrscreen::LabelCheck) -> Vec<(&'static str, usiz
         ("fine_step", k.fine_step_mda),
         ("short_cut", k.short_pct),
         ("short_points", k.short_points),
+        ("short_step", k.short_step_mda),
+        ("short_min", k.short_min),
     ]
 }
 

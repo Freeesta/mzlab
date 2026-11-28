@@ -292,9 +292,18 @@ fn raw_info_and_the_label_check_classify_alike_and_the_notice_has_the_cue() {
             .map(|(_, v)| *v)
     };
     assert_eq!(
-        (get("short"), get("short_cut"), get("short_points")),
-        (Some(0), Some(20), Some(3))
+        (
+            get("short"),
+            get("short_cut"),
+            get("short_points"),
+            get("short_step"),
+            get("short_min")
+        ),
+        (Some(0), Some(20), Some(3), Some(200), Some(9))
     );
-    assert!(mzlab_feat::lrscreen::label_reason(&v.check.unwrap())
-        .contains("0 % are in short runs of 3 points (a profile from 20 %)"));
+    assert!(
+        mzlab_feat::lrscreen::label_reason(&v.check.unwrap()).contains(
+            "0 % are in short runs of 3 points at least 200 mDa apart (a profile from 20 % and 9 points)"
+        )
+    );
 }

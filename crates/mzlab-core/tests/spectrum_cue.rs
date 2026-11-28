@@ -220,3 +220,17 @@ fn three_point_peaks_are_short_runs_only_and_isolated_ions_are_neither() {
     r.add(&ions);
     assert!(r.sparse() && r.short_share() == Some(0.0));
 }
+
+/// Points a few hundredths of a Da apart are the digitiser steps of a feature far narrower than a unit-resolution peak: they are no short run, whatever
+/// their count (the product-ion scan of the synthetic `.wiff` of `tools/wiff_riferimento.py`: ten points in two clumps of 0.06 Da steps).
+#[test]
+fn points_a_few_hundredths_of_a_dalton_apart_are_no_short_run() {
+    let scan = [
+        100.62, 101.22, 101.28, 101.34, 101.40, 220.02, 220.08, 220.14, 220.62, 221.10,
+    ];
+    // the clumps are no short run; 220.14, 220.62 and 221.10 line up by chance (a triplet, 30 % of the ten points) and three points are not a profile
+    assert_eq!(short_run_points(&scan).0, 3);
+    let mut r = Runs::default();
+    r.add(&scan);
+    assert!(r.sparse() && r.short_share() == Some(0.3));
+}
