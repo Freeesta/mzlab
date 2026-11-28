@@ -479,9 +479,6 @@ function placeLeg(/** @type {Pannello} */ p) {
   if (p.type === "spec") {
     const right = p.el.clientWidth - p.cv.offsetLeft - p.cv.offsetWidth + M.r + 6;
     p.leg.style.right = right + "px"; p.leg.style.top = p.cv.offsetTop + p.cv.offsetHeight - 17 + "px";
-    const tw = /** @type {any} */ (p.cv)._xtw || 0;      // right of the x axis title, never over it: what does not fit is cut (the file name first, uv-spettro.js)
-    p.leg.style.maxWidth = tw ? Math.max(0, p.cv.offsetWidth - M.r - 6 - ((M.l + p.cv.offsetWidth - M.r) / 2 + tw / 2 + 8)) + "px" : "";
-    p.leg.classList.remove("uvnarrow"); if (tw && p.leg.querySelector(".uvfl") && [...p.leg.children].some(c => c.scrollWidth > c.clientWidth + 1)) p.leg.classList.add("uvnarrow");      // no room for the file name beside the title: the time stays
   }
   const el = p.type === "spec" ? p.leg2 : p.leg;
   if (el && LEGENDE.place(p, el)) drawSoon(p);
@@ -792,7 +789,7 @@ function rngIsOn(/** @type {Pannello} */ p) {
   return (p.type !== "mrm" && !(p.type === "chrom" && p.kind === "pda") && (p.mz0 != null || p.mz1 != null)) || !!p.zoom || (p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "" && !ms2c);
 }
 // ---- one header row: what does not fit goes into «⋯» (nodes moved with their handlers, put back when there is room); nothing wraps or is cut.
-// Order: the NL note, then the icon groups from the right, then the controls from the right.
+// Order: the NL note, then the icon groups from the right, then the controls from the right. With the panel bar on (pbar.js) the tool groups live in the bar: only the controls move.
 function hdRestore(/** @type {Pannello} */ p) {
   const l = p._hm || []; p._hm = [];
   l.slice().reverse().forEach((/** @type {HTMLElement & Bag} */ n) => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
@@ -817,7 +814,7 @@ function fitHd(/** @type {Pannello} */ p) {
     const over = () => hdOver(hd, c);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
+    const cands = [...el.querySelectorAll(".bnl")], groups = document.documentElement.hasAttribute("data-pbar") ? [] : [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
     const list = [...cands, ...groups, ...kids], w = list.map(n => n.hidden ? 0 : n.offsetWidth), gone = /** @type {HTMLElement[]} */ ([]);
     const put = (/** @type {HTMLElement & Bag} */ n) => { p._hm.push(n); if (n.classList.contains("bnl")) return n.classList.add("hd-ov"); const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); };
     // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow

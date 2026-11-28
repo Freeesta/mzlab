@@ -143,5 +143,8 @@ export async function draw(p) {
   if (window.ETPK) ETPK.drawUv(p, g, { nm, y, X, Y, x0, x1, W });       // wavelength of the absorbance maxima of the first sample (etichette-picchi.js)
   p.leg.innerHTML = h`<span class="uvfl">${raw(ser.map(s => h`<span><i style="background:${s.f.color}"></i>${s.f.label}</span>`).join(" "))}</span><span class="uvsep"> · </span><span class="uvrt">${T(d.n > 1 ? "uv.leg.mean" : "uv.leg.one", { rt, n: d.n })}</span>`;
   if (p.leg2) p.leg2.innerHTML = provenance(p, d.rt0);
+  g.save(); g.font = fpx(12); const tw = g.measureText(T("uv.axis.x")).width; g.restore();      // the legend on the title row stays right of the x title; what does not fit is cut, the file names first
+  p.leg.style.maxWidth = Math.max(0, W - M.r - 6 - ((M.l + W - M.r) / 2 + tw / 2 + 8)) + "px"; p.leg.classList.remove("uvnarrow");
+  if ([...p.leg.children].some(c => c.scrollWidth > c.clientWidth + 1)) p.leg.classList.add("uvnarrow");
   p.r0 = d.rt0; p.r1 = d.rt1;
 }

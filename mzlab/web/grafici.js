@@ -141,7 +141,7 @@ function frame(g, W, H, xt, yt, xtitle, ytitle) {
   g.textAlign = "center"; for (const [x, lab] of xt) { if (x < M.l - 1 || x > W - M.r + 1) continue; g.beginPath(); g.moveTo(Math.round(x) + .5, H - M.b); g.lineTo(Math.round(x) + .5, H - M.b + 4); g.stroke(); g.fillText(lab, x, H - M.b + 4 + 11 * fz()); }
   g.fillStyle = ecss("--ink"); g.font = fpx(12);
   const fnt = t => t === "m/z" ? fpx(12, "italic ") : fpx(12);           // m/z is always in italics
-  if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6 * fz()); g.canvas._xtw = g.measureText(xtitle).width; } else g.canvas._xtw = 0;      // _xtw: the legend on the title row stays clear of it (placeLeg)
+  if (xtitle) { g.font = fnt(xtitle); g.fillText(xtitle, (M.l + W - M.r) / 2, H - 6 * fz()); }
   if (ytitle) { g.font = fnt(ytitle); g.translate(1 + 12 * fz(), (M.t + H - M.b) / 2); g.rotate(-Math.PI / 2); g.fillText(ytitle, 0, 0); }
   g.restore(); g.font = fpx(12); g.lineWidth = 1;
 }
