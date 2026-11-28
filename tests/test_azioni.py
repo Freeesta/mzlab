@@ -15,6 +15,14 @@ def run(code):
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
+def run_panel_menu(code):
+    """Like run(), with the lazy panel-menu.js loaded on top (scope, the panel block with keys, the 12-row cap)."""
+    js = (f"const fs=require('fs');const AZIONI=new Function(fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')();"
+          "global.window=global;global.AZIONI=AZIONI;global.I18N={t:k=>k};global.AZIONI_ICONE={POR_ID:{},svg:n=>'<'+n+'>'};"
+          f"new Function(fs.readFileSync({str(WEB / 'panel-menu.js')!r},'utf8'))();{code}")
+    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
+
+
 def test_menu_order_separators_and_grey_entries():
     r = run("""const log=[];
       const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>log.push(id),...o});
@@ -52,6 +60,44 @@ def test_rows_of_one_action_and_order_inside_a_group():
       const m=AZIONI.forContext({view:'v',xs:[1,2]});
       console.log(JSON.stringify(m.map(i=>i==='-'?'-':[i.id,i.label,i.dim])))""")
     assert r == [["n", "n1", False], ["n", "n2", True], ["a", "a", False], ["b", "b", False], "-", ["h", "h", False]]
+
+
+def test_menu_point_actions_then_panel_actions_with_their_key():
+    """Study §3.7: what is under the pointer first, a separator, then the panel commands (the menu ones before the ones that come from the bar), each with its key."""
+    r = run_panel_menu("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>0,...o});
+      reg('bar','tools',{scope:'panel',barra:true,menu:true});
+      reg('fs','view',{scope:'panel',shortcut:{key:'f',where:'chart',label:'x'}});
+      reg('help','help');reg('pt','extract',{shortcut:{key:'x',where:'chart',label:'x'}});reg('rz','reset',{scope:'panel'});
+      reg('hid','tools',{scope:'panel',barra:true,menu:false});
+      const m=AZIONI.forContext({view:'v'});
+      console.log(JSON.stringify({m:m.map(i=>i==='-'?'-':[i.id,i.key||null]),scopes:AZIONI.actions.map(a=>[a.id,a.scope]),bar:AZIONI.list({view:'v'},'barra').map(a=>a.id)}))""")
+    assert r["m"] == [["pt", "X"], "-", ["help", None], "-", ["rz", None], "-", ["fs", "F"], "-", ["bar", None]]
+    assert dict(r["scopes"]) == {"bar": "panel", "fs": "panel", "help": "point", "pt": "point", "rz": "panel", "hid": "panel"}
+    assert r["bar"] == ["bar", "hid"], "the bar still lists its actions: the same entries, two views"
+
+
+def test_unknown_scope_is_refused():
+    r = run_panel_menu("let e=null;try{AZIONI.register({id:'a',group:'help',scope:'row',views:[],name:()=>'',run:()=>0})}catch(x){e=x.message}console.log(JSON.stringify(e))")
+    assert r and r.startswith("AZIONI:")
+
+
+def test_menu_never_has_more_than_12_rows_the_tail_goes_in_one_submenu():
+    r = run_panel_menu("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>log.push(id),...o});
+      const log=[];
+      for(let i=0;i<8;i++)reg('p'+i,'extract');
+      for(let i=0;i<9;i++)reg('q'+i,'view',{scope:'panel',shortcut:i==0?{key:'f',where:'chart',label:'x'}:undefined,checked:i==1?()=>true:undefined});
+      const top=a=>AZIONI.clean(AZIONI.forContext({view:'v'})).filter(i=>i!=='-');
+      const t=top(),more=t[t.length-1],sub=more.sub();
+      const small=(()=>{const x=AZIONI.clean([{id:'a',label:'a',fn:()=>0},'-',{id:'b',label:'b',fn:()=>0}]);return x.length})();
+      sub[1].run();
+      console.log(JSON.stringify({n:t.length,ids:t.map(i=>i.id),sub:sub.map(r=>[r.name,r.key||null,r.check]),log,small}))""")
+    assert r["n"] == 12 and r["ids"][-1] == "menu.more"
+    assert r["ids"][:8] == [f"p{i}" for i in range(8)] and r["ids"][8:11] == ["q0", "q1", "q2"]
+    assert r["sub"][0] == ["q3", None, None] and len(r["sub"]) == 6
+    assert r["log"] == ["q4"], "a row of the submenu runs its action"
+    assert r["small"] == 3, "a short menu is left alone"
+    r = run_panel_menu("""const x=[];for(let i=0;i<15;i++)x.push({id:'d'+i,label:'d'+i,fn:()=>0});console.log(AZIONI.clean(x).length)""")
+    assert r == 15, "a menu that does not come from the registry (the drawing) is never capped"
 
 
 def test_spectrum_actions_have_texts():
@@ -112,7 +158,7 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
     ids = json.loads(subprocess.run(["node", "-e", f"const fs=require('fs');const I=new Function(fs.readFileSync({str(WEB / 'azioni-icone.js')!r},'utf8')+';return AZIONI_ICONE;')();console.log(JSON.stringify(Object.keys(I.POR_ID)))"],
                                     check=True, capture_output=True, encoding="utf-8").stdout)
     for i in ids:
-        assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src, f"{i}: no action with this id in mzlab/web"
+        assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src or (i.startswith("panel.") and f'["{i[6:]}", ' in src), f"{i}: no action with this id in mzlab/web"   # panel.* rows: azioni-barra.js ROWS
 
 
 def test_arrangement_actions_show_in_every_view_and_have_texts():
@@ -165,7 +211,7 @@ BAR_ONLY = {"map": "mapzin mapzout maphelp"}
 def bar(view, extra="", fn="bar"):
     js = ("const fs=require('fs');const AZIONI=new Function(fs.readFileSync(%r,'utf8')+';return AZIONI;')();" % str(WEB / "azioni.js")
           + "global.AZIONI=AZIONI;global.I18N={t:k=>k};global.EH=s=>s;for(const k of ['ZOOM','FIT','SYNC','RULER','UNLOCK','AUTO','MAN','DEL_INT','SMOOTH','DL','FS'])global['IC_'+k]='<svg/>';"
-          + "global.window=global;global.XICBTN={lens:{ok:p=>!p.nolens}};global.UIP={xicLens:true};global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
+          + "global.window=global;global.loadScript=()=>0;global.XICBTN={lens:{ok:p=>!p.nolens}};global.UIP={xicLens:true};global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
           + "const host={innerHTML:'',querySelector:()=>null};const p={type:%r,tl:true,smooth:true,log:false,imode:null};" % view + extra
           + "AZIONI.bar({view:%r,p},host%s);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id),runs:AZIONI.list({view:%r,p},'barra').filter(a=>typeof a.run==='function').map(a=>a.id)}));" % (view, "," + fn if fn != "bar" else "", view, view))
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)

@@ -119,8 +119,8 @@ const DISP = (() => {
       run: c => { COMMANDS.run("spec.display", c.p, () => { c.p.mk = !markOn(c.p); }); draw(c.p); uiSave(); } });
     AZIONI.register({ id: "spec.noCont", group: "gen", order: 4, views: ["spec"], menu: false, visible: c => !!c.a?.hrp && bench(), checked: c => !!c.p.noCont, name: () => T("ctx.spec.noCont"), aria: () => T("ctx.spec.noCont.aria"),
       run: c => { COMMANDS.run("spec.display", c.p, () => { c.p.noCont = !c.p.noCont; }); draw(c.p); uiSave(); } });
-    AZIONI.register({ id: "spec.disp", group: "gen", order: 5, views: ["spec"], visible: bench, name: () => T("disp.menu"), aria: () => T("disp.menu.aria"), run: c => open(c.p) });
-    AZIONI.register({ id: "chrom.disp", group: "gen", order: 5, views: ["chrom", "xic"], visible: bench, name: () => T("disp.menu"), run: c => open(c.p) });
+    AZIONI.register({ id: "spec.disp", group: "gen", scope: "panel", order: 5, views: ["spec"], visible: bench, name: () => T("disp.menu"), aria: () => T("disp.menu.aria"), run: c => open(c.p) });
+    AZIONI.register({ id: "chrom.disp", group: "gen", scope: "panel", order: 5, views: ["chrom", "xic"], visible: bench, name: () => T("disp.menu"), run: c => open(c.p) });
   }
   return { register, panel, open, items, typeOf, pdaShift, pdaHere: p => !!dfile(p), pdaDelayValue: p => { const m = measured(p); return p.pdaDelay != null ? p.pdaDelay : m ? m.delay : 0; } };
 })();

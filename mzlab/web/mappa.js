@@ -793,14 +793,14 @@ window.MAPPA = (() => {
     cmd("mapspec", "extract", "spec", V2, { ...short("mapspec"), available: hasPt, run: (/** @type {Record<string, any>} */ ad) => extract(ad, "spec") }),
     cmd("maplock", "lock", "lock", V2, { checked: (/** @type {Record<string, any>} */ ad) => ad.locked(), run: (/** @type {Record<string, any>} */ ad) => ad.toggleLock() }),
     cmd("mapmark", "lock", "mark", ["map"], { available: hasPt, checked: (/** @type {Record<string, any>} */ ad) => ad.marked(), run: (/** @type {Record<string, any>} */ ad) => ad.toggleMark() }),
-    cmd("mapreset", "view", "home", V2, { run: (/** @type {Record<string, any>} */ ad) => ad.resetAll() }),
-    cmd("map3top", "view", "top", ["map3d"], { run: (/** @type {Record<string, any>} */ ad) => ad.camera(1) }),
-    cmd("map3rt", "view", "side", ["map3d"], { run: (/** @type {Record<string, any>} */ ad) => ad.camera(2) }),
-    cmd("map3mz", "view", "spec", ["map3d"], { run: (/** @type {Record<string, any>} */ ad) => ad.camera(3) }),
-    cmd("mapzin", "zoom", "plus", V2, { menu: false, run: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(0.7) }),
-    cmd("mapzout", "zoom", "minus", V2, { menu: false, run: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(1 / 0.7) }),
+    cmd("mapreset", "view", "home", V2, { scope: "panel", run: (/** @type {Record<string, any>} */ ad) => ad.resetAll() }),
+    cmd("map3top", "view", "top", ["map3d"], { scope: "panel", run: (/** @type {Record<string, any>} */ ad) => ad.camera(1) }),
+    cmd("map3rt", "view", "side", ["map3d"], { scope: "panel", run: (/** @type {Record<string, any>} */ ad) => ad.camera(2) }),
+    cmd("map3mz", "view", "spec", ["map3d"], { scope: "panel", run: (/** @type {Record<string, any>} */ ad) => ad.camera(3) }),
+    cmd("mapzin", "zoom", "plus", V2, { scope: "panel", menu: false, run: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(0.7) }),
+    cmd("mapzout", "zoom", "minus", V2, { scope: "panel", menu: false, run: (/** @type {Record<string, any>} */ ad) => ad.zoomBy(1 / 0.7) }),
     cmd("mapcopy", "copy", "copy", V2, { available: hasPt, run: async (/** @type {Record<string, any>} */ ad) => { const q = ad.pt(); if (!q) return; try { await clipboardCopy({ "text/plain": ptText(q) }); nearMsg(T("mapnav.copied")); } catch (e) { nearMsg(T("mapnav.copyFail")); } } }),
-    cmd("maphelp", "help", "help", V2, { run: (/** @type {Record<string, any>} */ ad) => help(ad.kind) })
+    cmd("maphelp", "help", "help", V2, { scope: "panel", run: (/** @type {Record<string, any>} */ ad) => help(ad.kind) })
   ];
   const runCmd = (/** @type {string} */ id, /** @type {Record<string, any>} */ ad) => AZIONI.run(id, /** @type {{ view: string, [k: string]: any }} */ (ad));
   // the items of the right-click menu (shared component: menu() in explore.js): where the commands act, then the actions of the view
@@ -815,7 +815,7 @@ window.MAPPA = (() => {
     const mo = new MutationObserver(() => { if (!m.hidden) return; mo.disconnect(); s.frz = null; frame(ad.p); navSync(ad.p); });
     mo.observe(m, { attributes: true, attributeFilter: ["hidden"] });
   }
-  function showMenu(/** @type {Record<string, any>} */ ad, /** @type {MenuEv} */ ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); holdSight(ad); }
+  function showMenu(/** @type {Record<string, any>} */ ad, /** @type {MenuEv} */ ev) { if (!window.PANELMENU) { loadScript("panel-menu.js").then(() => showMenu(ad, ev)); return; } if (ad.host) ad.host(); menu(ev, itemsFor(ad)); holdSight(ad); }
   // zoom around a point (default: the middle of the view); axes "x" = RT, "y" = m/z
   function scaleView(/** @type {Pannello} */ p, /** @type {number} */ f, /** @type {Record<string, any> | null} */ c, /** @type {string} */ axes) {
     const a = p._a, x = c ? c.rt : (a.x0 + a.x1) / 2, y = c ? c.mz : (a.y0 + a.y1) / 2;

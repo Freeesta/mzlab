@@ -277,7 +277,7 @@ function arrRestore() {
 }
 const arrSplit = () => tabPanels().filter(q => q.full).some(q => q.riga != null && tabPanels().some(o => o !== q && o.full && o.riga === q.riga) || (q.quota != null && q.quota !== 1));
 if (typeof AZIONI !== "undefined") {
-  const reg = (/** @type {any} */ o) => AZIONI.register({ group: "disp", views: ["*"], visible: (/** @type {any} */ c) => c.view !== "map" && !!c.p && !!c.p.el && !!c.p.full && arrEligible(c.p), ...o });
+  const reg = (/** @type {any} */ o) => AZIONI.register({ group: "disp", scope: "panel", views: ["*"], visible: (/** @type {any} */ c) => c.view !== "map" && !!c.p && !!c.p.el && !!c.p.full && arrEligible(c.p), ...o });
   reg({ id: "disp.arrange", order: 1, menu: false, name: () => ARR_T("arrange.menu.beside"), available: (/** @type {any} */ c) => arrOthers(c.p).length > 0,
     run: (/** @type {any} */ c) => { if (c.p._grip) arrOpenMenu(c.p, c.p._grip); },
     rows: (/** @type {any} */ c) => {

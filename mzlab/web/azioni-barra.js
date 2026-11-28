@@ -80,4 +80,5 @@
       if (a.tip) b.title = a.tip(c);
     }
   };
+  setTimeout(() => loadScript("panel-menu.js"), 1000);
 })();
