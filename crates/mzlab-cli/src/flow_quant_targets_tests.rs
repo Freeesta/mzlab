@@ -8,7 +8,7 @@ use mzlab_core::upload::prepare;
 
 #[path = "../../mzlab-feat/tests/common_quant/mod.rs"]
 #[allow(dead_code)]
-mod common_quant;
+pub(crate) mod common_quant;
 use common_quant::{mzml, sample, Ion, TARGETS};
 
 fn index(ions: &[Ion], seed: u64) -> Vec<u8> {

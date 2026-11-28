@@ -7,10 +7,8 @@ use std::path::{Path, PathBuf};
 use mzlab_core::mzidx::build_mzml_to_vec;
 use mzlab_core::upload::prepare;
 
-#[path = "../../mzlab-feat/tests/common_quant/mod.rs"]
-#[allow(dead_code)]
-mod common_quant;
-use common_quant::{mzml, Ion};
+// the synthetic-file helpers are loaded once, by the quant.targets tests (clippy::duplicate_mod)
+use crate::flow_quant_targets_tests::common_quant::{mzml, Ion};
 
 const TIMES: [i64; 6] = [5, 10, 20, 30, 45, 60];
 const INJ: [f64; 13] = [
