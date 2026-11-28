@@ -1,7 +1,7 @@
 //! Tests of `pair` on small synthetic tables (invented neutral masses; ions made with the adduct table's own shifts).
 
 use super::*;
-use crate::json::parse;
+use mzlab_core::json::parse;
 
 const H: f64 = 1.007276;
 
@@ -25,16 +25,16 @@ fn neg() -> String {
     )
 }
 
-fn go(pos: &str, neg: &str, params: &str) -> Result<crate::json::Value> {
+fn go(pos: &str, neg: &str, params: &str) -> Result<mzlab_core::json::Value> {
     let req = format!(
         "{{\"pos\":{{\"name\":\"p.csv\",\"text\":{}}},\"neg\":{{\"name\":\"n.csv\",\"text\":{}}},\"params\":{params}}}",
-        crate::jsonb::write(&crate::jsonb::text(pos)),
-        crate::jsonb::write(&crate::jsonb::text(neg))
+        mzlab_core::jsonb::write(&mzlab_core::jsonb::text(pos)),
+        mzlab_core::jsonb::write(&mzlab_core::jsonb::text(neg))
     );
     route(&req).map(|d| parse(d.as_bytes()).unwrap())
 }
 
-fn ids(d: &crate::json::Value, k: &str) -> Vec<String> {
+fn ids(d: &mzlab_core::json::Value, k: &str) -> Vec<String> {
     d.get(k)
         .unwrap()
         .arr()
@@ -158,14 +158,14 @@ fn the_answer_does_not_depend_on_the_order_of_the_rows() {
     };
     let a = route(&format!(
         "{{\"pos\":{{\"name\":\"p\",\"text\":{}}},\"neg\":{{\"name\":\"n\",\"text\":{}}}}}",
-        crate::jsonb::write(&crate::jsonb::text(&pos())),
-        crate::jsonb::write(&crate::jsonb::text(&neg()))
+        mzlab_core::jsonb::write(&mzlab_core::jsonb::text(&pos())),
+        mzlab_core::jsonb::write(&mzlab_core::jsonb::text(&neg()))
     ))
     .unwrap();
     let b = route(&format!(
         "{{\"pos\":{{\"name\":\"p\",\"text\":{}}},\"neg\":{{\"name\":\"n\",\"text\":{}}}}}",
-        crate::jsonb::write(&crate::jsonb::text(&rev(&pos()))),
-        crate::jsonb::write(&crate::jsonb::text(&rev(&neg())))
+        mzlab_core::jsonb::write(&mzlab_core::jsonb::text(&rev(&pos()))),
+        mzlab_core::jsonb::write(&mzlab_core::jsonb::text(&rev(&neg())))
     ))
     .unwrap();
     let csv = |d: &str| {
@@ -193,7 +193,7 @@ fn the_answer_does_not_depend_on_the_order_of_the_rows() {
 
 #[test]
 fn a_bad_value_is_refused_with_its_name() {
-    let key = |r: Result<crate::json::Value>| r.err().map(|e| e.key.to_string());
+    let key = |r: Result<mzlab_core::json::Value>| r.err().map(|e| e.key.to_string());
     assert_eq!(
         key(go(&pos(), &neg(), "{\"pos_adducts\":\"[M-H]-\"}")).as_deref(),
         Some("err.pair.param")
@@ -227,7 +227,7 @@ fn a_bad_value_is_refused_with_its_name() {
         Some("err.pair.empty")
     );
     assert_eq!(
-        key(route("nope").map(|_| crate::json::Value::Null)).as_deref(),
+        key(route("nope").map(|_| mzlab_core::json::Value::Null)).as_deref(),
         Some("err.pair.request")
     );
 }

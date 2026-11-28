@@ -276,7 +276,6 @@ pub mod stats;
 pub mod tracestat;
 pub mod subformulas;
 pub mod samples;
-pub mod polarity_pair;
 pub mod series_union;
 pub mod molecules;
 pub mod design;

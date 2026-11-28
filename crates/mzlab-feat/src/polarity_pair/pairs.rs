@@ -66,7 +66,7 @@ pub fn run(pos: &[Row], neg: &[Row], p: &Params) -> Matched {
             ions.push((ad.neutral(r.mz), i, a));
         }
     }
-    crate::sortc::slice_by(&mut ions, |x, y| {
+    mzlab_core::sortc::slice_by(&mut ions, |x, y| {
         x.0.total_cmp(&y.0).then(x.1.cmp(&y.1)).then(x.2.cmp(&y.2))
     });
     let mut pairs: Vec<Pair> = Vec::new();
@@ -97,7 +97,7 @@ pub fn run(pos: &[Row], neg: &[Row], p: &Params) -> Matched {
             }
         }
     }
-    crate::sortc::slice_by(&mut pairs, |x, y| {
+    mzlab_core::sortc::slice_by(&mut pairs, |x, y| {
         x.neutral()
             .total_cmp(&y.neutral())
             .then_with(|| pos[x.pos].id.cmp(&pos[y.pos].id))

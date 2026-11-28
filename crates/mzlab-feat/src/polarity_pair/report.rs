@@ -4,8 +4,8 @@
 use super::pairs::Matched;
 use super::params::Params;
 use super::table::Row;
-use crate::json::Value;
-use crate::jsonb::{text, write, Obj};
+use mzlab_core::json::Value;
+use mzlab_core::jsonb::{text, write, Obj};
 
 fn round(v: f64, d: i32) -> f64 {
     let f = 10f64.powi(d);

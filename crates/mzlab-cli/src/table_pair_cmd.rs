@@ -1,12 +1,12 @@
 //! `mzlab-cli table pair`: the feature tables of the positive and the negative method (the CSV of `mzlab-cli features` or a `.mzfeat`) paired by neutral
-//! mass and RT (`mzlab_core::polarity_pair`, the engine of the Flow step `features.pair`: same bytes as the site's `.wasm`). The pairs are the standard
+//! mass and RT (`mzlab_feat::polarity_pair`, the engine of the Flow step `features.pair`: same bytes as the site's `.wasm`). The pairs are the standard
 //! output as CSV (or `pair/1` with `--json`); the rows without a partner are listed with them; the rule and every automatic choice are in the document.
 
 use std::path::PathBuf;
 
 use mzlab_core::error::Error;
 use mzlab_core::json::{parse, Value};
-use mzlab_core::polarity_pair::{run, Params};
+use mzlab_feat::polarity_pair::{run, Params};
 
 use crate::samples_import::say;
 use crate::Outcome;

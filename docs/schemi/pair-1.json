@@ -2,7 +2,7 @@
  "$schema": "https://json-schema.org/draft/2020-12/schema",
  "$id": "pair/1",
  "title": "pair/1: the [M+H]+ and [M-H]- features of two polarity methods paired by neutral mass and RT",
- "description": "The answer of `mzlab-cli table pair --json` and of the `features.pair` Flow step (same bytes in the site and the app): every positive row is paired with every negative row whose neutral mass (from the adduct lists, user-editable) agrees within `mass_tol` and whose RT agrees within `rt_tol`; `csv` is the same table as text. Rows left without a partner are in `unmatched`; every automatic choice (the rule, the adduct lists, the sign of the mass error, how `mutual` is decided) is in `choices`. Nothing is refused for a finding; identification of the compounds is out of scope. Code: crates/mzlab-core/src/polarity_pair/.",
+ "description": "The answer of `mzlab-cli table pair --json` and of the `features.pair` Flow step (same bytes in the site and the app): every positive row is paired with every negative row whose neutral mass (from the adduct lists, user-editable) agrees within `mass_tol` and whose RT agrees within `rt_tol`; `csv` is the same table as text. Rows left without a partner are in `unmatched`; every automatic choice (the rule, the adduct lists, the sign of the mass error, how `mutual` is decided) is in `choices`. Nothing is refused for a finding; identification of the compounds is out of scope. Code: crates/mzlab-feat/src/polarity_pair/.",
  "type": "object",
  "required": [
   "schema",

@@ -8,8 +8,8 @@ mod params;
 mod report;
 mod table;
 
-use crate::error::{Error, Result};
-use crate::json::{parse, Value};
+use mzlab_core::error::{Error, Result};
+use mzlab_core::json::{parse, Value};
 
 pub use params::{Params, NEG_DEFAULT, POS_DEFAULT};
 

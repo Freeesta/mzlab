@@ -1,5 +1,5 @@
 //! `features.pair@1` on two synthetic tables (invented neutral masses: two known pairs, an RT decoy at the mass of a third species, a mass decoy at the
-//! right RT and one positive row alone): the pairs and the `pair/1` are the ones of `mzlab_core::polarity_pair`, every row is listed as paired or unmatched
+//! right RT and one positive row alone): the pairs and the `pair/1` are the ones of `mzlab_feat::polarity_pair`, every row is listed as paired or unmatched
 //! and the bytes are the same on every call.
 
 use mzlab_core::json::{parse, Value};

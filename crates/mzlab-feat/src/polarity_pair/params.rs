@@ -1,9 +1,9 @@
 //! The parameters of `pair`, checked: a value out of range or a bad adduct entry is `err.pair.param`, never clamped; an unknown name is refused too.
 //! An adduct entry is a name of the adduct table (`adduct_table::ion_terms`) or `LABEL:SHIFT`, the mass the adduct adds to M for a singly charged ion.
 
-use crate::adduct_table::ion_terms;
-use crate::error::{Error, Result};
-use crate::json::Value;
+use mzlab_core::adduct_table::ion_terms;
+use mzlab_core::error::{Error, Result};
+use mzlab_core::json::Value;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Unit {

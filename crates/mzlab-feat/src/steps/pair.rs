@@ -1,7 +1,7 @@
 //! `features.pair`: the descriptor of the step that pairs the features of a positive and a negative table by their neutral mass and RT
-//! (`mzlab_core::polarity_pair`, the engine of `mzlab-cli table pair`), to see which species show in both polarities. The adduct lists are parameters.
+//! (`crate::polarity_pair`, the engine of `mzlab-cli table pair`), to see which species show in both polarities. The adduct lists are parameters.
 
-use mzlab_core::polarity_pair::{NEG_DEFAULT, POS_DEFAULT};
+use crate::polarity_pair::{NEG_DEFAULT, POS_DEFAULT};
 use mzlab_core::step::{DataType, Param, Port, RunsIn, Step};
 
 use super::FEAT_CEILING;

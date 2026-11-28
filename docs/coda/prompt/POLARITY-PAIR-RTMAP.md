@@ -6,7 +6,7 @@ Read docs/coda/BRIEF.md.
 
 **Why.** Two methods with different gradients or dead times shift every RT; a fixed `rt_tol` then either misses true pairs or lets decoys in.
 
-**Read first.** `docs/agenti/polarity-pair.md`, `docs/agenti/quant-targets.md` (`rt_warp`, `rt_gap` of `union/1`), `crates/mzlab-core/src/series_union/` (the map), `crates/mzlab-core/src/polarity_pair/pairs.rs`.
+**Read first.** `docs/agenti/polarity-pair.md`, `docs/agenti/quant-targets.md` (`rt_warp`, `rt_gap` of `union/1`), `crates/mzlab-core/src/series_union/` (the map), `crates/mzlab-feat/src/polarity_pair/pairs.rs`.
 
 **Already on main (re-check before coding).** `quant union` maps the RT of the series onto the first one (`rt_warp=piecewise`). `pair/1` has no map: the doc says the axes are compared as they are.
 
