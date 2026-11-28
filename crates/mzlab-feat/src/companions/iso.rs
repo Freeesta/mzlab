@@ -172,10 +172,8 @@ pub fn group(mut pairs: Vec<IsoPair>, mz: &[f64], n: usize) -> IsoFound {
         }
     }
     let mut has_member = vec![false; n];
-    for j in 0..n {
-        if let Some(a) = parent[j] {
-            has_member[a] = true;
-        }
+    for &a in parent.iter().flatten() {
+        has_member[a] = true;
     }
     for j in 0..n {
         if let Some(a) = parent[j] {
