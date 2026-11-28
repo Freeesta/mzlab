@@ -1,12 +1,15 @@
 //! `companions/1` (`docs/schemi/companions-1.json`): the parameters used, the counts, one entry per row (`id`, `companion_of`, `companion_via`), the edges
 //! with their evidence and the `weak` candidates (a mass relation that fits but whose correlation is below `min_corr`, or was not tested).
 
+use super::iso::IsoFound;
 use super::{Edge, Found, Kind, Params};
 use crate::table::Aligned;
 use mzlab_core::json::{round, Out};
 
 /// Weak candidates listed at most, the strongest first; `weak_dropped` counts the others.
 pub const WEAK_CAP: usize = 200;
+/// Isotope pairs listed at most (`isotopes.pairs_dropped` counts the rest); the counts cover every pair.
+pub const PAIR_CAP: usize = 5000;
 /// 13C/12C of nature (1.08 %): carbons implied by an M+1/M ratio, an upper bound when N, S or Si add to it.
 const C13: f64 = 0.0108;
 /// M+2/M above which Cl, Br or S is a reading to look at.
@@ -135,7 +138,80 @@ pub fn to_json(t: &Aligned, p: &Params, f: &Found) -> String {
             "true"
         } else {
             "false"
-        })
-        .raw("}");
+        });
+    if let Some(i) = &f.iso {
+        isotopes(&mut o, t, p, i);
+    }
+    o.raw("}");
     o.0
+}
+
+fn col(o: &mut Out, key: &str, t: &Aligned, v: &[Option<usize>]) {
+    o.raw(",\"").raw(key).raw("\":[");
+    for (r, x) in v.iter().enumerate() {
+        o.raw(if r > 0 { "," } else { "" });
+        match x {
+            Some(i) => o.int(i64::from(t.id(*i))),
+            None => o.raw("null"),
+        };
+    }
+    o.raw("]");
+}
+
+/// The `isotopes` object (only with `iso_group`): the parameters used, the counts, one entry per row and every +1/+2 pair with its verdict and numbers.
+fn isotopes(o: &mut Out, t: &Aligned, p: &Params, f: &IsoFound) {
+    let q = &p.iso;
+    o.raw(",\"isotopes\":{\"params\":{\"iso_min_corr\":")
+        .num(q.min_corr);
+    o.raw(",\"iso_ratio_min\":").num(q.ratio_min);
+    o.raw(",\"iso_ratio_max\":").num(q.ratio_max);
+    o.raw(",\"iso_m2_max\":").num(q.m2_max);
+    o.raw(",\"spill_min\":").num(q.spill_min);
+    o.raw(",\"spill_max\":").num(q.spill_max);
+    o.raw(",\"da_tol\":").num(p.da_tol);
+    o.raw(",\"rt_tol\":").num(p.rt_tol);
+    let c = &f.counts;
+    o.raw("},\"counts\":{\"pairs\":").int(c.pairs as i64);
+    o.raw(",\"isotope\":").int(c.isotope as i64);
+    o.raw(",\"spillover\":").int(c.spillover as i64);
+    o.raw(",\"rejected_corr\":").int(c.rejected_corr as i64);
+    o.raw(",\"rejected_ratio\":").int(c.rejected_ratio as i64);
+    o.raw(",\"untested\":").int(c.untested as i64);
+    o.raw(",\"groups\":").int(c.groups as i64);
+    o.raw(",\"grouped_rows\":").int(c.grouped_rows as i64);
+    o.raw("}");
+    col(o, "iso_group", t, &f.group_of);
+    o.raw(",\"iso_step\":[");
+    for (r, s) in f.step_of.iter().enumerate() {
+        o.raw(if r > 0 { "," } else { "" });
+        match s {
+            Some(v) => o.int(i64::from(*v)),
+            None => o.raw("null"),
+        };
+    }
+    o.raw("]");
+    col(o, "spill_of", t, &f.spill_of);
+    o.raw(",\"pairs\":[");
+    for (k, e) in f.pairs.iter().take(PAIR_CAP).enumerate() {
+        o.raw(if k > 0 { "," } else { "" });
+        o.raw("{\"from\":").int(i64::from(t.id(e.a)));
+        o.raw(",\"to\":").int(i64::from(t.id(e.b)));
+        o.raw(",\"step\":").int(i64::from(e.step));
+        o.raw(",\"verdict\":").str(e.verdict.name());
+        o.raw(",\"r\":");
+        opt(o, e.ev.r, 4);
+        o.raw(",\"n_files\":").int(e.ev.n as i64);
+        o.raw(",\"rt_offset\":");
+        opt(o, e.ev.rt_offset, 4);
+        o.raw(",\"ratio\":{\"median\":");
+        opt(o, e.ev.ratio_med, 4);
+        o.raw(",\"lo\":");
+        opt(o, e.ev.ratio_lo, 4);
+        o.raw(",\"hi\":");
+        opt(o, e.ev.ratio_hi, 4);
+        o.raw("}}");
+    }
+    o.raw("],\"pairs_dropped\":")
+        .int(f.pairs.len().saturating_sub(PAIR_CAP) as i64)
+        .raw("}");
 }

@@ -96,3 +96,31 @@ fn a_smiles_gives_the_groups_and_the_fragments_of_the_page() {
     assert!(run(&d, "{}").is_err());
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_formula_filter_is_off_by_default_and_its_parameters_reach_the_engine() {
+    let d = dir("filt");
+    std::fs::write(d.join("parent.txt"), format!("{FORMULA}\n")).unwrap();
+    let plain = run(&d, "{}").unwrap();
+    assert!(!plain.contains("\"filter\""), "{plain}");
+    let got = run(
+        &d,
+        r#"{"formula_filter":true,"filter_steps":1,"m2_tol":0.05,"m2_ref":0.1}"#,
+    )
+    .unwrap();
+    let p = HypoParams {
+        formula_filter: true,
+        filter_steps: 1,
+        m2_tol: 0.05,
+        m2_ref: Some(0.1),
+        ..HypoParams::default()
+    };
+    assert_eq!(got, engine(None, &p));
+    assert!(
+        got.contains(
+            "\"filter\":{\"steps\":1,\"m2_tol\":0.05,\"m2_ref\":0.1,\"m2_source\":\"observed\""
+        ),
+        "{got}"
+    );
+    let _ = std::fs::remove_dir_all(&d);
+}

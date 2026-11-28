@@ -117,6 +117,25 @@ fn generate() -> Step {
                 .default_bool(d.other_polarity)
                 .doc("Expected members of a family in the other polarity too ([M-H]- of a positive base and the reverse)")
                 .advanced(),
+            Param::boolean("formula_filter", "Formula filter")
+                .default_bool(d.formula_filter)
+                .doc("Keeps only hypotheses reachable from the parent in filter_steps rule steps whose expected M+2/M is within m2_tol of the parent's; the counts of what it left out are written in the registry")
+                .advanced(),
+            Param::integer("filter_steps", "Filter: most steps")
+                .min(1.0)
+                .max(4.0)
+                .default_num(f64::from(d.filter_steps))
+                .doc("Most rule steps from the parent for a hypothesis to stay (formula filter on)")
+                .advanced(),
+            Param::number("m2_tol", "Filter: M+2/M tolerance")
+                .min(0.0)
+                .default_num(d.m2_tol)
+                .doc("Largest difference between the expected M+2/M of a hypothesis and the reference ratio (formula filter on)")
+                .advanced(),
+            Param::number("m2_ref", "Filter: observed parent M+2/M")
+                .min(0.0)
+                .doc("Observed M+2/M of the parent (for example from raw isotopes); without it the ratio of the parent's formula is used")
+                .advanced(),
             Param::boolean("nominal", "Unit resolution")
                 .default_bool(d.nominal)
                 .doc("Two formulas of the same nominal m/z and adduct are one hypothesis, the others its alternatives")

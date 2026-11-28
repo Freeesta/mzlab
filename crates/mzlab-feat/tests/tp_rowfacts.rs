@@ -60,6 +60,7 @@ fn registry(formula: &str) -> Registry {
         rules_version: 1,
         polarity: 1,
         suspects_cut: 0,
+        filter: None,
     }
 }
 

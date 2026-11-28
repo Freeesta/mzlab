@@ -38,6 +38,24 @@
       "type": "integer",
       "description": "Suspect hits left out by the `max_suspects` cap."
     },
+    "filter": {
+      "type": "object",
+      "description": "Present only with the optional formula filter of tp.generate (`formula_filter`, off by default): the settings used and where each candidate went. seen = kept + unreachable + m2_off. `unchecked` (no formula) and `structural` (cleavage products of the structure, no reachability test) are kept and counted.",
+      "additionalProperties": false,
+      "required": ["steps", "m2_tol", "m2_ref", "m2_source", "seen", "kept", "unreachable", "m2_off", "unchecked", "structural"],
+      "properties": {
+        "steps": {"type": "integer", "description": "`filter_steps`: most rule steps from the parent"},
+        "m2_tol": {"type": "number", "description": "largest difference of the expected M+2/M from `m2_ref`"},
+        "m2_ref": {"type": "number", "description": "reference M+2/M used"},
+        "m2_source": {"enum": ["observed", "parent_formula"], "description": "`observed` = the `m2_ref` parameter, `parent_formula` = the ratio of the parent's formula"},
+        "seen": {"type": "integer"},
+        "kept": {"type": "integer"},
+        "unreachable": {"type": "integer", "description": "left out: formula not reachable from the parent in `steps` rule steps"},
+        "m2_off": {"type": "integer", "description": "left out: expected M+2/M farther than `m2_tol` from `m2_ref`"},
+        "unchecked": {"type": "integer"},
+        "structural": {"type": "integer"}
+      }
+    },
     "hypotheses": {
       "type": "array",
       "items": {
