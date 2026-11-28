@@ -60,16 +60,33 @@
   F.registerView({ id: "table", title: "Table", types: ["table", "annot", "tp", "candidates", "formulas", "library", "spectra", "report"], accepts: item => /\.(csv|tsv|txt)$/i.test(item.label), open: async (host, item) => {
     const { el } = F;
     if (!/\.(csv|tsv|txt)$/i.test(item.label)) { host.append(el("p", { class: "fl-note", text: `${item.label} is not a text table, so there is nothing to show here.` })); return; }
-    const rows = F.parseCsv(await item.text()), head = rows[0] || [], body = rows.slice(1, MAX_ROWS + 1), cols = Math.min(head.length, MAX_COLS);
-    const table = el("table", { class: "flx-table" }, el("caption", { text: `${item.label}: ${body.length} of ${Math.max(rows.length - 1, 0)} rows, ${cols} of ${head.length} columns` }),
-      el("thead", {}, el("tr", {}, ...head.slice(0, cols).map((/** @type {string} */ h) => el("th", { scope: "col", text: h })))),
-      el("tbody", {}, ...body.map((/** @type {string[]} */ r) => el("tr", {}, ...r.slice(0, cols).map(c => el("td", { text: c }))))));
+    const rows = F.parseCsv(await item.text()), head = rows[0] || [], cols = Math.min(head.length, MAX_COLS), oc = head.indexOf("origin");
+    // a list with an `origin` column (features.union with origin on) gets one chip per combination of series; a chip filters the rows of the whole file
+    /** @type {Set<string>} */ const picked = new Set();
+    const caption = el("caption", { text: "" }), tbody = el("tbody", {});
+    const table = el("table", { class: "flx-table" }, caption, el("thead", {}, el("tr", {}, ...head.slice(0, cols).map((/** @type {string} */ h) => el("th", { scope: "col", text: h })))), tbody);
+    const draw = () => {
+      const all = rows.slice(1).filter((/** @type {string[]} */ r) => oc < 0 || !picked.size || picked.has(r[oc] || "")), body = all.slice(0, MAX_ROWS);
+      caption.textContent = `${item.label}: ${body.length} of ${all.length} rows, ${cols} of ${head.length} columns${oc >= 0 && picked.size ? ` (origin: ${[...picked].join(", ")})` : ""}`;
+      tbody.replaceChildren(...body.map((/** @type {string[]} */ r) => el("tr", {}, ...r.slice(0, cols).map(c => el("td", { text: c })))));
+    };
+    draw();
+    /** @type {HTMLElement | null} */ let chips = null;
+    if (oc >= 0) {
+      /** @type {Map<string, number>} */ const n = new Map();
+      for (const r of rows.slice(1)) n.set(r[oc] || "", (n.get(r[oc] || "") || 0) + 1);
+      chips = el("div", { class: "flx-chips", role: "group", "aria-label": "Filter by origin" }, ...[...n].map(([v, k]) => el("button", { type: "button", class: "fl-b", "data-origin": v, "aria-pressed": "false", text: `${v || "(none)"} (${k})`, onclick: (/** @type {Event} */ e) => {
+        const b = /** @type {HTMLElement} */ (e.currentTarget), on = !picked.has(v);
+        if (on) picked.add(v); else picked.delete(v);
+        b.setAttribute("aria-pressed", String(on)); draw();
+      } })));
+    }
     const sum = F.tableSummary(rows), fmt = (/** @type {number | undefined} */ n) => n === undefined ? "" : String(Math.round(n * 1e6) / 1e6);
     const qc = el("details", { class: "flx-qc" }, el("summary", { text: `Columns: what is filled in (${sum.length})` }),
       el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": "Column summary" }, el("table", { class: "flx-table" }, el("caption", { text: `${Math.max(rows.length - 1, 0)} rows in the file` }),
         el("thead", {}, el("tr", {}, ...["Column", "Filled", "Empty", "Lowest", "Highest"].map(h => el("th", { scope: "col", text: h })))),
         el("tbody", {}, ...sum.map(c => el("tr", {}, el("th", { scope: "row", text: c.name }), el("td", { text: String(c.filled) }), el("td", { text: String(c.empty) }), el("td", { text: fmt(c.min) }), el("td", { text: fmt(c.max) })))))));
-    host.append(qc, el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": `Table ${item.label}` }, table));
+    host.append(qc, ...(chips ? [chips] : []), el("div", { class: "flx-tablewrap", tabindex: 0, role: "region", "aria-label": `Table ${item.label}` }, table));
   } });
 
   /** shows a result under the canvas, with a way back @param {any} item */

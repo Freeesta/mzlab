@@ -57,11 +57,11 @@ def native(tmp_path, params, names):
     return (out / "u.csv").read_text(encoding="utf-8"), (out / "u.union.json").read_text(encoding="utf-8")
 
 
-DEFAULTS = {"da": 0.5, "rt_tol": 0.1, "rt_warp": "off", "rt_gap": 0.5, "min_series": 1, "pad": 0, "polarity": "any"}
+DEFAULTS = {"da": 0.5, "rt_tol": 0.1, "rt_warp": "off", "rt_gap": 0.5, "min_series": 1, "pad": 0, "polarity": "any", "origin": "off"}
 
 
 @pytest.mark.parametrize("names", NAMES)
-@pytest.mark.parametrize("params", [{}, {"min_series": 2, "polarity": "+"}, {"rt_tol": 0.02, "pad": 0.05}])
+@pytest.mark.parametrize("params", [{}, {"min_series": 2, "polarity": "+"}, {"rt_tol": 0.02, "pad": 0.05}, {"origin": "on"}])
 def test_wasm_and_cli_give_the_same_bytes(pkg, tmp_path, params, names):
     got = wasm(pkg, {**DEFAULTS, **params}, tmp_path / "w", names)
     assert (got["csv"], got["doc"]) == native(tmp_path / "n", params, names)

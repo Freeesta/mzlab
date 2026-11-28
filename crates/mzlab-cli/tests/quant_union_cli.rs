@@ -236,3 +236,41 @@ fn polarity_any_is_the_default_and_a_sign_stamps_the_rows_that_have_none() {
     assert_eq!(run(&["--set", "polarity=+"]), plus, "--set polarity=+");
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn origin_is_opt_in_names_the_input_tables_and_quant_targets_still_reads_the_list() {
+    let d = dir("origin");
+    let run = |extra: &[&str]| {
+        let mut a = vec!["quant", "union", "a.csv", "b.csv", "--rt-tol", "0.3"];
+        a.extend_from_slice(extra);
+        cli(&a, &d)
+    };
+    let off = run(&[]);
+    assert_eq!(off.status.code(), Some(0), "{}", text(&off.stderr));
+    assert_eq!(
+        text(&run(&["--origin", "off"]).stdout),
+        text(&off.stdout),
+        "--origin off is the default"
+    );
+    assert!(!text(&off.stdout).contains("origin"));
+    let on = run(&["--origin", "on"]);
+    assert_eq!(on.status.code(), Some(0), "{}", text(&on.stderr));
+    let csv = text(&on.stdout);
+    assert_eq!(text(&run(&["--set", "origin=on"]).stdout), csv, "--set origin=on");
+    assert!(csv.starts_with("id,mz,rt_min,rt_max,polarity,role,origin\n"), "{csv}");
+    // 200 is in both series; 300 and 400.3 only in a.csv, 500 only in b.csv
+    let of = |o: &str| csv.lines().filter(|l| l.ends_with(&format!(",{o}"))).count();
+    assert_eq!((of("a.csv+b.csv"), of("a.csv"), of("b.csv")), (1, 2, 1), "{csv}");
+    // the same list as JSON: the origin of each target and the count per combination
+    let j = run(&["--origin", "on", "--json"]);
+    let v = mzlab_core::json::parse(&j.stdout).unwrap();
+    assert_eq!(v.get("origins").unwrap().arr().len(), 3);
+    assert_eq!(v.get("csv").and_then(mzlab_core::json::Value::str), Some(csv.as_str()));
+    // the extra column does not disturb the sweep
+    std::fs::write(d.join("union.csv"), &csv).unwrap();
+    let q = cli(&["quant", "targets", "--targets", "union.csv", "A.mzML", "B.mzML"], &d);
+    assert_eq!(q.status.code(), Some(0), "{}", text(&q.stderr));
+    // a value that is neither is a usage error with its own exit code
+    assert_eq!(run(&["--origin", "maybe"]).status.code(), Some(2));
+    let _ = std::fs::remove_dir_all(&d);
+}

@@ -29,6 +29,8 @@ pub(super) fn union() -> Step {
             Param::choice("polarity", "Polarity", &["any", "+", "-"]).default_str("any")
                 .doc("The polarity of the rows (a table holds none): + or -, any = every scan; run one list per polarity")
                 .tip("The polarity of the list: + or -, any = every scan; run one list per polarity."),
+            Param::choice("origin", "Origin", &["off", "on"]).default_str("off")
+                .doc("on writes the series each target came from (an origin column in the list, a list in union/1); off leaves the bytes of a run as they were"),
         ],
         runs_in: RunsIn {
             wasm: Some("flowtab + rotte"),
