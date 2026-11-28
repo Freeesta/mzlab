@@ -42,6 +42,43 @@ fn params() -> Vec<Param> {
         Param::text("losses", "In-source loss differences")
             .default_str(LOSSES)
             .doc("Comma-separated nominal differences (Da) of in-source fragments: 17 NH3, 18 H2O, 28 CO, 42 C2H2O, 44 CO2, 46 HCOOH"),
+        Param::boolean("iso_group", "Group isotopes")
+            .default_bool(false)
+            .doc("Adds an isotopes section: M, M+1 and M+2 rows grouped by the rules below, and a +1 channel that holds spill_min to spill_max of M flagged as spill-over instead of an isotope")
+            .tip("Groups M, M+1 and M+2 into isotopes and flags a spill-over +1 channel.")
+            .advanced(),
+        Param::number("iso_min_corr", "Isotope correlation floor")
+            .min(-1.0)
+            .max(1.0)
+            .default_num(0.5)
+            .doc("An ion at M+1 or M+2 whose height correlation with M is below this is never an isotope")
+            .advanced(),
+        Param::number("iso_ratio_min", "Smallest M+1/M")
+            .min(0.0)
+            .default_num(0.01)
+            .doc("A +1 ion below this ratio to M is not grouped as an isotope")
+            .advanced(),
+        Param::number("iso_ratio_max", "Largest M+1/M")
+            .min(0.0)
+            .default_num(0.5)
+            .doc("A +1 ion above this ratio to M (and outside the spill-over band) is not grouped as an isotope")
+            .advanced(),
+        Param::number("iso_m2_max", "Largest M+2/M")
+            .min(0.0)
+            .default_num(1.0)
+            .doc("A +2 ion above this ratio to M is not grouped as an isotope")
+            .advanced(),
+        Param::number("spill_min", "Spill-over from")
+            .min(0.0)
+            .default_num(0.5)
+            .doc("A correlated +1 channel holding at least this share of M is flagged as instrument spill-over, with its ratio and correlation")
+            .tip("A correlated +1 channel with at least this share of M is flagged as spill-over.")
+            .advanced(),
+        Param::number("spill_max", "Spill-over up to")
+            .min(0.0)
+            .default_num(0.8)
+            .doc("Upper end of the spill-over band of the +1 to M ratio")
+            .advanced(),
         Param::integer("max_edges", "Largest edge count")
             .min(0.0)
             .default_num(20000.0)

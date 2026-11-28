@@ -423,6 +423,7 @@ fn network_of(product: &[(f64, f32)], o: &SpecOpts) -> Option<f64> {
         rules_version: 1,
         polarity: 1,
         suspects_cut: 0,
+        filter: None,
     };
     row_facts(&t, &reg, Some((300.0, 5.0)), &spec, &[], false).0[1].network
 }

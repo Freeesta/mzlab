@@ -147,3 +147,35 @@ fn fewer_files_than_min_corr_samples_are_said_in_the_record() {
     assert_eq!(text, engine(&[("min_corr_samples", Value::Num(6.0))]));
     let _ = std::fs::remove_dir_all(&d);
 }
+
+#[test]
+fn the_isotope_grouping_is_opt_in_and_reaches_the_engine() {
+    let d = dir("iso");
+    let (plain, _) = run(&d, "{}");
+    assert!(!plain.contains("\"isotopes\""), "{plain}");
+    let (got, prov) = run(&d, r#"{"iso_group":true,"spill_max":0.9}"#);
+    assert!(!prov.contains("\"error\""), "{prov}");
+    assert_eq!(
+        got,
+        engine(&[
+            ("iso_group", Value::Bool(true)),
+            ("spill_max", Value::Num(0.9))
+        ])
+    );
+    let v = parse(got.as_bytes()).unwrap();
+    let iso = v.get("isotopes").unwrap();
+    assert_eq!(
+        iso.get("params").unwrap().get("spill_max").unwrap().f64(),
+        Some(0.9)
+    );
+    // the M+1 at 11 % is grouped with its M (ids are 1-based rows)
+    let groups: Vec<Option<f64>> = iso
+        .get("iso_group")
+        .unwrap()
+        .arr()
+        .iter()
+        .map(Value::f64)
+        .collect();
+    assert_eq!(&groups[..2], &[Some(1.0), Some(1.0)]);
+    let _ = std::fs::remove_dir_all(&d);
+}
