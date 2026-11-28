@@ -220,7 +220,7 @@ fn params_value(p: &Params) -> Value {
 /// The series that hold a target, in the order the series were given.
 fn origin_of(d: &Done) -> Vec<usize> {
     let mut k: Vec<usize> = d.t.members.iter().map(|m| m.series).collect();
-    k.sort_unstable();
+    crate::sortc::slice_ord(&mut k);
     k.dedup();
     k
 }
