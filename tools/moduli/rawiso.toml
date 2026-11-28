@@ -3,6 +3,6 @@ pacchetto = "mzlab-rawiso-wasm"
 chiavi = { rawiso = 38 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 299008
-misura = 260418
-nota = "api/rawiso (`raw isotopes`: the net counts of M, M+1 and M+2 over the peak region of an m/z and a window, the observed ratios with counting sigma, and the z scores against the pattern of a formula, over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first isotopes request; a module of its own (new lazy module, owner decision NEW line); 260,418 B after wasm-opt (CI size step, 1cdd4e112), cap = measurement x 1.05 rounded up to 4 KiB; the figure (`--figure`, `figure=1`: rawiso_fig.rs) grew the module by about 22.5 KB after wasm-opt (283,454 B measured locally against 260,931 B without it), so the cap is 299,008 (+8.96 %, inside the 10 % rule)"
+tetto = 294912
+misura = 283494
+nota = "api/rawiso (`raw isotopes`: the net counts of M, M+1 and M+2 over the peak region of an m/z and a window, the observed ratios with counting sigma, and the z scores against the pattern of a formula, over the .mzidx in OPFS); lazy, loaded by rust-raw.js at the first isotopes request; a module of its own (new lazy module, owner decision NEW line); 260,418 B after wasm-opt (CI size step, 1cdd4e112), cap = measurement x 1.05 rounded up to 4 KiB; 283,494 B after wasm-opt with the figure of `raw isotopes` (`--figure`, `figure=1`: `rawiso_fig.rs`; CI size step, +23,076 B over 260,418 B), cap 294,912 = measurement x 1.04 rounded down to 4 KiB"
