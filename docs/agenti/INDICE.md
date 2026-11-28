@@ -76,9 +76,9 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | in silico candidate package (`mzlab-cli db insilico pack`, `insilico-scarica.js`, `flow-web-insilico.js`, `crates/mzlab-desktop/src/insilico.rs`, `spectra.insilico` in the browser) | `docs/agenti/insilico.md` |
 | per-row TP interpretation (`crates/mzlab-feat/src/interp/`, `interp/1`, `filtri/1`, `interp` block in the `.mzfeat`, `.wasm` `interp`, `table_interp` routes) | `docs/agenti/interp.md` |
 | grouping the ions of a compound (`features.group`, `ionnet/1`: correlation, isotopes, GNPS edges; `ionnet/`) and companion ions at unit mass (`features.companions`, `companions/1`, AU-10; `companions/`) | `docs/agenti/ion-groups.md` |
+| first-order rate of a time series (`quant.kinetics`: areas of fixed RT windows, UV injection check, k with its interval, `kinetics-series/1`, `kinetics.rs`, `flow_kinetics.rs`) | `docs/agenti/kinetics-series.md` |
 | texts, `lang/`, `help.js`, English only; marked-up texts (italic m/z, superscript MS2) written once, before first paint | `docs/agenti/languages.md` |
 | identification levels (Schymanski scale 2a/2b/3a/3b, prediction scale, "L3" and "Prev. 2" labels, Tabui, Attributio, untargeted) | `docs/agenti/levels.md` |
-| first-order rate of a time series (`quant.kinetics`: areas of fixed RT windows, UV injection check, k with its interval, `kinetics-series/1`, `kinetics.rs`, `flow_kinetics.rs`) | `docs/agenti/kinetics-series.md` |
 | `.mzlib` format, library parsers, indexes and scores (`crates/mzlab-lib`) | `docs/agenti/libraries.md` |
 | user lists (transformations, adducts, suspects: CSV with per-row errors, `liste/1`, SHA-256 for `prov/1`) | `docs/agenti/lists.md` |
 | LLM assistant and external agents: principles, choices, risks, unrealized proposals | `docs/agenti/llm-choices.md` |

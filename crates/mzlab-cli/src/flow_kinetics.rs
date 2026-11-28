@@ -31,15 +31,15 @@ pub fn kinetics_step() -> Step {
                 .doc("The files with role t0 join every series at their time (0 when the samples give none; logged)."),
             Param::choice("missing", "A file with no peak", &["skip", "zero"])
                 .default_str("skip")
-                .doc("skip: the point is left out and counted; zero: its area is 0. Either way the points list says so."),
+                .doc("Skip leaves the point out and counts it; zero gives it an area of 0."),
             Param::choice("uv_mode", "UV reference", &["normalise", "check"])
                 .default_str("normalise")
-                .doc("normalise: every area is divided by the UV area of its file over the median UV area; check: the factors are reported and the areas stay as they are. Without the uv input nothing is divided."),
+                .doc("Normalise divides each area by its file's UV factor; check only reports the factors."),
             Param::number("uv_rt", "UV reference RT")
                 .min(0.0)
                 .default_num(0.0)
                 .unit("min")
-                .doc("Apex of the UV peak that does not react (an internal reference, or the parent in a dark control); 0 = the median apex of the largest peak of each file, logged."),
+                .doc("Apex of the UV peak that does not react; 0 takes the median apex of the largest peak."),
             Param::number("uv_rt_tol", "UV RT tolerance")
                 .min(0.0)
                 .default_num(DEFAULT_UV_RT_TOL)

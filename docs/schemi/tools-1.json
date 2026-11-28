@@ -1767,18 +1767,18 @@
                   {
                     "enum":["skip","zero"],
                     "default":"skip",
-                    "description":"skip: the point is left out and counted; zero: its area is 0. Either way the points list says so."
+                    "description":"Skip leaves the point out and counts it; zero gives it an area of 0."
                   },
                   {
                     "enum":["normalise","check"],
                     "default":"normalise",
-                    "description":"normalise: every area is divided by the UV area of its file over the median UV area; check: the factors are reported and the areas stay as they are. Without the uv input nothing is divided."
+                    "description":"Normalise divides each area by its file's UV factor; check only reports the factors."
                   },
                   {
                     "type":"number",
                     "minimum":0,
                     "default":0,
-                    "description":"Apex of the UV peak that does not react (an internal reference, or the parent in a dark control); 0 = the median apex of the largest peak of each file, logged."
+                    "description":"Apex of the UV peak that does not react; 0 takes the median apex of the largest peak."
                   },
                   {
                     "type":"number",
