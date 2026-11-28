@@ -6,8 +6,8 @@
 // above; one outside it (spec.out: the file list of the side bar, the «+ XIC» button) from above, left or right, with the arrow in a fixed layer because the panel
 // clips its children; off screen it gives way to a plain line (spec.plain). grafici.js drawLines calls sync(p, spec) / clear(p).
 
-/** @typedef {{ key: string, above?: string, target?: string, out?: string, plain?: string, act?: (t: Element | null) => void, alt?: string }} Spec  key: i18n key of the prompt; above: the same without the arrow;
- * target: selector (inside the panel) of the control; out: selector (in the page) of a control outside the panel; plain: key of the line when that control is off screen or has no room;
+/** @typedef {{ key: string, above?: string, target?: string, out?: string | (() => Element | null), plain?: string, act?: (t: Element | null) => void, alt?: string }} Spec  key: i18n key of the prompt; above: the same without the arrow;
+ * target: selector (inside the panel) of the control; out: selector (in the page), or a function that returns the element, of a control outside the panel; plain: key of the line when that control is off screen or has no room;
  * act: what the prompt does (t = the control, null when it is off screen), default a click on the control; alt: text when the control is absent */
 /** @typedef {{ svg: SVGSVGElement, ln: SVGPathElement, hd: SVGPathElement }} Fixed */
 /** @typedef {{ spec: Spec, root: HTMLElement, box: HTMLElement, go: HTMLElement, tx: HTMLElement, ln: SVGPathElement, hd: SVGPathElement, fx: Fixed | null, stops: (() => void)[], mo: MutationObserver, raf: number }} State */
@@ -50,6 +50,22 @@ export function empty(p, g, hidden, say, x) {
     : p.type === "xic" && !(p.traces || []).length ? { key: "empty.xic", plain: "msg.xic", out: XIC_BTN, act: (/** @type {Element | null} */ t) => /** @type {HTMLElement | null} */ (t || document.querySelector(XIC_BTN))?.click(), alt: say } : { key: "msg." + p.type, alt: say });
 }
 
+/** the chromatogram panel that holds the choice of a spectrum panel: the one it is linked to, else the first one of its tab (a TIC / BPC, XIC or MRM panel that is drawn)
+ * @param {any} p @returns {any} */
+function chromOf(p) {
+  const ok = (/** @type {any} */ q) => q && q.el && q.el.isConnected && q.cv && !q._exp && isLine(q);
+  const l = p.link != null ? E.panels.find((/** @type {any} */ q) => q.id === p.link) : null;
+  return ok(l) ? l : tabPanels(p.tab ?? E.tab).find(ok) || null;
+}
+
+/** empty state of a spectrum or map panel that has nothing to show; say = its words (already translated), pick = no time range chosen yet: the prompt then points at the chromatogram
+ * panel that holds the choice (its live rectangle), or is text only when there is none; any other message is text only
+ * @param {any} p @param {string} say @param {boolean} [pick] */
+export function note(p, say, pick) {
+  const ch = pick ? chromOf(p) : null, cv = () => (chromOf(p) || ch)?.cv || null;
+  sync(p, ch ? { key: "empty.spec", plain: "spec.pickRange", out: cv, alt: say, act: () => { const c = chromOf(p); if (c) { c.el.scrollIntoView({ block: "nearest" }); c.cv.focus?.(); } } } : { key: "empty.note", alt: say });
+}
+
 /** @param {any} p */
 export function clear(p) {
   const s = /** @type {State | undefined} */ (p._eh); if (!s) return;
@@ -74,7 +90,7 @@ export function sync(p, spec) {
   s = p._eh = { spec, root, box: q(".eh-box"), go, tx: q(".eh-tx"), ln: q(".eh-ln"), hd: q(".eh-hd"), fx: null, stops: [], mo, raf: 0 };
   s.stops = [p.el, p.cv, go, ...[".hd", ".ttl", ".ctl"].map(q => p.el.querySelector(q))].map(e => FRAME.ro(e, redo));
   if (spec.out) {      // a control outside the panel moves with the page (scroll, side bar opened or resized, list re-rendered), not with the panel
-    s.stops.push(FRAME.ro(document.querySelector(spec.out), redo));
+    s.stops.push(FRAME.ro(outEl(spec), redo));
     for (const ev of ["resize", "scroll"]) { window.addEventListener(ev, redo, { capture: true, passive: true }); s.stops.push(() => window.removeEventListener(ev, redo, { capture: true })); }
   }
   const hd = p.el.querySelector(".hd"); if (hd) mo.observe(hd, { childList: true, subtree: true, attributes: true });      // the toolbar is rebuilt as a whole, and its fit moves controls with a class or a style: its control is not where it was
@@ -82,9 +98,12 @@ export function sync(p, spec) {
   if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => layout(p));
 }
 
+/** the control outside the panel that a spec names @param {Spec} sp */
+const outEl = sp => typeof sp.out === "function" ? sp.out() : sp.out ? document.querySelector(sp.out) : null;
+
 /** the control the prompt points at, if it is there (and, outside the panel, on screen) @param {any} p */
 function target(p) {
-  const s = /** @type {State | undefined} */ (p._eh), sp = s && s.spec, t = sp ? sp.out ? document.querySelector(sp.out) : sp.target ? p.el.querySelector(sp.target) : null : null;
+  const s = /** @type {State | undefined} */ (p._eh), sp = s && s.spec, t = sp ? sp.out ? outEl(sp) : sp.target ? p.el.querySelector(sp.target) : null : null;
   if (!t) return null;
   const r = t.getBoundingClientRect(); if (!(r.width > 0 && r.height > 0)) return null;
   return sp && sp.out && !(r.bottom > 0 && r.top < innerHeight && r.right > 0 && r.left < innerWidth) ? null : t;
@@ -111,7 +130,7 @@ function curl(ln, hd, sx, sy, ex, ey, fx, fy) {
 
 /** place the prompt over the canvas, choose its words and draw the arrow @param {any} p */
 function layout(p) {
-  const s = /** @type {State | undefined} */ (p._eh); if (!s || !p.el.isConnected) return;
+  const s = /** @type {State | undefined} */ (p._eh); if (!s) return; if (!p.el.isConnected) return clear(p);      // a closed panel takes its fixed arrow layer with it
   const pr = p.el.getBoundingClientRect(); if (!pr.width) { if (s.fx) s.fx.svg.remove(), s.fx = null; return; }            // hidden (another tab): nothing to measure
   const ox = pr.left + p.el.clientLeft, oy = pr.top + p.el.clientTop, cr = p.cv.getBoundingClientRect();
   Object.assign(s.box.style, { left: cr.left - ox + "px", top: cr.top - oy + "px", width: cr.width + "px", height: cr.height + "px" });

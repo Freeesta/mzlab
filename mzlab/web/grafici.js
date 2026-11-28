@@ -571,7 +571,7 @@ function mapView(A, B, rt0, rt1, mz0, mz1, others = []) {
 async function drawMap(p) {
   if (window.MAPPA) { MAPPA.corrInit(p); MAPPA.corrPick(p); }                // an old panel gets its «Correzione»; a stretch chosen with Alt + drag becomes the background
   const { g, W, H } = setup(p.cv);
-  const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; p._a = null; };
+  const say = async (/** @type {string} */ t) => { g.clearRect(0, 0, W, H); p.leg.innerHTML = ""; p._a = null; ((/** @type {any} */ (window)).EMPTYHINT ||= await import("./empty-hint.js")).note(p, t); };
   const isPda = p.mapKind === "pda" || p.kind === "pda";
   const sf = isPda ? tabFiles(p.tab) : scanFiles(tabFiles(p.tab)); if (!sf.length) return say(I18N.t("map.noScans"));
   let f = E.browse && E.files[E.cur] && E.files[E.cur].kind === p.tab ? E.files[E.cur] : E.files[p.k];
@@ -588,7 +588,7 @@ async function drawMap(p) {
   const x0 = p.zoom ? p.zoom[0] : ext.rt[0], x1 = p.zoom ? p.zoom[1] : ext.rt[1], y0 = p.zoomY ? p.zoomY[0] : ext.mz[0], y1 = p.zoomY ? p.zoomY[1] : ext.mz[1];
   const pw = W - M.l - M.r, ph = H - M.t - M.b;
   const nTxt = { abs: "", max: I18N.t("map.norm.max"), tic: I18N.t("map.norm.tic") }[p.norm || "abs"], scTxt = p.scale === "gamma" ? I18N.t("map.sc.gamma", { g: p.gamma || 0.6 }) : I18N.t(`map.sc.${p.scale}`);
-  g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = !!(window.MAPPA && (p.zoom || p.zoomY) && MAPPA.smooth());      // zoomed in: «Liscia» blends the stretched bins
+  /** @type {any} */ (window).EMPTYHINT?.clear(p); g.clearRect(0, 0, W, H); g.imageSmoothingEnabled = !!(window.MAPPA && (p.zoom || p.zoomY) && MAPPA.smooth());      // zoomed in: «Liscia» blends the stretched bins
   if (!(window.MAPPA && MAPPA.zoomImg(p, g, { A, B, im, x0, x1, y0, y1, pw, ph, norm: p.norm || "abs" })))        // mappa.js: the zoomed region on new bins
     g.drawImage(im.off, (x0 - rt0) / (rt1 - rt0) * A.nrt, (mzB - y1) / A.dmz, (x1 - x0) / (rt1 - rt0) * A.nrt, (y1 - y0) / A.dmz, M.l, M.t, pw, ph);
   const X = v => M.l + (v - x0) / (x1 - x0) * pw, Yv = v => H - M.b - (v - y0) / (y1 - y0) * ph;
