@@ -21,7 +21,7 @@ use mzlab_core::step::DataType;
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{self, Stored};
 use mzlab_ops::run::feat::run;
-use mzlab_ops::run::feat::run::meta::{recipe, written, Estimate};
+use mzlab_ops::run::feat::run::meta::{recipe, written};
 
 #[cfg(test)]
 #[path = "flow_record_tests.rs"]
@@ -38,6 +38,11 @@ use crate::flow::{io, FileRunner, Lineage, Made};
 use crate::flow_made::named_preset;
 use crate::flow_pace::{Gate, Gated, Stop, Stopping};
 use flow_indexes::Indexes;
+
+#[path = "flow_recipe.rs"]
+mod recipe_of;
+use recipe_of::align_recipe;
+pub(crate) use recipe_of::rebuild;
 
 pub(crate) fn open(path: &PathBuf) -> Result<Index<File>> {
     #[cfg(test)]
@@ -93,15 +98,6 @@ pub(crate) fn index_job(r: &FileRunner, job: &Job) -> Result<Made> {
     let mut made = Made::new("index", a);
     crate::flow_convert_notes::note_losses(&mut made, &lost);
     Ok(made)
-}
-
-/// The recipe a lineage means: the one of the panel on its first index, then the parameters of each feature step.
-pub(crate) fn rebuild(lin: &Lineage) -> Result<Recipe> {
-    let first = lin
-        .first
-        .as_ref()
-        .ok_or_else(|| Error::new("err.flow.lineage"))?;
-    run::recipe_of_layers(&mut open(first)?, &lin.layers)
 }
 
 /// `features.detect`: the features of one indexed file (`.mzfeatf`), named after the file the index was made from.
@@ -241,19 +237,6 @@ fn align_lineage(r: &FileRunner, job: &Job) -> Result<Lineage> {
     Ok(lin)
 }
 
-/// The recipe and the estimates of a step of the alignment on `lin`, from `first`, the first index of its series (`rebuild`).
-fn align_recipe(
-    job: &Job,
-    lin: &Lineage,
-    first: &mut Index<File>,
-) -> Result<(Recipe, Vec<Estimate>)> {
-    let base =
-        run::recipe_of_layers(first, &lin.layers).map_err(|e| e.with("step", job.step.id))?;
-    let (mut recipe, estimates) = recipe(job, base)?;
-    recipe.fill_gaps = job.step.id == "features.gapfill";
-    Ok((recipe, estimates))
-}
-
 /// `features.align` (the table of the series without gap filling) and `features.gapfill` (the table of `features.align` with its gaps filled: the stored
 /// table is not filled after the fact, alignment and filling run again on the peaks of that table, which gives the bytes of the page's single call).
 /// Each index is opened once: the check of the kind, the recipe, the facts of the files and the filling read copies of it (`flow_indexes`).
@@ -272,7 +255,7 @@ pub(crate) fn align_job(r: &FileRunner, job: &Job) -> Result<Made> {
         None => open(first),
     }
     .map_err(|e| e.with("step", job.step.id))?;
-    let (recipe, estimates) = align_recipe(job, &lin, &mut first)?;
+    let (recipe, estimates) = align_recipe(job, &lin, &mut first, Some(&indexes))?;
     drop(first);
     let peaks = lin.peaks.clone();
     let made = table(r, job, &recipe, lin, &indexes)?;
@@ -295,7 +278,7 @@ pub(crate) fn align_mem(r: &FileRunner, job: &Job, known: Option<Mem>) -> Option
     }
     let lin = align_lineage(r, job).ok()?;
     let mut first = open(lin.first.as_ref()?).ok()?;
-    let (recipe, _) = align_recipe(job, &lin, &mut first).ok()?;
+    let (recipe, _) = align_recipe(job, &lin, &mut first, None).ok()?;
     mem_of(r, &recipe, lin.peaks)
 }
 
