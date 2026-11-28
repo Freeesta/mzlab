@@ -156,6 +156,7 @@ fn the_next_round_starts_from_the_accepted_products_and_stops_at_the_third_step(
         rules_version: 1,
         polarity: 1,
         suspects_cut: 0,
+        filter: None,
     };
     let mut signs = vec![[NONE; 10]; 3];
     signs[1][5] = FOR;

@@ -3,6 +3,7 @@
 //! of the heights over the files, intensity ratio and its spread. No row is merged or removed; a mass difference alone never makes an edge.
 
 mod evidence;
+pub mod iso;
 pub mod list;
 mod text;
 
@@ -28,6 +29,7 @@ pub struct Params {
     pub adducts: Vec<Rel>,
     pub losses: Vec<Rel>,
     pub max_edges: usize,
+    pub iso: iso::IsoParams,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
@@ -80,6 +82,9 @@ pub struct Found {
     pub counts: Counts,
     /// Per row: the parent it is a companion of (row index) and the kind of the edge that says so.
     pub companion_of: Vec<Option<(usize, Kind)>>,
+    /// The isotope grouping and the spill-over flags, only when `iso_group` is on.
+    pub iso: Option<iso::IsoFound>,
+    iso_pairs: Vec<iso::IsoPair>,
 }
 
 /// The `companions/1` text and its warnings.
@@ -116,6 +121,7 @@ pub fn params_of(params: &[(String, Value)]) -> Result<Params> {
         adducts: list::parse(text(params, "adducts", list::ADDUCTS), list::ADDUCT_NAMES)?,
         losses: list::parse(text(params, "losses", list::LOSSES), list::LOSS_NAMES)?,
         max_edges: num(params, "max_edges", 20000.0).max(0.0) as usize,
+        iso: iso::IsoParams::of(params),
     })
 }
 
@@ -162,6 +168,10 @@ pub fn find(t: &Aligned, p: &Params) -> Found {
     drop_implied(&mut out, n);
     cap_edges(&mut out, p.max_edges);
     choose_parents(&mut out);
+    if p.iso.on {
+        let pairs = std::mem::take(&mut out.iso_pairs);
+        out.iso = Some(iso::group(pairs, &t.mz, n));
+    }
     out
 }
 
@@ -273,6 +283,20 @@ fn pair(t: &Aligned, p: &Params, i: usize, j: usize, out: &mut Found) {
         kinds.push((Kind::Coelution, Vec::new()));
     }
     let ev = evidence::of(t, a, b, p.min_corr_samples);
+    if p.iso.on {
+        for step in [1u8, 2] {
+            if (d - f64::from(step)).abs() <= p.da_tol {
+                let verdict = iso::judge(&p.iso, step, &ev);
+                out.iso_pairs.push(iso::IsoPair {
+                    a,
+                    b,
+                    step,
+                    verdict,
+                    ev: ev.clone(),
+                });
+            }
+        }
+    }
     out.counts.untested += usize::from(!ev.r.is_finite());
     for (kind, relations) in kinds {
         let mut e = Edge {

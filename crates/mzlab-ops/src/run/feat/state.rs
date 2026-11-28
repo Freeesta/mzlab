@@ -204,6 +204,7 @@ pub fn load(bytes: &[u8]) -> Result<HypoRun> {
             rules_version,
             polarity,
             suspects_cut: 0,
+            filter: None,
         },
         result: TargetResult {
             n_files,

@@ -75,10 +75,9 @@ pub(crate) const TASKS: &[(&str, &str)] = &[
         "group correlated ions and isotopes of one compound",
         "features.group",
     ),
-    (
-        "find adducts and in-source fragments that co-elute at unit mass",
-        "features.companions",
-    ),
+    ("find adducts and in-source fragments that co-elute at unit mass", "features.companions"),
+    ("group M+1 and M+2 isotopes, flag Q1 spill-over at unit mass", "features.companions"),
+    ("keep only tp hypotheses reachable from the parent that fit M+2", "tp.generate"),
     (
         "join the feature tables of several series into one target list",
         "features.union",

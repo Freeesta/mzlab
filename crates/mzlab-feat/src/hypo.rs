@@ -4,6 +4,7 @@
 //! One pass, no loop to convergence: the order is fixed (mass, then label), so two runs give the same `Registry` byte for byte.
 //! A hypothesis is a place to look, never a verdict: what it finds is graded by `target`.
 
+mod filter;
 mod rules;
 mod sources;
 mod structure;
@@ -60,6 +61,12 @@ pub struct HypoParams {
     pub other_polarity: bool,
     /// Unit resolution: two formulas of the same nominal m/z and adduct are one hypothesis, the others are its alternatives.
     pub nominal: bool,
+    /// Keep only candidates reachable from the parent in `filter_steps` steps whose M+2/M is within `m2_tol` of the reference (off by default).
+    pub formula_filter: bool,
+    pub filter_steps: u8,
+    pub m2_tol: f64,
+    /// Observed M+2/M of the parent; without it the ratio of the parent's formula.
+    pub m2_ref: Option<f64>,
 }
 
 impl Default for HypoParams {
@@ -71,6 +78,10 @@ impl Default for HypoParams {
             max_suspects: 500,
             other_polarity: false,
             nominal: false,
+            formula_filter: false,
+            filter_steps: 2,
+            m2_tol: 0.1,
+            m2_ref: None,
         }
     }
 }
@@ -113,6 +124,8 @@ pub struct Registry {
     pub polarity: i8,
     /// Suspect hits left out by `max_suspects`.
     pub suspects_cut: u32,
+    /// What the formula filter did; `None` when it was off.
+    pub filter: Option<filter::FilterLog>,
 }
 
 pub struct Inputs<'a> {
@@ -257,6 +270,12 @@ pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry>
     }
     raw.extend(sources::from_families(inp.families, p));
     raw.extend(sources::from_imported(inp.imported, p)?);
+    let (raw, filter) = if p.formula_filter {
+        let (r, log) = filter::apply(raw, rules, &pc, inp.groups, p);
+        (r, Some(log))
+    } else {
+        (raw, None)
+    };
     let hyps = merge(raw, p.nominal);
     let outcomes = vec![Outcome::NotSearched; hyps.len()];
     Ok(Registry {
@@ -265,6 +284,7 @@ pub fn generate(rules: &Rules, inp: &Inputs, p: &HypoParams) -> Result<Registry>
         rules_version: rules.version,
         polarity: p.polarity,
         suspects_cut: cut,
+        filter,
     })
 }
 
@@ -317,6 +337,18 @@ impl Registry {
             .int(self.found() as i64)
             .raw(",\"suspects_cut\":")
             .int(self.suspects_cut as i64);
+        if let Some(f) = &self.filter {
+            o.raw(",\"filter\":{\"steps\":").int(i64::from(f.steps));
+            o.raw(",\"m2_tol\":").num(f.m2_tol);
+            o.raw(",\"m2_ref\":").num(round(f.m2_ref, 6));
+            o.raw(",\"m2_source\":").str(f.m2_source);
+            o.raw(",\"seen\":").int(f.seen as i64);
+            o.raw(",\"kept\":").int(f.kept as i64);
+            o.raw(",\"unreachable\":").int(f.unreachable as i64);
+            o.raw(",\"m2_off\":").int(f.m2_off as i64);
+            o.raw(",\"unchecked\":").int(f.unchecked as i64);
+            o.raw(",\"structural\":").int(f.structural as i64).raw("}");
+        }
         o.raw(",\"hypotheses\":[");
         for (i, (h, out)) in self.hyps.iter().zip(&self.outcomes).enumerate() {
             if i > 0 {

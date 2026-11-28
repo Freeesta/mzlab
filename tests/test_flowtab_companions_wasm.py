@@ -1,7 +1,8 @@
 """features.companions@1: the flowtab .wasm (`flow_companions`, through Node) gives the bytes of `mzlab-cli flow run` on the synthetic unit-mass table committed under
-crates/mzlab-feat/tests/data/companions (the golden of the engine test), for the defaults and two sets of parameters, and the same error key and warning.
-Skipped without cargo, wasm-bindgen or node."""
+crates/mzlab-feat/tests/data/companions (the golden of the engine test), for the defaults and three sets of parameters (one with the isotope grouping on), and the same error key and warning.
+Skipped on a machine without cargo, wasm-bindgen or node, never in CI."""
 import json
+import os
 import shutil
 from pathlib import Path
 
@@ -11,7 +12,14 @@ from cargo_util import cli, run, wasm_module
 ROOT = Path(__file__).resolve().parents[1]
 DATA = ROOT / "crates" / "mzlab-feat" / "tests" / "data" / "companions"
 
-pytestmark = pytest.mark.skipif(not all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node")), reason="cargo, wasm-bindgen or node not available")
+TOOLS = all(shutil.which(x) for x in ("cargo", "wasm-bindgen", "node"))
+CI = bool(os.environ.get("GITHUB_ACTIONS"))
+# skipped on a machine without the tools, but never silently in CI: there it must run
+pytestmark = pytest.mark.skipif(not TOOLS and not CI, reason="cargo, wasm-bindgen or node not available")
+
+
+def test_the_tools_are_there_in_ci():
+    assert TOOLS or not CI, "cargo, wasm-bindgen and node must be installed in CI: this test would not run"
 
 
 @pytest.fixture(scope="module")
@@ -36,12 +44,14 @@ def native(tmp_path, params):
     return (out / "c.json").read_text(encoding="utf-8")
 
 
-@pytest.mark.parametrize("params", [{}, {"losses": "", "min_corr": 0.95}, {"min_corr_samples": 6, "da_tol": 0.2}])
+@pytest.mark.parametrize("params", [{}, {"losses": "", "min_corr": 0.95}, {"min_corr_samples": 6, "da_tol": 0.2}, {"iso_group": True, "spill_max": 0.9}])
 def test_wasm_and_cli_give_the_same_bytes(pkg, tmp_path, params):
     got = wasm(pkg, params)
     assert got["text"] == native(tmp_path, params)
     if not params:
         assert got["text"] == (DATA / "companions.json").read_text(encoding="utf-8")
+    if params.get("iso_group"):
+        assert '"isotopes":{"params":' in got["text"]
     if params.get("min_corr_samples") == 6:
         assert got["warnings"] == ["warn.flow.companions.corrFiles"]
 
