@@ -12,6 +12,6 @@ Read docs/coda/BRIEF.md.
 
 **Done means.** 1. The two combinations answer with `spectrum-bins/1` plus the blank's evidence. 2. A synthetic sample and blank with a split fragment give the expected bins. 3. Route shared by site and app, parity byte test, schema keys, catalogs updated.
 
-**Out of scope.** HR profile files (row NOMINAL-BIN-HR); spectrum comparison.
+**Out of scope.** HR profile files (done); spectrum comparison.
 
 **Follow-ups.** Closing step of the brief: delete your row and this file; name each concrete follow-up in the PR body and add its row and prompt.
