@@ -9,7 +9,7 @@
  * @typedef {{ id: string, name: string, synonyms?: string[], formula: string, charge?: number, mass?: number, smiles?: string | null, inchikey?: string | null,
  *   adducts?: string[], collections?: string[], classes?: string[], external?: { cas?: string, pubchem_cid?: string }, properties?: any[], notes?: string, origin: Origin }} Molecule
  * @typedef {{ line: number, key: string, text: string }} RowError
- * @typedef {{ id: string, name: string, formula: string, charge: number, mass: number, smiles: string | null, adducts: string[], score: number }} Found
+ * @typedef {{ id: string, name: string, formula: string, charge: number, mass: number, smiles: string | null, adducts: string[], score: number, level?: string }} Found
  */
 
 const SCHEMA = "molecules/1";
@@ -57,7 +57,7 @@ export const level = (/** @type {string} */ id) => (mine.find(m => m.id === id) 
 
 export async function search(/** @type {string} */ q, limit = 8, ppm = 10, wide = false) {
   await ready();
-  return /** @type {Promise<Found[]>} */ (json("search", wide ? { q, limit, ppm, wide } : { q, limit, ppm }));
+  return /** @type {Promise<Found[]>} */ (json("search", wide ? { q, limit, ppm, wide, levels: true } : { q, limit, ppm, levels: true }));
 }
 
 /** The names of the adduct table of the engine. */

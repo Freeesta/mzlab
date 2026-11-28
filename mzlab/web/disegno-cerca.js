@@ -65,7 +65,7 @@ export function initCerca(t, note) {
   const smi = /** @type {HTMLInputElement} */ (document.getElementById("ex-smi")), load = /** @type {HTMLButtonElement} */ (document.getElementById("ex-load"));
   field(/** @type {HTMLElement} */ (smi.parentElement), {
     input: smi,
-    texts: { label: t("draw.quick.label"), none: t("draw.quick.none"), count: n => t("draw.quick.count", { n }) },
+    texts: { label: t("draw.quick.label"), none: t("draw.quick.none"), count: n => t("draw.quick.count", { n }), levels: { imported: t("mol.level.imported"), user: t("mol.level.user") } },
     manage: null,
     limit: 8,
     ppm: 5,

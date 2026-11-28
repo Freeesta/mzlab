@@ -69,7 +69,7 @@ try:
         step("an invalid SMILES shows the message", invalid)
 
         def accents():
-            type_into("caffeìna")
+            type_into("caffeìne")
             wait_for_js(pg, "document.querySelectorAll('.molc [role=option]').length > 0", timeout=30000)
             assert any(o.lower().startswith("caffeine") for o in options()), options()
         step("accents in the typed name are ignored", accents)

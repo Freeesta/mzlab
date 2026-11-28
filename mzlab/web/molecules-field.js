@@ -7,7 +7,7 @@ import { search } from "./molecules-archive.js";
 
 /** @typedef {import("./molecules-archive.js").Found} Found */
 /**
- * @typedef {{ label: string, placeholder?: string, none: string, count: (n: number) => string, manage?: string }} FieldTexts
+ * @typedef {{ label: string, placeholder?: string, none: string, count: (n: number) => string, manage?: string, levels?: { imported: string, user: string } }} FieldTexts
  * @typedef {{ texts: FieldTexts, onPick: (m: Found) => void, limit?: number, ppm?: number, wide?: boolean, prepare?: (t: string) => Promise<string>, manage?: (() => void) | null, value?: string, display?: (name: string) => string, input?: HTMLInputElement, skip?: (t: string) => boolean }} FieldOptions
  */
 
@@ -21,11 +21,13 @@ const CSS = `.molc{position:relative;display:flex;flex-direction:column;gap:4px;
 .molc li{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:2px 10px;align-items:baseline;padding:6px 10px;min-height:24px;cursor:pointer}
 .molc .molc-n{min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .molc li[aria-selected=true]{background:var(--sel);outline:2px solid var(--accent);outline-offset:-2px}
+.molc li.molc-lv{grid-template-columns:minmax(0,1fr) auto auto auto}
+.molc .molc-o{font-size:.75rem;color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:0 6px;white-space:nowrap}
 .molc .molc-f,.molc .molc-m{color:var(--muted);font-size:.8125rem;white-space:nowrap}
 .molc .molc-man{align-self:flex-start;background:none;border:0;padding:4px 0;min-height:24px;font:inherit;font-size:.8125rem;color:var(--accent);text-decoration:underline;cursor:pointer}
 .molc .molc-sr{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
 .molc.molc-existing{flex:1;min-width:0;max-width:none}
-@media (max-width:480px){.molc li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n n" "f m"}.molc .molc-n{grid-area:n}.molc .molc-f{grid-area:f}.molc .molc-m{grid-area:m}}
+@media (max-width:480px){.molc li{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"n n" "f m"}.molc li.molc-lv{grid-template-columns:minmax(0,1fr) auto auto;grid-template-areas:"n n n" "f m o"}.molc .molc-n{grid-area:n}.molc .molc-f{grid-area:f}.molc .molc-m{grid-area:m}.molc .molc-o{grid-area:o}}
 @media (pointer:coarse){.molc li{min-height:40px}.molc input{min-height:40px}.molc .molc-man{min-height:40px}}`;
 
 let seq = 0;
@@ -55,6 +57,15 @@ function build(/** @type {string} */ id, /** @type {FieldTexts} */ texts, /** @t
   if (texts.placeholder) input.placeholder = texts.placeholder;
   root.append(label, input, list, status);
   return { root, input, list, status };
+}
+
+/** The chip with the origin of a molecule the person added (imported or own); the catalogue is the default and says nothing. */
+function originChip(/** @type {HTMLElement} */ li, /** @type {Found} */ m, /** @type {FieldTexts} */ texts) {
+  const origin = texts.levels && (m.level === "user" || m.level === "imported") ? texts.levels[m.level] : "";
+  if (!origin) return;
+  const o = document.createElement("span");
+  o.className = "molc-o"; o.textContent = origin;
+  li.classList.add("molc-lv"); li.append(o);
 }
 
 /**
@@ -104,6 +115,7 @@ export function field(host, opts) {
       const n = document.createElement("span"), f = document.createElement("span"), z = document.createElement("span");
       n.textContent = display(m.name); n.className = "molc-n"; li.title = display(m.name); f.className = "molc-f"; f.textContent = m.formula; z.className = "molc-m"; z.textContent = m.mass.toFixed(4);
       li.append(n, f, z);
+      originChip(li, m, texts);
       li.onmousedown = ev => ev.preventDefault();
       li.onclick = () => pick(i);
       return li;

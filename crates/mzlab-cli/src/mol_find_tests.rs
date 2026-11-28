@@ -78,3 +78,60 @@ fn the_exit_codes_are_pinned() {
     assert_eq!(names(&o), ["Exampline"]);
     std::fs::remove_file(&p).ok();
 }
+
+/// A synonym of two invented molecules written as a CSV the user could have exported.
+const USER_CSV: &str =
+    "name;synonyms;molecular_formula\nExampline;Exa-1;C10H15NO\nProvolone B;;C12H17NO2\n";
+
+fn with_file<R>(tag: &str, text: &str, f: impl FnOnce(&str) -> R) -> R {
+    let p = std::env::temp_dir().join(format!("mol_find_{tag}_{}", std::process::id()));
+    std::fs::write(&p, text).unwrap();
+    let r = f(p.to_str().unwrap());
+    std::fs::remove_file(&p).ok();
+    r
+}
+
+#[test]
+fn a_user_csv_is_searched_with_the_catalogue_and_every_hit_names_its_level() {
+    with_file("u.csv", USER_CSV, |p| {
+        let o = run(&["examp", "--user", p]);
+        assert_eq!(o.code, 0, "{}", o.stderr);
+        let j: Value = serde_json::from_slice(&o.stdout).unwrap();
+        assert_eq!(j[0]["name"], "Exampline");
+        assert_eq!(j[0]["level"], "user");
+        let o = run(&["dimethomorph", "--user", p]);
+        let j: Value = serde_json::from_slice(&o.stdout).unwrap();
+        assert_eq!(j[0]["level"], "catalog");
+        let o = run(&["C12H17NO2", "--user", p]);
+        let j: Value = serde_json::from_slice(&o.stdout).unwrap();
+        assert!(j
+            .as_array()
+            .unwrap()
+            .iter()
+            .any(|m| m["name"] == "Provolone B"));
+    });
+}
+
+#[test]
+fn without_user_the_hits_have_no_level_key() {
+    let j: Value = serde_json::from_slice(&run(&["dimethomorph"]).stdout).unwrap();
+    assert!(j[0].get("level").is_none());
+}
+
+#[test]
+fn a_user_document_keeps_the_level_of_its_records() {
+    let doc = "{\"schema\":\"molecules/1\",\"molecules\":[{\"name\":\"Exampline\",\"formula\":\"C10H15NO\",\"origin\":{\"type\":\"imported\"}}]}";
+    with_file("u.json", doc, |p| {
+        let j: Value = serde_json::from_slice(&run(&["examp", "--user", p]).stdout).unwrap();
+        assert_eq!(j[0]["level"], "imported");
+    });
+}
+
+#[test]
+fn the_user_exit_codes_are_those_of_db() {
+    assert_eq!(run(&["xx", "--user", "/no/such/mine.csv"]).code, 4);
+    assert_eq!(run(&["xx", "--user"]).code, 2);
+    with_file("bad.csv", "name;molecular_formula\nBad;Xx9\n", |p| {
+        assert_eq!(run(&["xx", "--user", p]).code, 1);
+    });
+}

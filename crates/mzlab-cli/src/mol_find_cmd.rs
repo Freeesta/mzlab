@@ -1,4 +1,4 @@
-//! `mzlab-cli mol find QUERY [--db CSV|-] [--set limit=N ppm=X wide=1] [--out PATH]`: the compound search box of the pages, from the command line. The query is a
+//! `mzlab-cli mol find QUERY [--db CSV|-] [--user FILE] [--set limit=N ppm=X wide=1] [--out PATH]`: the compound search box of the pages, from the command line. The query is a
 //! name, a synonym, a formula or a mass; the answer is the JSON of the route `api/molecules/search` (`molecules::route`), byte for byte what the `.wasm` and the app give.
 //! Without `--db` the built-in environmental catalogue is searched (the file the pages load, compiled in).
 
@@ -6,7 +6,7 @@ use std::borrow::Cow;
 use std::path::PathBuf;
 
 use mzlab_core::json::Out;
-use mzlab_core::molecules::{from_csv, route};
+use mzlab_core::molecules::{from_csv, from_json, route, to_json, RowError};
 
 use crate::Outcome;
 
@@ -15,10 +15,12 @@ const CATALOGUE: &str = include_str!("../../../mzlab/web/molecules/catalogue.csv
 
 pub const HELP: &str = "mzlab-cli mol find: search the compound catalogue by name, synonym, formula or mass, as JSON.
 
-usage: mzlab-cli mol find QUERY [--db CSV|-] [--set NAME=VALUE...] [--out PATH]
+usage: mzlab-cli mol find QUERY [--db CSV|-] [--user FILE] [--set NAME=VALUE...] [--out PATH]
 
   QUERY         a name or synonym (2 characters at least), a molecular formula (Hill order or not) or a mass (a number)
   --db CSV      a molecules/1 CSV instead of the built-in environmental catalogue; - reads it from the standard input
+  --user FILE   also search the molecules you saved: a molecules/1 JSON document or a CSV (the page's export); a molecule with the id of a catalogue
+                one replaces it. Every hit then carries a \"level\" key: catalog, imported or user
   --set limit   at most this many answers (1-1000, default 8)
   --set ppm     the window of a mass search in ppm (default 10)
   --set wide    1 = also whole InChIKeys, their first block, and names one letter away (default 0)
@@ -61,6 +63,29 @@ fn catalogue_text(db: Option<&str>) -> Result<Cow<'static, str>, Outcome> {
     Ok(Cow::Owned(text))
 }
 
+/// The molecules of `--user FILE` as a `molecules/1` document: a JSON document is read as it is (each record keeps its level), a CSV gets the level `user`.
+fn user_document(path: &str) -> Result<String, Outcome> {
+    let text = std::fs::read_to_string(path).map_err(|e| Outcome::fail(&format!("{path}: {e}")))?;
+    let rows: Result<_, Vec<RowError>> = if text.trim_start().starts_with('{') {
+        from_json(text.as_bytes())
+    } else {
+        from_csv(&text, "user", None)
+    };
+    match rows {
+        Ok(ms) => Ok(to_json(&ms)),
+        Err(rows) => {
+            let e = &rows[0];
+            Err(Outcome::fail(&format!(
+                "{} line {}: {path} has {} wrong rows ({})",
+                e.key,
+                e.line,
+                rows.len(),
+                e.detail
+            )))
+        }
+    }
+}
+
 /// One `--set NAME=VALUE`: limit, ppm or wide.
 fn setting(
     kv: Option<&str>,
@@ -82,7 +107,7 @@ fn setting(
 }
 
 pub fn run(args: Vec<String>) -> Outcome {
-    let (mut pos, mut out, mut db) = (Vec::new(), None, None);
+    let (mut pos, mut out, mut db, mut user) = (Vec::new(), None, None, None);
     let (mut limit, mut ppm, mut wide) = (8u32, "10".to_string(), false);
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
@@ -91,6 +116,10 @@ pub fn run(args: Vec<String>) -> Outcome {
             "--db" => match it.next() {
                 Some(p) => db = Some(p),
                 None => return Outcome::fail("--db needs a path (or - for the standard input)"),
+            },
+            "--user" => match it.next() {
+                Some(p) => user = Some(p),
+                None => return Outcome::fail("--user needs a path"),
             },
             "--out" => match it.next() {
                 Some(p) => out = Some(PathBuf::from(p)),
@@ -113,10 +142,21 @@ pub fn run(args: Vec<String>) -> Outcome {
         Err(o) => return o,
     };
     let mut load = Out::default();
-    load.raw("{\"catalog\":").str(&csv).raw("}");
+    load.raw("{\"catalog\":").str(&csv);
+    // Always sent, empty without `--user`: the engine keeps the last user list between calls of one process.
+    let doc = match &user {
+        Some(path) => match user_document(path) {
+            Ok(doc) => doc,
+            Err(o) => return o,
+        },
+        None => to_json(&[]),
+    };
+    load.raw(",\"user\":").str(&doc);
+    load.raw("}");
     let mut ask = Out::default();
     ask.raw("{\"q\":").str(query).raw(&format!(
-        ",\"limit\":{limit},\"ppm\":{ppm},\"wide\":{wide}}}"
+        ",\"limit\":{limit},\"ppm\":{ppm},\"wide\":{wide},\"levels\":{}}}",
+        user.is_some()
     ));
     let _g = LOCK.lock().unwrap_or_else(|e| e.into_inner()); // the archive of the engine is one per process
     if let Err(e) = route("load", &load.0) {

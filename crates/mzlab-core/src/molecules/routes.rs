@@ -60,13 +60,14 @@ fn search_hits(v: &Value) -> String {
         .map_or(8, |x| x as usize);
     let ppm = v.get("ppm").and_then(|x| x.f64()).unwrap_or(10.0);
     let wide = v.get("wide").is_some_and(|x| x.bool() == Some(true));
+    let levels = v.get("levels").is_some_and(|x| x.bool() == Some(true));
     con(|a| {
         let hits = if wide {
             search_wide(&a.all, q, limit, ppm)
         } else {
             search(&a.all, q, limit, ppm)
         };
-        hits_json(&a.all, &hits)
+        hits_json(&a.all, &hits, levels)
     })
 }
 
@@ -130,7 +131,7 @@ fn bad(op: &str) -> Error {
     Error::new("error.badMolecules").with("op", op)
 }
 
-/// `op` is `load` (`{"catalog": csv, "user": document}`, each optional: what is missing stays), `search` (`{"q","limit","ppm","wide"}`), `ion` (`{"q","adduct"}`), `adducts` (the names of the adduct table), `get` (`{"id"}`), `list` (`{"collection","adducts"}`),
+/// `op` is `load` (`{"catalog": csv, "user": document}`, each optional: what is missing stays), `search` (`{"q","limit","ppm","wide","levels"}`), `ion` (`{"q","adduct"}`), `adducts` (the names of the adduct table), `get` (`{"id"}`), `list` (`{"collection","adducts"}`),
 /// `from_csv` (`{"csv","file","level","collection"}` to a document), `validate` (`{"csv"}`), or, on a `molecules/1` document, `to_csv`, `to_json`, `digest`.
 pub fn route(op: &str, input: &str) -> Result<String> {
     let v = || parse(input.as_bytes()).map_err(|_| bad(op));
