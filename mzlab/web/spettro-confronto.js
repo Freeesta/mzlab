@@ -80,11 +80,11 @@ function mirror(cv, doc) {
     rows: bars.map(b => [b.side.toUpperCase(), t(b.m ? "spcmp.mirror.matched" : "spcmp.mirror.only"), W_.TDATI.num(b.mz, 4), W_.TDATI.num(b.y, 4), W_.TDATI.num(b.rel * 100, 1)]) }));
   cv.dataset.bars = JSON.stringify(bars.map(b => [b.side, b.mz, +b.rel.toFixed(4), b.m ? 1 : 0]));
   if (!bars.length) return;
-  const s = W_.setup(cv), g = s.g, W = s.W, H = s.H, ml = 44, mr = 14, mt = 22, mb = 30, mid = mt + (H - mt - mb) / 2, half = (H - mt - mb) / 2 - 14;
+  const s = setup(cv), g = s.g, W = s.W, H = s.H, ml = 44, mr = 14, mt = 22, mb = 30, mid = mt + (H - mt - mb) / 2, half = (H - mt - mb) / 2 - 14;
   const mz = bars.map(b => b.mz), lo = Math.floor(Math.min(...mz) / 10) * 10 - 5, hi = Math.ceil(Math.max(...mz) / 10) * 10 + 5, X = (/** @type {number} */ m) => ml + (m - lo) / (hi - lo) * (W - ml - mr);
-  const hit = W_.css("--lv1"), miss = W_.css("--lv3b"), ink = W_.css("--ink"), mut = W_.css("--muted"), line = W_.css("--line");
-  g.clearRect(0, 0, W, H); g.fillStyle = W_.css("--panel"); g.fillRect(0, 0, W, H);
-  g.font = W_.fpx(12);
+  const hit = css("--lv1"), miss = css("--lv3b"), ink = css("--ink"), mut = css("--muted"), line = css("--line");
+  g.clearRect(0, 0, W, H); g.fillStyle = css("--panel"); g.fillRect(0, 0, W, H);
+  g.font = fpx(12);
   // the line between the two bars of a matched ion
   g.save(); g.globalAlpha = 0.55; g.lineWidth = 1; g.strokeStyle = hit;
   doc.matched.forEach((/** @type {any} */ r, /** @type {number} */ i) => { g.beginPath(); g.moveTo(X(r.mz_a), mid - A[i].rel * half); g.lineTo(X(r.mz_b), mid + B[i].rel * half); g.stroke(); });
