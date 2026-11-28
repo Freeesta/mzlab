@@ -152,10 +152,10 @@ def test_downloads_of_a_view_come_from_the_registry_not_from_the_menu():
 
 # the header buttons of a panel (azioni-barra.js): the ids and the order of every kind are those of the old hand-written header
 HEADER = {
-    "chrom": "izoom fit tlink iauto iall iman idel intf iclr smooth log xic xwcl dl more max close",
-    "xic": "izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
+    "chrom": "ms2tri izoom fit tlink iauto iall iman idel intf iclr smooth log xic xwcl ticbg dl more max close",
+    "xic": "ms2tri izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
     "mrm": "izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
-    "spec": "xicb xicl fit rul par rel lock dl xicp tabp more max close",
+    "spec": "ddaw xicb xicl fit rul par rel lock dl xicp tabp more max close",
     "map": "fit dl more max close",
 }
 # the actions drawn only by the shared panel bar (AZIONI.pbar): the zoom and gestures buttons of the map, whose header keeps its own .mznav group
@@ -184,7 +184,7 @@ def test_header_buttons_are_registry_actions_drawn_in_order(view):
 def test_buttons_of_the_modules_are_actions_with_a_run():
     r = bar("spec", "p.uv=true;")
     ids = re.findall(r'data-a="(\w+)"', r["html"])
-    assert ids == "xicb xicl xwc xwcl fit rul par rel lock dl tabp more max".split(), "XWC in the XIC group, no lens switch"
+    assert ids == "ddaw xicb xicl xwc xwcl fit rul par rel lock dl tabp more max".split(), "XWC in the XIC group, no lens switch"
     assert {"panel.xwc", "panel.xwcs"} <= set(r["ids"]) and "panel.xicp" not in r["ids"]
     for view in ("spec", "chrom"):
         r = bar(view)
@@ -192,6 +192,12 @@ def test_buttons_of_the_modules_are_actions_with_a_run():
     tag = lambda html, i: re.search(r'<button[^>]*data-a="%s"[^>]*>' % i, html).group(0)
     spec = bar("spec", "p.nolens=true;")["html"]
     assert "hidden" in tag(spec, "xicp") and "hidden" in tag(spec, "xicl") and "hidden" in tag(bar("chrom")["html"], "xwcl")
+    # the DDA buttons and the background removal are hidden until their module says the panel has them (AZIONI.refresh then shows them and hides or shows their group)
+    assert "hidden" in tag(spec, "ddaw") and "hidden" in tag(bar("chrom")["html"], "ms2tri") and "hidden" in tag(bar("chrom")["html"], "ticbg")
+    shown = bar("spec", "p._dws=true;")["html"]
+    assert "hidden" not in tag(shown, "ddaw") and 'aria-haspopup="listbox"' in tag(shown, "ddaw")
+    tri = bar("chrom", "p._tri=true;p.ms2tri=true;")["html"]
+    assert 'aria-pressed="true"' in tag(tri, "ms2tri") and "hdkeep" in tag(tri, "ms2tri") and "hidden" not in tag(tri, "ms2tri")
     assert 'aria-pressed="true"' in tag(bar("spec")["html"], "xicp") and "hidden" not in tag(bar("spec")["html"], "xicp")
 
 

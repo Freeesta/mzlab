@@ -62,6 +62,8 @@ export async function series(p, fl) {
 }
 
 // ---------------------------------------------------------------- the popover: λ and bandwidth; Enter opens (Shift+Enter: one more trace), Esc closes
+/** The arrow, in the header and, with the shared panel bar on, its twin in the bar (`lb`, the one that opened the popover): both carry aria-expanded. @param {any} p @returns {HTMLElement[]} */
+const arrows = p => [p.el.querySelector('[data-a="xwcl"]'), p._xwLb].filter((/** @type {any} */ x, /** @type {number} */ i, /** @type {any[]} */ l) => x && l.indexOf(x) === i);
 /** @param {any} p @param {HTMLElement} lb the arrow */
 export async function pop(p, lb) {
   if (p._xwPop) { close(p); return; }
@@ -74,8 +76,9 @@ export async function pop(p, lb) {
   msg.className = "xb-err"; msg.setAttribute("role", "alert"); row.className = "xb-row";
   row.append(btn("go", T("xicbtn.pop.go")), btn("no", T("xicbtn.pop.close")));
   el.append(field("nm", j.nm, T("xwc.pop.nm")), field("bw", j.bw, T("xwc.pop.bw")), msg, row);
-  const pr = p.el.getBoundingClientRect(), br = lb.getBoundingClientRect();
-  p.el.appendChild(el); p._xwPop = el; lb.setAttribute("aria-expanded", "true");
+  p._xwLb = lb;
+  const pr = p.el.getBoundingClientRect(), br = (p.el.contains(lb) ? lb : p.el.querySelector(".hd") || p.el).getBoundingClientRect();   // an arrow in the bar is far from the panel: the popover goes under the header
+  p.el.appendChild(el); p._xwPop = el; for (const a of arrows(p)) a.setAttribute("aria-expanded", "true");
   el.style.left = Math.max(4, Math.min(br.left - pr.left, p.el.clientWidth - el.offsetWidth - 6)) + "px"; el.style.top = br.bottom - pr.top + 4 + "px";
   const [fn, fb] = /** @type {HTMLInputElement[]} */ ([...el.querySelectorAll("input")]);
   const apply = (/** @type {boolean} */ add) => {
@@ -97,7 +100,9 @@ export async function pop(p, lb) {
 function close(p) {
   if (!p._xwPop) return;
   p._xwPop.remove(); p._xwPop = null;
-  const l = p.el.querySelector('[data-a="xwcl"]'); if (l) { l.setAttribute("aria-expanded", "false"); l.focus({ preventScroll: true }); }
+  const l = arrows(p); for (const a of l) a.setAttribute("aria-expanded", "false");
+  (l.find(a => a.offsetParent) || l[0])?.focus({ preventScroll: true });          // the arrow that opened it (the header one is not shown with the bar on)
+  p._xwLb = null;
 }
 
 /** Shows the split button where a file of the panel has a matrix: a TWC-only file (a DAD trace, no matrix) gets none. @param {any} p @param {HTMLElement} b @param {HTMLElement} l @param {boolean} on */
