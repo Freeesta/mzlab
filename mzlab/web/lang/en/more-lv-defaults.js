@@ -132,6 +132,8 @@ I18N.add("en", {
   "empty.file": "Choose a file to show",
   "empty.file.list": "Tick a file in the Files list",
   "empty.xic": "Add an XIC",
+  "empty.spec": "Choose a time range on the chromatogram",
+  "empty.note": "Nothing to show here",
   "msg.noFiles": "No file of this experiment type is shown.",
   "map.sc.sqrt": "square root",
   "map.sc.lin": "linear",

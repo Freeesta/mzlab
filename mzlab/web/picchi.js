@@ -280,7 +280,7 @@ function makeSnap(/** @type {Bag[]} */ data, /** @type {(m: number) => number} *
 async function drawSpec(p, snapped) {
   if (p.iso && p._isoKey != null && p._isoKey !== JSON.stringify(p.zoom)) { p.iso = null; p._isoKey = null; }      // the student moved the zoom: the isotope simulation switches off
   const tok = p._tok = (p._tok || 0) + 1;                // "last one wins": a slower, older request never paints over a newer one
-  const say = (/** @type {string} */ t) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; p._say = t; };      // _say: the same words for the screen reader (tdati-pannelli.js)
+  const say = async (/** @type {string} */ t, /** @type {boolean} */ pick = false) => { const { g, W, H: HF } = setup(p.cv); g.clearRect(0, 0, W, HF); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; p._say = t; const w = /** @type {any} */ (window); const EH = (w.EMPTYHINT ||= await import("./empty-hint.js")); if (tok === p._tok) EH.note(p, t, pick); };      // _say: the same words for the screen reader (tdati-pannelli.js)
   const isDda = p.dda != null && !!window.DDA;                // MS2 panel of a DDA trio: shows one MS2 scan of the file (dda.js), whatever file is selected in the toolbar
   if (!isDda && !p.all && p.level === 1 && E.files[/** @type {number} */ (p.k)] && !E.files[/** @type {number} */ (p.k)].vis) { const v = shownFor(p).find((/** @type {Bag} */ x) => scanFiles([x]).length); if (v) { p.k = v.k; p.kSet = false; ctl(p); } }      // the file of the spectrum was unticked: the first ticked one
   const targetK = p.link ? /** @type {number} */ (p.k) : (E.browse && (!p.tab || p.tab === E.tab) ? E.cur : /** @type {number} */ (p.k));
@@ -302,7 +302,7 @@ async function drawSpec(p, snapped) {
     files = other;
   }
   if (isDda) { const m = DDA.waiting(p); if (m) return say(m); }
-  else if (p.r0 == null) return say(I18N.t("spec.pickRange"));
+  else if (p.r0 == null) return say(I18N.t("spec.pickRange"), true);
   const sref = window.SUBREF ? SUBREF.eff(p) : null;          // the reference of the session (or the file chosen in «fondo»): same window of time, factor of the session
   const bgOf = await FONDOSP.bgOf(p, files, sref);          // the stretch typed, the automatic one (from the TIC), or the file chosen as reference
   // scan-by-scan walk (arrows): one file, no background subtraction -> the scan comes from the cache of neighbouring scans, not from a window request
@@ -345,7 +345,7 @@ async function drawSpec(p, snapped) {
     return say(I18N.t("spec.noScan"));
   }
   // everything is known: only now the canvas is cleared and drawn again, in one go (until then the previous spectrum stays on the screen)
-  const { g, W, H: HF } = setup(p.cv);
+  const { g, W, H: HF } = setup(p.cv); /** @type {any} */ (window).EMPTYHINT?.clear(p);
   const H = HF;
   const isDiff = data.some(x => x.d.diff), relY = rel && !isDiff;            // a difference from the reference: bars up (higher in the sample) and down (higher in the reference)
   const lineOf = (/** @type {Bag} */ x) => x.d.pmz && !p.sticks;                  // a profile file is drawn as a line (the peaks are drawn as bars only if the student asks)

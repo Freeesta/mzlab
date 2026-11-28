@@ -99,10 +99,10 @@ export async function draw(p) {
   const tok = p._tok = (p._tok || 0) + 1;
   const { g, W, H } = setup(p.cv);
   /** @param {string} t */
-  const say = t => { g.clearRect(0, 0, W, H); g.fillStyle = ecss("--muted"); g.fillText(t, M.l, 30); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; };
+  const say = async (/** @type {string} */ t, pick = false) => { g.clearRect(0, 0, W, H); p.leg.innerHTML = ""; if (p.leg2) p.leg2.innerHTML = ""; p._a = null; const w = /** @type {any} */ (window); const EH = (w.EMPTYHINT ||= await import("./empty-hint.js")); if (tok === p._tok) EH.note(p, t, pick); };
   const f = E.files[p.k];
   import("./xwc.js").then(m => (/** @type {any} */ (window).XWC = m).dressSpec(p));      // the XWC split button of the spectrum
-  if (!f || p.r0 == null) return say(T("spec.pickRange"));
+  if (!f || p.r0 == null) return say(T("spec.pickRange"), true);
   /** @param {number} k @returns {Promise<any>} the slice of file k at r0..r1, or the answer of api/uvspec, or the error */
   const one = async k => {
     if (MAT[k] || await ensureMat(k)) return sliceUv(MAT[k], p.r0, p.r1);
@@ -113,6 +113,7 @@ export async function draw(p) {
   /** @type {{ f: any, nm: number[], y: number[], d: any }[]} */
   const ser = []; got.forEach((d, i) => { if (d && !d.err && d.nm && d.nm.length) ser.push({ f: E.files[ks[i]], nm: d.nm, y: d.mau, d }); });
   if (!ser.length) { const e = got[0] && got[0].err; return say(e && e.error_key !== "err.pda.none" ? reason(e) : T("uv.none")); }
+  /** @type {any} */ (window).EMPTYHINT?.clear(p);
   const d = ser[0].d, nm = ser[0].nm, y = ser[0].y;
   const full = [minOf(ser.map(s => s.nm[0])), maxOf(ser.map(s => s.nm[s.nm.length - 1]))], x0 = p.zoom ? p.zoom[0] : full[0], x1 = p.zoom ? p.zoom[1] : full[1];
   let lo = 0, hi = 0; for (const s of ser) for (const v of s.y) { if (v < lo) lo = v; if (v > hi) hi = v; }
