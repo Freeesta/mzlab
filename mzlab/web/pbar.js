@@ -9,8 +9,8 @@
 (() => {
   /** @typedef {any} Pannello */
   const T = (/** @type {string} */ k, /** @type {any} */ a = {}) => I18N.t(k, a), KEY = NOMI.KEY("pbar");
-  /** group of the bar for each header group («s», the spectrum tools, splits by action: peak picking is Analyse); more and close stay in the header */
-  const PB = /** @type {Record<string, string>} */ ({ xb: "x", v: "v", l: "v", s: "v", i: "a", t: "v", x: "x", o: "o", e: "o" });
+  /** group of the bar for each header group («s», the spectrum tools, splits by action: peak picking is Analyse); more and close stay in the header. The DDA buttons (dd) and the TIC background (tb) extract a trace or a list from the data, like the XIC: Extract */
+  const PB = /** @type {Record<string, string>} */ ({ xb: "x", v: "v", l: "v", s: "v", i: "a", t: "v", x: "x", o: "o", e: "o", dd: "x", tb: "x" });
   /** the groups of the bar: View, Analyse, Extract, Output, each labelled, drawn only when the kind has an action in it */
   const GRP = { of: (/** @type {any} */ a) => a.bid === "more" || a.nodata ? "" : a.bid === "par" ? "a" : PB[a.bar] || "", groups: [["v", "pbar.g.view"], ["a", "pbar.g.analyse"], ["x", "pbar.g.extract"], ["o", "pbar.g.output"]],
     wrap: (/** @type {string} */ k, /** @type {string} */ t, /** @type {string} */ s) => h`<span class="tbg" role="group" data-pg="${k}" aria-label="${T(t)}"><span class="tbl" aria-hidden="true">${T(t)}</span>${raw(s)}</span>` };
@@ -35,6 +35,7 @@
     const hd = hdr(p), b = host(); if (!hd || !b) return;
     for (const t of /** @type {NodeListOf<HTMLElement>} */ (b.querySelectorAll(".pbtools [data-a]"))) {
       const s = /** @type {HTMLElement | null} */ (hd.querySelector(`[data-a="${t.dataset.a}"]`)); if (!s) continue;
+      const tbg = t.dataset.a === "ticbg" && /** @type {any} */ (window).TICBG; if (tbg) tbg.wire(p, t);   // long press, right click and ↓ open the options from the bar too (the module is lazy: wired once it has loaded)
       if (t.className !== s.className) t.className = s.className;
       if (t.innerHTML !== s.innerHTML) t.innerHTML = s.innerHTML;
       for (const k of ["title", "aria-label", "aria-pressed", "aria-expanded"]) { const v = s.getAttribute(k); if (v == null) t.removeAttribute(k); else if (t.getAttribute(k) !== v) t.setAttribute(k, v); }

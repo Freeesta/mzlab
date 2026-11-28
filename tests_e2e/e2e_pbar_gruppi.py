@@ -32,10 +32,27 @@ try:
             pick(pg, ".pnl.chrom")
             assert pg.evaluate(GROUPS) == ["v:View", "a:Analyse", "x:Extract", "o:Output"], pg.evaluate(GROUPS)
             a = pg.evaluate(IDS + "('a')"); assert a[:3] == ["iauto", "iall", "iman"], a
-            assert pg.evaluate(IDS + "('x')") == ["xic"], pg.evaluate(IDS + "('x')")
+            assert pg.evaluate(IDS + "('x')") == ["xic", "ticbg"], pg.evaluate(IDS + "('x')")   # the TIC background switch is an extraction of the trace, like the XIC
             o = pg.evaluate(IDS + "('o')"); assert o == ["dl", "max"], o
             v = pg.evaluate(IDS + "('v')"); assert v[:2] == ["izoom", "fit"] and "smooth" in v and "log" in v, v
         step("chromatogram: View, Analyse (integration), Extract (XIC), Output, labelled", chrom)
+        def ticbg():
+            pick(pg, ".pnl.chrom")
+            assert pg.evaluate("E.active.kind==='tic'"), "the first chromatogram of the example is the TIC"
+            B = "#pbar [data-a=ticbg]"; assert pg.evaluate(f"document.querySelector('{B}').closest('.tbg').dataset.pg") == "x"
+            assert pg.evaluate("E.active.el.querySelector('[data-a=ticbg]').offsetParent") is None, "the header twin is not shown with the bar on"
+            pg.locator(B).click(button="right")
+            pg.wait_for_selector(".pnl.chrom .tb-pop", timeout=10000)
+            got = pg.evaluate("""() => { const p = E.active, q = p.el.getBoundingClientRect(), o = p.el.querySelector('.tb-pop').getBoundingClientRect(), h = p.el.querySelector('.hd').getBoundingClientRect();
+              return { top: o.top - h.bottom, bottom: q.bottom - o.bottom, left: o.left - q.left, right: q.right - o.right, bar: document.querySelector('#pbar [data-a=ticbg]').getAttribute('aria-expanded'), hd: p.el.querySelector('[data-a=ticbg]').getAttribute('aria-expanded') }; }""")
+            assert got["top"] >= 0 and got["left"] >= 0 and got["right"] >= 0 and got["bottom"] >= 0, ("the options are under the header, inside the panel", got)
+            assert got["bar"] == "true" and got["hd"] == "true", ("aria-expanded on both twins", got)
+            pg.keyboard.press("Escape"); pg.wait_for_selector(".pnl.chrom .tb-pop", state="detached", timeout=5000)
+            assert pg.evaluate(f"document.activeElement === document.querySelector('{B}')"), "Esc puts the focus back on the bar button"
+            assert pg.evaluate("[...document.querySelectorAll('[data-a=ticbg]')].every(b => b.getAttribute('aria-expanded') === 'false')")
+            pg.keyboard.press("ArrowDown"); pg.wait_for_selector(".pnl.chrom .tb-pop", timeout=5000); pg.keyboard.press("Escape")
+            pg.wait_for_selector(".pnl.chrom .tb-pop", state="detached", timeout=5000)
+        step("TIC: the background switch is in Extract; its options open under the panel header, Esc returns to the bar button, aria-expanded on both twins", ticbg)
         def xic():
             pick(pg, ".pnl.xic")
             assert pg.evaluate(GROUPS) == ["v:View", "a:Analyse", "o:Output"], pg.evaluate(GROUPS)
@@ -65,7 +82,7 @@ try:
             pg.evaluate("(()=>{const p=E.active;p._tab0=p.tab;p.tab=ESP.ms2;AZIONI.refresh({view:p.type,p})})()")   # a chromatogram of the MS2 tab: no log, no XIC (ctl.noMs2)
             wait_for_js(pg, "(()=>{const b=document.querySelector('#pbar [data-a=log]');return !b||b.hidden})()")
             assert pg.evaluate("!document.querySelector('#pbar .pbtools [data-a=xic]:not([hidden])')"), "XIC is hidden on an MS2 chromatogram"
-            assert pg.evaluate(GROUPS)[2:] == ["o:Output"], pg.evaluate(GROUPS)   # no Extract group at all
+            assert pg.evaluate(IDS + "('x')") == ["ticbg"], pg.evaluate(IDS + "('x')")   # Extract keeps only the TIC background (it does not depend on the tab)
             pg.evaluate("(()=>{const p=E.active;p.tab=p._tab0;AZIONI.refresh({view:p.type,p})})()")
             wait_for_js(pg, "!document.querySelector('#pbar [data-a=log]').hidden && !document.querySelector('#pbar [data-a=xic]').hidden")
         step("an action that is not available is hidden, and a group with nothing in it is not drawn", hidden_not_grey)

@@ -39,7 +39,7 @@ export async function series(p, fl) {
 export function mount(p) {
   const b = /** @type {HTMLButtonElement | null} */ (p.el && p.el.querySelector('[data-a="ticbg"]'));
   if (!b) return;
-  if (!b.dataset.w) { b.dataset.w = "1"; b.innerHTML = IC; wire(p, b); }   // the icon comes with this lazy module: the button is hidden until now
+  if (!b.dataset.i) { b.dataset.i = "1"; b.innerHTML = IC; wire(p, b); }   // the icon comes with this lazy module: the button is hidden until now
   const sig = `${applies(p)}${on(p)}`, tip = T(on(p) ? "ctl.ticbg.off" : "ctl.ticbg.on");
   if (p._tbSig !== sig) { p._tbSig = sig; AZIONI.refresh({ view: "chrom", p }); }
   if (b.title !== tip) { b.title = tip; b.setAttribute("aria-label", tip); }
@@ -52,7 +52,8 @@ export function press(p) {
 }
 
 /** a long press, right click, ↓, Shift+F10 or the menu key open the options (the click itself is `press`) @param {Bag} p @param {HTMLButtonElement} b */
-function wire(p, b) {
+export function wire(p, b) {
+  if (b.dataset.w) return; b.dataset.w = "1";   // once per button: the header one and the twin the bar redraws
   let timer = 0;
   const stop = () => { clearTimeout(timer); timer = 0; };
   b.addEventListener("pointerdown", e => { if (e.button !== 0) return; p._tbLong = false; stop(); timer = window.setTimeout(() => { p._tbLong = true; open(p, b); }, LONG_MS); });
@@ -61,17 +62,20 @@ function wire(p, b) {
   b.addEventListener("keydown", e => { if (e.key === "ArrowDown") { e.preventDefault(); e.stopPropagation(); open(p, b); } });
 }
 
-/** @param {Bag} p */
-function close(p) {
+/** the header button and its twin in the shared bar (only while the bar shows this panel) @param {Bag} p @returns {HTMLElement[]} */
+const twins = p => /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="ticbg"]'), window.PBAR?.on() && E.active === p ? document.querySelector('#pbar [data-a="ticbg"]') : null].filter(Boolean));
+/** @param {Bag} p @param {boolean} [back] focus returns to the button that opened the options (Esc) */
+function close(p, back = false) {
   const pop = p.el && p.el.querySelector(".tb-pop"); if (!pop) return;
   if (p._tbOff) p._tbOff();
   pop.remove();
-  p.el.querySelector('[data-a="ticbg"]')?.setAttribute("aria-expanded", "false");
+  const l = twins(p); for (const x of l) x.setAttribute("aria-expanded", "false");
+  if (back) (l.find(a => a.offsetParent) || l[0])?.focus({ preventScroll: true });   // the bar twin when the header one is hidden
 }
 
 /** the options of the removal, with no text on screen: each control says what it is in its aria-label and title @param {Bag} p @param {HTMLButtonElement} b */
 function open(p, b) {
-  if (p.el.querySelector(".tb-pop")) { close(p); return; }
+  if (p.el.querySelector(".tb-pop")) { close(p, true); return; }
   const o = p.ticbg = { mode: "auto", action: "subtract", ...(p.ticbg || {}) };
   const opt = (/** @type {string} */ v, /** @type {string} */ k, /** @type {unknown} */ cur) => h`<option value="${v}"${raw(String(cur) === v ? " selected" : "")}>${T(k)}</option>`;
   const sel = (/** @type {string} */ k, /** @type {string} */ key, /** @type {string} */ opts) => h`<select data-t="${k}" aria-label="${T(key)}" title="${T(key)}">${raw(opts)}</select>`;
@@ -96,11 +100,11 @@ function open(p, b) {
     if (o.mode !== "quiet" || (o.rt0 && o.rt1)) draw(p);         // a quiet window is asked for once both ends are written
   });
   Q("table").onclick = () => table(p);
-  pop.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(p); b.focus(); } });
+  pop.addEventListener("keydown", e => { if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(p, true); } });
   shape();
-  const br = b.getBoundingClientRect(), pr = p.el.getBoundingClientRect();
+  const pr = p.el.getBoundingClientRect(), br = (p.el.contains(b) ? b : p.el.querySelector(".hd") || p.el).getBoundingClientRect();   // a button in the bar is far from the panel: the options go under the header
   pop.style.top = Math.round(br.bottom - pr.top + 4) + "px"; pop.style.left = Math.max(8, Math.round(Math.min(br.left - pr.left, pr.width - 250))) + "px";
-  p.el.append(pop); b.setAttribute("aria-expanded", "true"); Q("mode").focus();
+  p.el.append(pop); for (const x of twins(p)) x.setAttribute("aria-expanded", "true"); Q("mode").focus();
   const ac = new AbortController(); p._tbOff = () => ac.abort();
   p._ac.signal.addEventListener("abort", () => ac.abort(), { once: true, signal: ac.signal });
   document.addEventListener("pointerdown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!t.closest(".tb-pop") && !t.closest('[data-a="ticbg"]')) close(p); }, { capture: true, signal: ac.signal });

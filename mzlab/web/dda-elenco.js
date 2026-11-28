@@ -24,18 +24,21 @@ export function sync(I, p, w, why) {
   b.setAttribute("aria-disabled", String(!n));
   if (!p._dws) { p._dws = true; AZIONI.refresh({ view: "spec", p }); }              // the action shows its button (and its group) from now on
 }
-/** @param {Bag} p */
-function close(p) {
+/** @param {Bag} p @param {boolean} [back] focus returns to the button (Esc, a chosen row) */
+function close(p, back = false) {
   const pop = p.el.querySelector(".dw-pop"); if (!pop) return;
   if (p._dwOff) p._dwOff();
   pop.remove();
-  const b = p.el.querySelector('[data-a="ddaw"]'); if (b) b.setAttribute("aria-expanded", "false");
+  for (const b of twins(p)) b.setAttribute("aria-expanded", "false");
+  if (back) { const l = twins(p); (l.find(a => a.offsetParent) || l[0])?.focus({ preventScroll: true }); }   // the bar twin when the header one is hidden
 }
+/** the button of the list in the header and its twin in the shared bar (only while the bar shows this panel) @param {Bag} p @returns {HTMLElement[]} */
+const twins = p => /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="ddaw"]'), window.PBAR?.on() && E.active === p ? document.querySelector('#pbar [data-a="ddaw"]') : null].filter(Boolean));
 /** The list under the button (the run of `panel.ddaw`). @param {Bag} p @param {HTMLButtonElement} b */
 export function open(p, b) {
   const I = II; if (!I) return;
   const w = p._dw; if (!w || !w.n) return;
-  if (p.el.querySelector(".dw-pop")) { close(p); return; }
+  if (p.el.querySelector(".dw-pop")) { close(p, true); return; }
   const s2 = I.target(p), dec = HR.prof(E.files[s2 ? s2.k : p.k], 2).dec, f = E.files[p.k], D = f && I.ready(f.k), dia = !!(D && window.DDAMARK && window.DDAMARK.dia(f));
   const pop = document.createElement("div");
   pop.className = "sp-pop dw-pop"; pop.setAttribute("role", "listbox"); pop.tabIndex = 0; pop.setAttribute("aria-label", T("dda.win.list", { n: w.n }));
@@ -60,25 +63,24 @@ export function open(p, b) {
     const k = e.key, step = { ArrowDown: at + 1, ArrowUp: at - 1, Home: 0, End: opts.length - 1 }[k];
     if (step != null) move(step);
     else if (k === "Enter" || k === " ") choose(I, p, w.groups[at]);
-    else if (k === "Escape") { close(p); b.focus(); }
+    else if (k === "Escape") close(p, true);
     else if (k === "Tab") { close(p); return; }
     else return;
     e.preventDefault(); e.stopPropagation();
   });
-  const br = b.getBoundingClientRect(), pr = p.el.getBoundingClientRect();
+  const pr = p.el.getBoundingClientRect(), br = (p.el.contains(b) ? b : p.el.querySelector(".hd") || p.el).getBoundingClientRect();   // a button in the bar is far from the panel: the list goes under the header
   pop.style.top = Math.round(br.bottom - pr.top + 4) + "px"; pop.style.left = Math.max(8, Math.round(br.left - pr.left)) + "px";
-  p.el.append(pop); b.setAttribute("aria-expanded", "true"); move(0); pop.focus();
+  p.el.append(pop); for (const x of twins(p)) x.setAttribute("aria-expanded", "true"); move(0); pop.focus();
   const ac = new AbortController(); p._dwOff = () => ac.abort();
   p._ac.signal.addEventListener("abort", () => ac.abort(), { once: true, signal: ac.signal });   // the panel closing ends the listener too (the floor is Safari 16.4)
   document.addEventListener("pointerdown", e => { const t = /** @type {HTMLElement} */ (e.target); if (!t.closest(".dw-pop") && !t.closest('[data-a="ddaw"]')) close(p); }, { capture: true, signal: ac.signal });   // pointerdown: a tap on a plain area of iPad Safari gives no mousedown
 }
 /** The most intense MS2 of a precursor in the MS2 panel; the Full Scan stays as it is. @param {Bag} I @param {Bag} p @param {Bag} q */
 function choose(I, p, q) {
-  close(p);
+  close(p, true);
   const s2 = I.target(p); if (!s2) return;
   const b = q.pint.reduce((/** @type {number} */ m, /** @type {number | null} */ v, /** @type {number} */ i) => ((v ?? -1) > (q.pint[m] ?? -1) ? i : m), 0);
   I.selectMs2(s2, q.sid[b], { parent: false, zoom: false });
-  const bt = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="ddaw"]')); if (bt) bt.focus();
 }
 /** «▲ MS²» (the action `panel.ms2tri`, first among the buttons of the chromatogram or followed XIC of the trio): shown from now on, its pressed state from the panel.
  * @param {Bag | null} c */
