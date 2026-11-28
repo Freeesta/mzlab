@@ -50,7 +50,9 @@ try:
         st, txt = pg.evaluate(get, f"api/tic_background?k={k}&level=1&mode=nope")
         assert st == 400 and json.loads(txt)["error_key"] == "err.request.badValue", (st, txt[:300])
         print("OK  a bad value is a keyed error")
-        BTN = ".pnl.chrom .tbg:not([hidden]) > [data-a=ticbg]"
+        BAR = pg.evaluate("!!document.querySelector('#pbar') && !document.querySelector('#pbar').hidden")   # MZLAB_PBAR=1: the button is the twin in the shared bar
+        BTN = "#pbar .tbg:not([hidden]) > [data-a=ticbg]" if BAR else ".pnl.chrom .tbg:not([hidden]) > [data-a=ticbg]"
+        if BAR: pg.evaluate("setActive(E.panels.find(q => q.type === 'chrom' && q.kind === 'tic'))")
         pg.wait_for_selector(BTN, timeout=60000)
         b = pg.locator(BTN).first
         tip, box = b.get_attribute("title"), b.bounding_box()
@@ -73,6 +75,11 @@ try:
         print("OK  a second click: the raw trace again")
         b.click(button="right")
         pg.wait_for_selector(".tb-pop", timeout=10000)
+        if BAR:
+            got = pg.evaluate("""() => { const p = E.active, q = p.el.getBoundingClientRect(), o = p.el.querySelector('.tb-pop').getBoundingClientRect(), h = p.el.querySelector('.hd').getBoundingClientRect();
+              return { top: o.top - h.bottom, bottom: q.bottom - o.bottom, left: o.left - q.left, right: q.right - o.right, bar: document.querySelector('#pbar [data-a=ticbg]').getAttribute('aria-expanded'), hd: p.el.querySelector('[data-a=ticbg]').getAttribute('aria-expanded') }; }""")
+            assert got["top"] >= 0 and got["left"] >= 0 and got["right"] >= 0 and got["bottom"] >= 0, ("the options are inside the panel, under its header", got)
+            assert got["bar"] == "true" and got["hd"] == "true", ("aria-expanded on both twins", got)
         texts = pg.evaluate("""() => { const w = document.createTreeWalker(document.querySelector('.tb-pop'), NodeFilter.SHOW_TEXT); const o = [];
           for (let n; (n = w.nextNode());) if (n.textContent.trim() && !n.parentElement.closest('option')) o.push(n.textContent.trim()); return o; }""")
         assert not texts, texts
@@ -87,6 +94,7 @@ try:
         pg.keyboard.press("Escape")
         pg.wait_for_selector(".tb-pop", state="detached", timeout=5000)
         assert pg.evaluate("document.activeElement && document.activeElement.dataset.a") == "ticbg", "Esc gives the focus back to the button"
+        assert pg.evaluate("(!document.querySelector('#pbar') || document.querySelector('#pbar').hidden || document.activeElement.closest('#pbar')) && [...document.querySelectorAll('[data-a=ticbg]')].every(b => b.getAttribute('aria-expanded') === 'false')"), "the focus is on the bar twin and both twins are collapsed"
         print("OK  right click: options with no text on screen; a blank sample = mzlab-cli --blank; Esc closes")
         pg.keyboard.press("ArrowDown")
         pg.wait_for_selector(".tb-pop", timeout=5000)
