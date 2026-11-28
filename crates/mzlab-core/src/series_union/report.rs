@@ -209,7 +209,12 @@ fn params_value(p: &Params) -> Value {
         .n("pad", p.pad)
         .put("polarity", text(pol_text(p.polarity)));
     // the key exists only when asked for, so a run without `origin` keeps its bytes
-    if p.origin { o.put("origin", text("on")) } else { o }.done()
+    if p.origin {
+        o.put("origin", text("on"))
+    } else {
+        o
+    }
+    .done()
 }
 
 /// The series that hold a target, in the order the series were given.
@@ -237,7 +242,11 @@ fn target_rows(named: &[(String, &Done)], series: &[Series], origin: bool) -> (S
     let mut targets = Vec::new();
     for (id, d) in named {
         let from = origin_of(d);
-        let names = |k: &[usize]| k.iter().map(|&i| series[i].name.as_str()).collect::<Vec<_>>();
+        let names = |k: &[usize]| {
+            k.iter()
+                .map(|&i| series[i].name.as_str())
+                .collect::<Vec<_>>()
+        };
         csv += &format!(
             "{id},{},{},{},{},target",
             fix(d.mz, 5),
@@ -245,7 +254,11 @@ fn target_rows(named: &[(String, &Done)], series: &[Series], origin: bool) -> (S
             fix(d.hi, 4),
             pol_text(d.t.polarity)
         );
-        csv += &if origin { format!(",{}\n", cell(&names(&from).join("+"))) } else { "\n".into() };
+        csv += &if origin {
+            format!(",{}\n", cell(&names(&from).join("+")))
+        } else {
+            "\n".into()
+        };
         let o = Obj::new()
             .put("id", text(id))
             .n("mz", d.mz)
@@ -255,7 +268,10 @@ fn target_rows(named: &[(String, &Done)], series: &[Series], origin: bool) -> (S
             .put("polarity", pol_value(d.t.polarity))
             .i("series", d.series as i64);
         let o = if origin {
-            o.put("origin", Value::Arr(names(&from).into_iter().map(text).collect()))
+            o.put(
+                "origin",
+                Value::Arr(names(&from).into_iter().map(text).collect()),
+            )
         } else {
             o
         };

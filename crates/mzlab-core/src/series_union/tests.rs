@@ -235,13 +235,23 @@ fn origin_is_opt_in_and_names_the_series_of_each_target() {
     ];
     let off = super::route(&request(&t, "{}")).unwrap();
     // asking for the default is the run without it: not one byte moves
-    assert_eq!(super::route(&request(&t, r#"{"origin":"off"}"#)).unwrap(), off);
+    assert_eq!(
+        super::route(&request(&t, r#"{"origin":"off"}"#)).unwrap(),
+        off
+    );
     assert!(!off.contains("origin"), "{off}");
     let v = run(&t, r#"{"origin":"on"}"#);
     let csv = v.get("csv").and_then(Value::str).unwrap();
-    assert!(csv.starts_with("id,mz,rt_min,rt_max,polarity,role,origin\n"), "{csv}");
+    assert!(
+        csv.starts_with("id,mz,rt_min,rt_max,polarity,role,origin\n"),
+        "{csv}"
+    );
     // 10 shared ions, 3 own ions in each series
-    let of = |o: &str| csv.lines().filter(|l| l.ends_with(&format!(",{o}"))).count();
+    let of = |o: &str| {
+        csv.lines()
+            .filter(|l| l.ends_with(&format!(",{o}")))
+            .count()
+    };
     assert_eq!(
         (of("direct+suspect"), of("direct"), of("suspect")),
         (10, 3, 3)
@@ -251,15 +261,27 @@ fn origin_is_opt_in_and_names_the_series_of_each_target() {
         .unwrap()
         .arr()
         .iter()
-        .map(|o| (o.get("origin").and_then(Value::str).unwrap().into(), o.get("targets").unwrap().f64().unwrap()))
+        .map(|o| {
+            (
+                o.get("origin").and_then(Value::str).unwrap().into(),
+                o.get("targets").unwrap().f64().unwrap(),
+            )
+        })
         .collect();
     assert_eq!(
         counts,
-        [("direct".into(), 3.0), ("direct+suspect".into(), 10.0), ("suspect".into(), 3.0)]
+        [
+            ("direct".into(), 3.0),
+            ("direct+suspect".into(), 10.0),
+            ("suspect".into(), 3.0)
+        ]
     );
     let first = &v.get("targets").unwrap().arr()[0];
     assert!(first.get("origin").is_some());
-    assert_eq!(v.get("params").unwrap().get("origin").and_then(Value::str), Some("on"));
+    assert_eq!(
+        v.get("params").unwrap().get("origin").and_then(Value::str),
+        Some("on")
+    );
 }
 
 #[test]

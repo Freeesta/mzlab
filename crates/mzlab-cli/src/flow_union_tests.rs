@@ -161,16 +161,26 @@ fn set_parameters_reach_the_engine() {
 fn origin_names_the_input_tables_and_is_off_by_default() {
     let d = dir("origin");
     let (off_csv, off_doc, _) = run(&d, "{}");
-    assert!(!off_csv.contains("origin") && !off_doc.contains("origin"), "{off_csv}");
+    assert!(
+        !off_csv.contains("origin") && !off_doc.contains("origin"),
+        "{off_csv}"
+    );
     let (csv, doc, _) = run(&d, r#"{"origin":"on"}"#);
     assert_eq!(
         (csv.clone(), doc),
         engine(&[("origin", Value::Str("on".into()))])
     );
     let rows: Vec<&str> = csv.lines().skip(1).collect();
-    assert!(csv.starts_with("id,mz,rt_min,rt_max,polarity,role,origin\n"), "{csv}");
+    assert!(
+        csv.starts_with("id,mz,rt_min,rt_max,polarity,role,origin\n"),
+        "{csv}"
+    );
     // two targets hold both tables, 512.1 only the first and 230.0 only the second
-    let of = |o: &str| rows.iter().filter(|l| l.ends_with(&format!(",{o}"))).count();
+    let of = |o: &str| {
+        rows.iter()
+            .filter(|l| l.ends_with(&format!(",{o}")))
+            .count()
+    };
     assert_eq!(
         (of("a.mzfeat+b.mzfeat"), of("a.mzfeat"), of("b.mzfeat")),
         (2, 1, 1),
