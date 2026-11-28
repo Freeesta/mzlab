@@ -1,50 +1,14 @@
 //! `rebin=nominal|0.1` and `mzoff=` of `/api/spectrum` (`spectrum get --bin`): the app, the site's engine (an index in memory), the CLI (an index on disk),
 //! the CLI command's own bytes and the engine `.wasm` (`tests/rotte_wasm_node.js`, `MZLAB_WASM_PKG`, run by `tests/test_parita_rotte_app.py`) give the same
 //! text on a unit-resolution profile file whose fragment is split between 106.7 and 107.0; a question the route refuses has the same error everywhere.
+mod nominal_common;
 use mzlab_core::idxread::Index;
 use mzlab_core::routes::{Query, Routes};
-use mzlab_desktop::rpc::Answer;
 use mzlab_desktop::State;
+use nominal_common::{json_of, setup, text, Setup};
 use serde_json::{json, Value};
 use std::path::Path;
 use std::process::Command;
-
-/// Four profile scans of 0.1 Da points on 100.02 + 0.1 i, a baseline of 5 and a fragment of six points from 106.62 to 107.12. Numbers invented.
-fn split_fragment_mzml() -> Vec<u8> {
-    use mzlab_core::mzml::Spectrum;
-    use mzlab_core::mzmlwrite::{Header, MzmlWriter};
-    let mut w = MzmlWriter::new(Vec::new(), &Header::default()).unwrap();
-    w.open_spectra(4).unwrap();
-    let peak = [400.0f32, 800.0, 1000.0, 1000.0, 800.0, 400.0];
-    for k in 0..4 {
-        let mz: Vec<f64> = (0..100).map(|i| 100.02 + 0.1 * i as f64).collect();
-        let intensity: Vec<f32> = (0..100usize)
-            .map(|i| {
-                5.0 + i
-                    .checked_sub(66)
-                    .and_then(|j| peak.get(j))
-                    .copied()
-                    .unwrap_or(0.0)
-                    + k as f32
-            })
-            .collect();
-        let s = Spectrum {
-            index: k,
-            id: format!("scan={}", k + 1),
-            level: 1,
-            rt: k as f64,
-            polarity: 1,
-            profile: true,
-            filter: "ITMS + p ESI Full ms [100.00-110.00]".into(),
-            mz,
-            intensity,
-            ..Default::default()
-        };
-        w.spectrum(&s).unwrap();
-    }
-    w.close_spectra().unwrap();
-    w.finish().unwrap()
-}
 
 const QUERIES: [&str; 6] = [
     "?k=0&rt0=1&rt1=1&level=1&rebin=nominal",
@@ -54,44 +18,6 @@ const QUERIES: [&str; 6] = [
     "?k=0&rt0=1&rt1=1&level=1&rebin=nominal&mzoff=auto:300",
     "?k=0&rt0=1&rt1=1&level=1&rebin=7",
 ];
-
-fn text(a: Answer) -> String {
-    match a {
-        Answer::Text(t) => t,
-        Answer::Bytes(_) => panic!("bytes"),
-    }
-}
-
-/// The file, the app's state with it open in slot 0 and the index the site and the CLI read.
-struct Setup {
-    dir: tempfile::TempDir,
-    file: std::path::PathBuf,
-    st: State,
-    idx_path: std::path::PathBuf,
-}
-
-fn setup() -> Setup {
-    let dir = tempfile::tempdir().unwrap();
-    let file = dir.path().join("split.mzML");
-    std::fs::write(&file, split_fragment_mzml()).unwrap();
-    let st = State::new();
-    st.set_data_folder(dir.path().join("app"));
-    st.set_index_folder(dir.path().join("idx")).unwrap();
-    let (fid, _) = st.pick(file.clone()).unwrap();
-    st.rpc("lr_put", &json!({"name": "split.mzML", "fid": fid}), &[])
-        .unwrap();
-    st.rpc("lr_index", &json!({"name": "split.mzML"}), &[])
-        .unwrap();
-    st.rpc("idxopen", &json!({"slot": 0, "name": "split.mzML"}), &[])
-        .unwrap();
-    let idx_path = dir.path().join("idx").join("split.mzML.mzidx");
-    Setup {
-        dir,
-        file,
-        st,
-        idx_path,
-    }
-}
 
 /// The three native engines answer each query alike (or refuse it with the same key); `None` is a refusal.
 fn native_answers(s: &Setup) -> Vec<Option<String>> {
@@ -132,10 +58,6 @@ fn native_answers(s: &Setup) -> Vec<Option<String>> {
         }
     }
     answers
-}
-
-fn json_of(a: &Option<String>) -> Value {
-    serde_json::from_str(a.as_ref().unwrap()).unwrap()
 }
 
 /// The CLI command holds the route's tokens: bin, centre of mass, counts and points of the offset question.

@@ -1,0 +1,11 @@
+# Binned spectrum: `spectrum get --bin`
+
+Split out of `data-channels.md`; the other `spectrum get` modes (`--minus`, `--sum`, `--peak auto`) stay there.
+
+- `spectrum get FILE --rt A,B|--scan N --bin nominal|0.1 [--mz-offset DA|auto:MZ[@RT]]`: unit-resolution profile points summed into half-open bins `[bin - w/2, bin + w/2)` AFTER the offset is taken off (`observed - offset`, `mzcal`), so a fragment split between 106.7 and 107.0 is one bin. Core `nominalbin.rs`, shared by site, app and CLI through `/api/spectrum` (`rebin=`, `mzoff=`); the answer states `rule`, `width_da`, `mz_offset_da`, `mz_offset` (evidence), also at 0.
+- Output: columns `bin`, `mz` (centre of mass on the corrected scale, plain mean when the bin sums to 0), `counts`, `points`; schema `spectrum-bins/1` (`docs/schemi/spectrum-bins-1.json`), CSV `bin,mz,counts,points`; stderr names the rule and offset (`warn.mz.offset.notFound|wide` for `auto`).
+- `--minus FILE`: the engine cuts the window and the blank into bins (each with its own `--mz-offset`; `auto:` is measured on the blank's own file) and subtracts the bins on their centres (`specdiff::binned_diff`, factor 1, bins above zero), never the points: at unit resolution the two files split one fragment between two integers differently, and a difference taken on the points leaves residues at the wrong bin.
+  The choice is stated: the answer's `order` is `bin_then_subtract`; `evidence.minus` carries `order`, the blank's `mz_offset_da`, `mz_offset` and `scans`; stderr names the blank's offset.
+- `--sum` (`mode=sum`): the summed counts are cut as they are; `evidence.sum` is the usual `/api/specsum` one.
+- Exit 2 for an unknown rule, `--mz-offset` without `--bin`, `--bin` with `--peak auto`, `--sum` with `--minus`; exit 1 `err.spectrum.rebin.hr` on HR centroid data. HR PROFILE files are binned too (`0.1` sums 0.004 Da points); the CLI asks `mzml_route` first, as site and app (not with `--minus`).
+- Tests `nominalbin_tests.rs`, `spectrum_bins*tests.rs` (`spectrum_bins_minus_tests.rs`: split fragment, blank offset, sum); parity `crates/mzlab-desktop/tests/parity_nominal_bin.rs` (app, site, CLI and `.wasm` through `spectrum_bg`, also the `bgk` and `mode=sum` queries, via `tests/test_parita_rotte_app.py`).

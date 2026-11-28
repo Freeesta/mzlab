@@ -102,18 +102,55 @@ impl<R: ReadAt> Routes<R> {
         };
         let rule = Rule::parse(t)
             .ok_or_else(|| Error::new("err.spectrum.rebin").with("value", t.to_string()))?;
-        let off = match q.some("mzoff") {
+        self.rebin_with(rule, q.some("mzoff")).map(Some)
+    }
+
+    /// The rule with the offset spec (`DA` or `auto:MZ[@RT]`) resolved on THIS file: a blank is calibrated on its own, not on the sample's ion.
+    pub(crate) fn rebin_with(&mut self, rule: Rule, mzoff: Option<&str>) -> Result<Rebin> {
+        let off = match mzoff {
             Some(s) => Spec::parse(s)?.resolve(&mut self.idx, self.pol)?,
             None => Offset::default(),
         };
-        Ok(Some(Rebin { rule, off }))
+        Ok(Rebin { rule, off })
     }
+}
+
+/// Sample bins minus blank bins (`factor` x), cell by cell on the bin's centre: the same fragment split between two integers is one bin on each
+/// side before it is subtracted, so no residue is left at the wrong bin. Bins whose difference is not above zero are dropped with `clip` (not
+/// zero otherwise); a bin keeps the sample's m/z (the blank's where only the blank has it) and the sample's point count.
+pub fn subtract_bins(a: &[Bin], b: &[Bin], factor: f64, clip: bool) -> Vec<Bin> {
+    let key = |x: &Bin| (x.centre * 1e6).round() as i64;
+    let rb: std::collections::BTreeMap<i64, &Bin> = b.iter().map(|x| (key(x), x)).collect();
+    let mut seen = std::collections::BTreeSet::new();
+    let mut out: Vec<Bin> = Vec::new();
+    for x in a {
+        let r = rb.get(&key(x)).map(|r| {
+            seen.insert(key(x));
+            r.y * factor
+        });
+        out.push(Bin {
+            y: x.y - r.unwrap_or(0.0),
+            ..x.clone()
+        });
+    }
+    out.extend(b.iter().filter(|x| !seen.contains(&key(x))).map(|x| Bin {
+        y: -x.y * factor,
+        points: 0,
+        ..x.clone()
+    }));
+    out.retain(|x| x.y != 0.0 && (!clip || x.y > 0.0));
+    out.sort_by(|p, q| p.centre.total_cmp(&q.centre));
+    out
 }
 
 /// The answer of `/api/spectrum` with `rebin`: the bins in columns (`bin`, `mz`, `y`, `points`), then the rule and the offset (always stated, also
 /// when 0), then the window as the plain answers give it.
 pub(crate) fn bins_json(b: &Binned, rb: &Rebin) -> String {
-    let bins = rebin(&b.mz, &b.y, rb.rule, rb.off.da);
+    bins_doc(b, rb, &rebin(&b.mz, &b.y, rb.rule, rb.off.da), "")
+}
+
+/// The same answer for bins already made (a blank taken off them); `extra` is members (leading comma) put after the sample's offset.
+pub(crate) fn bins_doc(b: &Binned, rb: &Rebin, bins: &[Bin], extra: &str) -> String {
     let col = |o: &mut Out, key: &str, f: &dyn Fn(&Bin) -> f64, nd: usize| {
         let v: Vec<f64> = bins.iter().map(f).collect();
         o.raw(key).rounded(&v, nd);
@@ -127,8 +164,8 @@ pub(crate) fn bins_json(b: &Binned, rb: &Rebin) -> String {
     o.raw(",\"mz_offset_da\":")
         .num(rb.off.da)
         .raw(",\"mz_offset\":")
-        .raw(&rb.off.evidence_json())
-        .raw(",");
+        .raw(&rb.off.evidence_json());
+    o.raw(extra).raw(",");
     col(&mut o, "\"bin\":", &|x| x.centre, 1);
     col(&mut o, ",\"mz\":", &|x| x.mz, 3);
     col(&mut o, ",\"y\":", &|x| x.y, 1);

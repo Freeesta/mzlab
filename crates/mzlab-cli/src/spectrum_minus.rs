@@ -78,8 +78,28 @@ pub(crate) fn answer(
         .ok_or_else(|| Error::new("err.spectrum.minus"))?;
     let out = mzlab_core::specdiff::spectrum_diff(&mut s.routes, Some(&mut m.sample.routes), &req)?
         .ok_or_else(|| Error::new("err.spectrum.minus"))?;
+    // with `--bin` the engine cut both sides first: the order and the blank's own offset (resolved on the blank) are part of the evidence
+    let binned = if base.iter().any(|(k, _)| *k == "rebin") {
+        let v = mzlab_core::json::parse(out.as_bytes())?;
+        let m = |k: &str| {
+            let mut o = mzlab_core::json::Out::default();
+            mzlab_core::json::write_value(
+                &mut o,
+                v.get(k).unwrap_or(&mzlab_core::json::Value::Null),
+            );
+            o.0
+        };
+        format!(
+            ",\"order\":\"bin_then_subtract\",\"mz_offset_da\":{},\"mz_offset\":{},\"scans\":{}",
+            m("blank_mz_offset_da"),
+            m("blank_mz_offset"),
+            m("blank_scans")
+        )
+    } else {
+        String::new()
+    };
     let ev = format!(
-        "\"minus\":{{\"file\":{},\"sample\":{},\"window_min\":[{},{}],\"scan\":{bg_scan},\"factor\":{},\"clip\":true,\"tol_ppm\":{}}}",
+        "\"minus\":{{\"file\":{},\"sample\":{},\"window_min\":[{},{}],\"scan\":{bg_scan},\"factor\":{},\"clip\":true,\"tol_ppm\":{}{binned}}}",
         extract::jstr(&m.sample.name),
         m.sample.sample.map_or("null".to_string(), |i| i.to_string()),
         extract::jnum(bg.0),
