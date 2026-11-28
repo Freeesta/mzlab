@@ -349,6 +349,7 @@ function kbdMenu(p) {
 }
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();
+  if (!window.PANELMENU) { e.preventDefault(); loadScript("panel-menu.js").then(() => ctxFor(p, e, x, px, py)); return; }
   const items = [];
   const inLbl = a => (p._a.lbls || []).some(l => l.ann === a && px >= l.x && px <= l.x + l.w && py >= l.y && py <= l.y + l.h);
   const near = p.anns.find(a => a.x >= p._a.x0 && a.x <= p._a.x1 && (inLbl(a) || Math.abs(p._a.X(a.x) - px) < 14));
@@ -426,7 +427,7 @@ async function editAnn(p, ann) {
   const V = ["spec", "chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
   const reg = o => AZIONI.register({ views: V, ...o });
-  reg({ id: "view.resetZoom", group: "reset", available: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClick: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClickOrder: 2,
+  reg({ id: "view.resetZoom", group: "reset", scope: "panel", available: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClick: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClickOrder: 2,
     name: () => T("ctx.resetZoom"), run: /** @param {any} c */ c => { pushZh(c.p); c.p.zoom = null; c.p.zoomY = null; if (c.dbl) c.p.sel = null; draw(c.p); if (c.dbl) uiSave(); } });
   reg({ id: "ann.edit", group: "ann", order: 1, visible: /** @param {any} c */ c => !!c.near, available: /** @param {any} c */ c => !!c.near, doubleClick: /** @param {any} c */ c => !!c.near, doubleClickOrder: 1,
     name: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), run: /** @param {any} c */ c => editAnn(c.p, c.near) });

@@ -193,6 +193,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | provisional TIC: zoom/pan of the RT axis while the index is being built, window handoff to the first panel | `docs/agenti/tic-provisional.md` |
 | SIM/MRM transition table of a triple quadrupole (`chrom.transitions`, `transitions/`, per-sample integration, RT candidates, example presets) | `docs/agenti/transitions.md` |
 | value states of quantities (AU-3): vocabulary (detected, forced, filled, below_loq, absent, na), `state` + S/N in concentrations, Dig, `peak`, `chrom.transitions`, `raw xic`, audit of surfaces, `quant.targets` shape gates `min_half`, `max_fwhm`, `max_asym` | `docs/agenti/value-states.md` |
+| log of the `.wasm` cap changes per module (cap step, measurement, reason) | `docs/agenti/wasm-caps-log.md` |
 | .wasm ceilings: rules, where each ceiling and measurement lives (`tools/moduli/*.toml`), what costs most, move steps | `docs/agenti/wasm-caps.md` |
 | WebAssembly potential (`opt-level` profiles, SIMD128, binaryen, zlib-rs, threads, memory64, minimum browsers; measurements) | `docs/agenti/wasm-potential.md` |
 | Waters MassLynx `.raw` folder reader (`crates/mzlab-lettori/src/waters/`, `waters` module, grouping in `waters-raw.js`) | `docs/agenti/waters.md` |
