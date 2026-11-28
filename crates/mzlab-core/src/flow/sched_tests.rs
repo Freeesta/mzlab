@@ -218,17 +218,15 @@ fn a_file_added_at_the_end_adds_its_jobs_and_stales_the_barrier() {
 }
 
 #[test]
-fn a_file_added_at_the_front_stales_the_detections_but_not_the_conversions() {
-    // the recipe of detect comes from the index of the FIRST input of the plan (decision D2): a new first file changes it for every detection
+fn a_file_added_at_the_front_stales_the_barrier_only() {
+    // each detection takes the recipe of its own index, so a new first file changes none of them; the alignment reads the new file
     let mut s = sched(&["f2.raw", "f3.raw"]);
     run_all(&mut s);
     s.update(&plan(&["f1.raw", "f2.raw", "f3.raw"], 1, 1));
-    for j in ["conv|f2.raw", "cen|f2.raw", "idx|f2.raw", "idx|f3.raw"] {
+    for j in ["conv|f2.raw", "idx|f3.raw", "det|f2.raw", "det|f3.raw"] {
         assert_eq!(state(&s, j), "done", "{j}");
     }
-    for j in ["det|f2.raw", "det|f3.raw", "aln"] {
-        assert_eq!(state(&s, j), "stale", "{j}");
-    }
+    assert_eq!(state(&s, "aln"), "stale");
 }
 
 #[test]

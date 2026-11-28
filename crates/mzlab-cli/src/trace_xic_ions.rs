@@ -8,7 +8,7 @@ use mzlab_core::json::parse;
 use mzlab_core::routes::Query;
 
 use crate::extract::{self, Parsed, Sample};
-use crate::raw_xic_ions::{fill_from_method, FACT_KEYS};
+use crate::raw_xic_ions::{fill_from_method, parse_facts};
 
 /// The ion-scale values of a call: the scan type named (`None`: read from the scans) and the method values given with `--set`.
 pub(crate) type IonAsk = (Option<ScanKind>, Facts);
@@ -19,35 +19,13 @@ pub(crate) fn parse_flags(p: &Parsed) -> std::result::Result<Option<IonAsk>, Str
         None => None,
         Some(v) => Some(ScanKind::parse(v).ok_or("--scan-type needs ems, epi, q1, sim or other")?),
     };
-    let mut f = Facts::default();
     // NAME=VALUE, repeated or separated by commas as in `raw xic --set`
     let given: Vec<&str> = p
         .all("--set")
         .into_iter()
         .flat_map(|v| v.split(','))
         .collect();
-    for kv in &given {
-        let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
-        let x = v
-            .parse::<f64>()
-            .ok()
-            .filter(|x| x.is_finite() && *x > 0.0)
-            .ok_or(format!("{k} must be a number above 0"))?;
-        *match k {
-            "fill_ms" => &mut f.fill_ms,
-            "dwell_ms" => &mut f.dwell_ms,
-            "scan_s" => &mut f.scan_s,
-            "step_da" => &mut f.step_da,
-            "mass_lo" => &mut f.mass_lo,
-            "mass_hi" => &mut f.mass_hi,
-            _ => {
-                return Err(format!(
-                    "--set takes a method value here: {}",
-                    FACT_KEYS.join(", ")
-                ))
-            }
-        } = Some(x);
-    }
+    let f = parse_facts(&given)?;
     if !p.flag("--ions") {
         if kind.is_some() || !given.is_empty() {
             return Err("err.cli.tracexic.needsIons".into());

@@ -60,10 +60,24 @@ pub struct Screen {
     /// Whether `centroid_wanted` said yes to each file, decided where the whole index is open (`series_js::series_recipe`; the page's gap fill reads lean
     /// indexes, which hold no scan table to decide on). Empty: each file decides for itself. Never part of the text.
     pub centroid_files: Vec<bool>,
+    /// The gap-filling floor each file estimated on its own profile (`Recipe::fill.floor` of that file), set only when the files differ (`set_file_floors`);
+    /// empty: every file fills at `Recipe::fill.floor`. Never part of the text: the files it comes from are the key of every cache that holds the bytes.
+    pub file_floors: Vec<f64>,
     pub evidence: Option<Evidence>,
 }
 
 impl Screen {
+    /// Keeps the floor each file of the series estimated, but only if two of them differ, so a series with one estimate keeps its recipe, and its bytes.
+    pub fn set_file_floors(&mut self, floors: Vec<f64>) {
+        let same = floors.windows(2).all(|w| w[0] == w[1]);
+        self.file_floors = if same { Vec::new() } else { floors };
+    }
+
+    /// The gap-filling floor of file `k`: its own estimate, or `base` when the series has one.
+    pub fn fill_floor(&self, k: usize, base: f64) -> f64 {
+        self.file_floors.get(k).copied().unwrap_or(base)
+    }
+
     /// The switches (`read`) and the number `dedup_overlap` of the params object `v`; a value outside 0..=1 or a missing key keeps the threshold.
     pub fn read_json(&mut self, v: &mzlab_core::json::Value) {
         use mzlab_core::json::Value;

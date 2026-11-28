@@ -4,13 +4,32 @@
 //! `mzlab-cli` (`flow_base.rs`) and the feature `.wasm` (`flow_job_meta`).
 
 use super::{recipe_for_estimated, recipe_of_layers};
-use mzlab_core::error::Result;
-use mzlab_core::flow::{lineage_from_text, value_text, Job};
+use mzlab_core::error::{Error, Result};
+use mzlab_core::flow::{lineage_from_text, value_text, Job, Layer};
 use mzlab_core::idxread::{Index, ReadAt};
 use mzlab_core::json::{Out, Value};
 use mzlab_feat::recipe::Recipe;
 use mzlab_feat::slabs::{rows_of, stima, Stored};
 use mzlab_feat::steps::recipe_map;
+
+/// Gives `r`, the recipe of the first file of a unit-resolution series, the gap-filling floor each of the `n` files estimates on its own (`recipe_of_layers`
+/// on file `k`), so that the gap filling of a file reads the floor that its detection read. The files of a series with one estimate, and the high-resolution
+/// ones (no floor of their own), leave `r` as it is, bytes included.
+pub fn with_file_floors<R: ReadAt>(
+    r: &mut Recipe,
+    n: usize,
+    mut open: impl FnMut(usize) -> Result<Index<R>>,
+    layers: &[Layer],
+) -> Result<()> {
+    if n < 2 || !r.detect.axis.is_da() {
+        return Ok(());
+    }
+    let floors = (0..n)
+        .map(|k| Ok(recipe_of_layers(&mut open(k)?, layers)?.fill.floor))
+        .collect::<Result<Vec<f64>>>()?;
+    r.screen.set_file_floors(floors);
+    Ok(())
+}
 
 pub use mzlab_core::flow::{job_layers_text, job_lineage_text, written};
 
@@ -31,8 +50,12 @@ fn recipe_of(
     mut base: Recipe,
 ) -> Result<(Recipe, Vec<Estimate>)> {
     recipe_map::apply(&mut base, step, w)?;
+    // a floor the plan writes is the floor of every file
+    if step == "features.gapfill" && w.iter().any(|x| x.0 == "floor") {
+        base.screen.file_floors.clear();
+    }
     let proof = Value::Str("profile of the first file of the series".into());
-    let estimates = recipe_map::values(&base, step)
+    let mut estimates: Vec<Estimate> = recipe_map::values(&base, step)
         .into_iter()
         .filter(|(k, v)| {
             !w.iter().any(|x| x.0 == *k)
@@ -60,6 +83,29 @@ fn recipe_of(
             (k, v, why)
         })
         .collect();
+    if step == "features.gapfill" && !base.screen.file_floors.is_empty() {
+        // the files of the series estimated different floors: each one fills at its own, and the record lists them in the order of the series
+        let why = Value::Obj(vec![
+            (
+                "basis".into(),
+                Value::Str(
+                    "profile floor of each file of the series, as its detection read it".into(),
+                ),
+            ),
+            (
+                "files".into(),
+                Value::Arr(
+                    base.screen
+                        .file_floors
+                        .iter()
+                        .map(|&f| Value::Num(f))
+                        .collect(),
+                ),
+            ),
+        ]);
+        estimates.retain(|e| e.0 != "floor");
+        estimates.push(("floor".into(), Value::Num(base.fill.floor), why));
+    }
     Ok((base, estimates))
 }
 
@@ -76,7 +122,25 @@ pub struct Meta {
 /// and memory.
 pub fn job_meta<R: ReadAt>(
     lineage: &str,
+    indexes: (&mut Index<R>, &mut Index<R>),
+    stored: Option<&mut dyn Stored>,
+    budget_mb: f64,
+) -> Result<Meta> {
+    job_meta_series(
+        lineage,
+        indexes,
+        (0, |_| Err(Error::new("error.badIndex"))),
+        stored,
+        budget_mb,
+    )
+}
+
+/// `job_meta` of a step of the alignment on a series of `n` files that `open(k)` gives (the indexes of the files its `.mzfeatf` were detected on), so that
+/// the floor each file estimated is in the recipe and in the record, as `flow run` writes it (`with_file_floors`).
+pub fn job_meta_series<R: ReadAt>(
+    lineage: &str,
     (first, own): (&mut Index<R>, &mut Index<R>),
+    (n, open): (usize, impl FnMut(usize) -> Result<Index<R>>),
     stored: Option<&mut dyn Stored>,
     budget_mb: f64,
 ) -> Result<Meta> {
@@ -85,7 +149,9 @@ pub fn job_meta<R: ReadAt>(
     let base = if detect {
         recipe_for_estimated("", own)?
     } else {
-        recipe_of_layers(first, &l.layers)?
+        let mut r = recipe_of_layers(first, &l.layers)?;
+        with_file_floors(&mut r, n, open, &l.layers)?;
+        r
     };
     let (mut recipe, estimates) = recipe_of(&l.step, &l.params, (&l.resolved, &l.noresult), base)?;
     recipe.fill_gaps = l.step == "features.gapfill";

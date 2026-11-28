@@ -891,7 +891,7 @@ exit 0
 --- stdout
 mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality,state] [--max-shift MIN] [--json] [--out PATH]
+usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality,state] [--max-shift MIN] [--ions [--scan-type K] [--set NAME=VALUE,...]] [--json] [--out PATH]
        mzlab-cli peak table (FILE... | --traces PATH...) --shifts --windows PATH [--max-shift MIN]
        mzlab-cli peak table (FILE... | --traces PATH...) --auto [--params PATH]
 
@@ -920,6 +920,12 @@ usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums]
                   table has more columns after origin: panel,conc,conc_unit,correction,below,area_unit
   --columns LIST  more columns after the others, any of: state (state: forced for a window given or moved by you, detected for the engine's own peak, absent for no_peak), sn (sn_zone: the height over the noise of the stretch a window names with "noise": [a, b], empty without),
                   fig (w_half_min,plates,tailing, on the window's own baseline), quality (gaussian,asymmetry,noise_score); the bytes of the page's table
+  --ions      the ion scale, after every other column: area_ions, height_ions, noise_ions (the noise of the trace at one ion = 1 / the factor), sn_ions (Poisson S/N,
+              the floor of one ion), ions_per_cps (the seconds one point accumulates ions), ion_source (method = a method value, data = 1 / the ion quantum of the
+              trace, trace = the factor a trace of `trace xic --ions` brought) and ion_scan_type; the cps columns are unchanged and the sum row leaves them empty.
+              The scan type of a file's channels is sim, of a `trace xic --ions` trace the one it carries; --scan-type ems|epi|q1|sim|other names it. The method values are
+              --set fill_ms=, dwell_ms=, scan_s=, step_da=, mass_lo=, mass_hi= (repeated or separated by commas); a --set value wins over the dwell read from the method of
+              the file. Each sample logs its scan type on stderr; with --json the answer gains `ion_scale` (the same per sample). --scan-type and --set need --ions (exit 2)
   --json      the table as JSON {"columns": [NAME], "rows": [{NAME: TEXT}]} (every cell the text of the CSV, so a number keeps its digits); with --shifts or --auto the
               answer is JSON already and --json changes nothing
   --out PATH  write there instead of the standard output

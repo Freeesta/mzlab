@@ -5,15 +5,39 @@ use super::*;
 /// The columns appended after `origin` when a trace names its panel (`Trace::panel`): the panel, the concentration of the sample and its unit, the
 /// correction note of the window, the part of the area under the baseline (counts x s; empty for `edges`), the unit of the area.
 pub const EXT_HEAD: &str = ",panel,conc,conc_unit,correction,below,area_unit";
+/// Columns after every other one: none for the cps table (`NoExtra`), the ion scale of `manint_ions` with `--ions`. A generic parameter, so the table of
+/// the `rotte` module never links the ion code.
+pub(super) trait Extra {
+    fn head(&self) -> String;
+    /// How many cells `cells` writes (the `sum` row leaves them empty).
+    fn width(&self) -> usize;
+    /// The cells of one row, with the leading commas.
+    fn cells(&self, t: &Trace, r: &Row) -> String;
+}
+
+pub(super) struct NoExtra;
+
+impl Extra for NoExtra {
+    fn head(&self) -> String {
+        String::new()
+    }
+    fn width(&self) -> usize {
+        0
+    }
+    fn cells(&self, _: &Trace, _: &Row) -> String {
+        String::new()
+    }
+}
+
 /// The CSV: the header, then for each channel (in the order of `keys`) its rows, and the `sum` row after them when `sums`.
 pub(super) fn csv_text(
     rows: &[(usize, Row)],
-    labels: &[String],
-    corrs: &[String],
+    (labels, corrs): (&[String], &[String]),
     keys: &[Channel],
     samples: &[Sample],
     sums: bool,
     cols: Cols,
+    extra: &impl Extra,
 ) -> String {
     // the extra columns only when a trace was supplied with its panel: the bytes of a table of file transitions do not change
     let ext = samples
@@ -24,6 +48,7 @@ pub(super) fn csv_text(
         out += EXT_HEAD;
     }
     out += &cols.head();
+    out += &extra.head();
     out.push('\n');
     for (ch, (_, label, _)) in keys.iter().enumerate() {
         let mine: Vec<&Row> = rows.iter().filter(|r| r.0 == ch).map(|r| &r.1).collect();
@@ -55,7 +80,8 @@ pub(super) fn csv_text(
                 out.pop();
                 out += &ext_cells(&samples[r.file].1[r.tr], r, &corrs[r.label]);
             }
-            let more = cols.cells(&samples[r.file].1[r.tr], r);
+            let more =
+                cols.cells(&samples[r.file].1[r.tr], r) + &extra.cells(&samples[r.file].1[r.tr], r);
             if !more.is_empty() {
                 out.pop();
                 out += &more;
@@ -68,9 +94,9 @@ pub(super) fn csv_text(
                 sci(mine.iter().map(|r| r.area).sum(), 5),
                 if ext { ",,,,,," } else { "" }
             );
-            if cols.any() {
+            if cols.any() || extra.width() > 0 {
                 out.pop();
-                out += &",".repeat(cols.count());
+                out += &",".repeat(cols.count() + extra.width());
                 out.push('\n');
             }
         }
