@@ -217,12 +217,9 @@ fn params_value(p: &Params) -> Value {
     .done()
 }
 
-/// The series that hold a target, in the order the series were given.
+/// The series that hold a target, in the order the series were given (`merge` adds the members series after series, one row per series).
 fn origin_of(d: &Done) -> Vec<usize> {
-    let mut k: Vec<usize> = d.t.members.iter().map(|m| m.series).collect();
-    crate::sortc::slice_ord(&mut k);
-    k.dedup();
-    k
+    d.t.members.iter().map(|m| m.series).collect()
 }
 
 /// A CSV cell: quoted when it holds a comma, a quote or a line break.
@@ -282,15 +279,15 @@ fn target_rows(named: &[(String, &Done)], series: &[Series], origin: bool) -> (S
 
 /// How many targets each combination of series holds (`origins` of the document, only with `origin`): the combinations in the order of their series.
 fn origins_value(named: &[(String, &Done)], series: &[Series]) -> Value {
+    // kept in the order of the series as they come in: no sort, so no second copy of the sort code in the module
     let mut count: Vec<(Vec<usize>, i64)> = Vec::new();
     for (_, d) in named {
         let k = origin_of(d);
-        match count.iter_mut().find(|(c, _)| *c == k) {
-            Some(c) => c.1 += 1,
-            None => count.push((k, 1)),
+        match count.binary_search_by(|(c, _)| c.cmp(&k)) {
+            Ok(i) => count[i].1 += 1,
+            Err(i) => count.insert(i, (k, 1)),
         }
     }
-    crate::sortc::slice_by(&mut count, |a, b| a.0.cmp(&b.0));
     Value::Arr(
         count
             .into_iter()
