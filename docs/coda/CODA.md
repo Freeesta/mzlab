@@ -21,7 +21,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ION-TABLE-SUMS | `docs/coda/prompt/ION-TABLE-SUMS.md` | - | the `--sums` row of `peak table --ions`: its ion cells (empty today) as the sum of the ions of the rows that share a factor |
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
-| RAW-ISOTOPES-FIGURE | `docs/coda/prompt/RAW-ISOTOPES-FIGURE.md` | - | `raw isotopes --figure PATH`: an SVG of the three traces with the region shaded and the observed against the expected ratios |
 | ISOTOPES-SPILL-RAW | `docs/coda/prompt/ISOTOPES-SPILL-RAW.md` | - | spill-over verdict in `raw isotopes` from the Q1 scan itself: the +1 channel against M inside the peak, with the shape correlation, for a file with no feature table |
 | TP-GENERATE-M2-OBSERVED | `docs/coda/prompt/TP-GENERATE-M2-OBSERVED.md` | - | feed the observed parent M+2/M of `raw isotopes` to the `m2_ref` of the `tp.generate` formula filter, logged, instead of a typed number |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |

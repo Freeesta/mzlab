@@ -3,7 +3,7 @@
 use super::Entry;
 
 pub(crate) static TABLE: &[Entry] = &[
-    Entry::new("raw isotopes", "mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--out PATH]   M+1, M+2 vs a formula", crate::raw_iso_cmd::iso_run)
+    Entry::new("raw isotopes", "mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--set NAME=VALUE,...] [--figure PATH] [--out PATH]   M+1, M+2 vs a formula", crate::raw_iso_cmd::iso_run)
         .schema("raw-isotopes/1")
         .exits(&[0, 1, 2, 4, 5, 6]),
     Entry::new("ion mz", "mzlab-cli ion mz TEXT [--adduct A]   m/z of an ion with a signed shift", crate::plain::ion_mz_cmd::run).examples(&["mzlab-cli ion mz C6H12O6 --adduct +H"]).schema("ion_mz/1").exits(&[0, 1, 2, 6]),

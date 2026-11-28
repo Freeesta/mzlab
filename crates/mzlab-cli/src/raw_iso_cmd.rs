@@ -23,14 +23,16 @@ undetermined; too few counts are undetermined with their reason). Without a form
 The correlation of M+1 with M over the region flags a co-eluting interference.
 
 usage: mzlab-cli raw isotopes FILE... --mz M --rt A,B [--formula F [--adduct A]] [--bin nominal] [--ms-level N] [--polarity +|-]
-                              [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--dry-run] [--out PATH]
+                              [--mz-offset DA|auto:MZ[@RT]] [--set NAME=VALUE,...] [--sample ID] [--figure PATH] [--dry-run] [--out PATH]
 
   --mz M      the monoisotopic mass of the ion; the bins are whole masses (round(M), +1, +2)   --rt A,B  the window, min; the peak of M inside it is the region
   --formula F the neutral formula (C6H12O6); --adduct A a name of `ion pattern` (default [M+H]+, logged as a choice); the ion must be singly charged
   --set       min_counts=10 (least net counts of M and of the ratio's bin), z_ok=2, z_bad=3, c13_pct=1.1 (13C per carbon, %), carbon_k=2 (sigma of the range),
               m2_ratio=0.2 and m2_k=3 (the M+2 hint), min_r=0.8 (least correlation of M+1 with M), min_sn, min_points, alpha, side_min, gap_min (as raw xic)
+  --figure PATH  also write an SVG: the traces of M, M+1 and M+2 over the window with the peak region shaded, and the observed ratios with their sigma beside the
+              expected ones and the verdict of each; several results write PATH-1.svg, PATH-2.svg, ... (`figures` in the answer: path, bytes, sha256)
   --dry-run   the resolved query and each file with its cache status (raw-plan/1); reads no peak
-exit 0 answered (any verdict), 1 a file could not be read (its entry has `error`), 2 usage, 4 a file is missing, 5 unknown sample, 6 --out not writable";
+exit 0 answered (any verdict), 1 a file could not be read (its entry has `error`), 2 usage, 4 a file is missing, 5 unknown sample, 6 --out or --figure not writable";
 
 /// The keys of `--set` and of the route.
 const SET_KEYS: &[&str] = &[
@@ -48,6 +50,9 @@ const SET_KEYS: &[&str] = &[
     "side_min",
     "gap_min",
 ];
+
+#[path = "raw_iso_fig_cmd.rs"]
+mod fig_cmd;
 
 /// The question: the files, the route question and the polarity.
 pub(crate) struct IsoAsk {
@@ -102,6 +107,9 @@ fn iso_ask_of(p: &Parsed) -> std::result::Result<IsoAsk, Error> {
     for (k, v) in set_of(p)? {
         query += &format!("&{k}={}", enc(&v));
     }
+    if p.get("--figure").is_some() {
+        query += "&figure=1";
+    }
     let pol = match p.get("--polarity") {
         None => None,
         Some("+") => Some(1),
@@ -120,6 +128,8 @@ struct Answer {
     prov: String,
     warnings: Vec<String>,
     choices: Vec<String>,
+    /// The figure of this sample with its file name, when `--figure` was given.
+    svg: Option<(String, Option<u32>, String)>,
 }
 
 fn warning(key: &str, file: &str, sample: Option<u32>, extra: &[(&str, String)]) -> String {
@@ -246,8 +256,10 @@ fn one(f: &Path, sample: Option<u32>, a: &IsoAsk) -> Result<(Answer, String)> {
             false,
         );
         let prov = prov_file(&s.name, &sha, size, s.sample);
+        let svg = out.svg.map(|v| (s.name.clone(), s.sample, v));
         Ok((
             Answer {
+                svg,
                 entry,
                 result: tagged(&s.name, &sid, &out.result),
                 prov,
@@ -282,6 +294,9 @@ fn params_json(p: &Parsed, a: &IsoAsk) -> String {
         .raw(&k.offset.map_or("null".into(), |s| jstr(&s.to_string())));
     o.raw(",\"sample\":")
         .raw(&p.get("--sample").map_or("null".into(), jstr));
+    if let Some(f) = p.get("--figure") {
+        o.raw(",\"figure\":").str(f);
+    }
     o.raw(",\"set\":{");
     let vals = [
         t.min_counts,
@@ -315,6 +330,7 @@ struct Gathered {
     choices: Vec<String>,
     notes: String,
     bad: bool,
+    figures: Vec<(String, Option<u32>, String)>,
 }
 
 /// Each file through `one`; a file that cannot be answered keeps its place with an `error` entry, a whole-run failure ends the command.
@@ -329,6 +345,7 @@ fn gather(p: &Parsed, a: &IsoAsk) -> std::result::Result<Gathered, Outcome> {
                 g.provs.push(ans.prov);
                 g.warnings.extend(ans.warnings);
                 g.choices.extend(ans.choices);
+                g.figures.extend(ans.svg);
                 g.notes += &note;
             }
             Err(e) if whole_run(&e) => return Err(crate::sample_select::fail(&e)),
@@ -360,12 +377,17 @@ fn render(p: &Parsed, a: &IsoAsk, command: &[String], mut g: Gathered) -> Outcom
         "null",
         "whole masses: round(--mz), +1 and +2, each bin M-0.5 to M+0.5 Da after the offset",
     ));
+    let figures = match fig_cmd::write_figures(p, &g.figures, &mut g.choices) {
+        Ok(f) => f,
+        Err(o) => return o,
+    };
     let text = format!(
-        "{{\"schema\":\"raw-isotopes/1\",\"query\":{},\"files\":[{}],\"results\":[{}],\"warnings\":[{}],{}}}\n",
+        "{{\"schema\":\"raw-isotopes/1\",\"query\":{},\"files\":[{}],\"results\":[{}],\"warnings\":[{}],{}{}}}\n",
         params_json(p, a),
         g.entries.join(","),
         g.results.join(","),
         g.warnings.join(","),
+        figures,
         provenance(command, &g.provs, &params_json(p, a), &g.choices)
     );
     let mut o = crate::emit(text, &p.out());
@@ -395,6 +417,7 @@ pub fn iso_run(args: Vec<String>) -> Outcome {
         "--mz-offset",
         "--set",
         "--sample",
+        "--figure",
         "--out",
     ];
     let p = match extract::parse(args, &valued, &["--dry-run"]) {
@@ -418,6 +441,9 @@ pub fn iso_run(args: Vec<String>) -> Outcome {
     }
 }
 
+#[cfg(test)]
+#[path = "raw_iso_fig_cmd_tests.rs"]
+mod fig_tests;
 #[cfg(test)]
 #[path = "raw_iso_cmd_tests.rs"]
 pub(crate) mod tests;

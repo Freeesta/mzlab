@@ -3,6 +3,7 @@
 `tools/dati_sintetici.py` (full scan, profile, MS2, alternating polarity, a two-sample .wiff); a question the route refuses has the same `error_key` in both. The
 desktop answers the same route (`crates/mzlab-desktop/tests/parity_routes.rs`). Skipped on a machine without cargo, wasm-bindgen, node or numpy; in CI
 (GITHUB_ACTIONS) those are required and a missing one fails. Run by the `rest` shards of test.yml."""
+import hashlib
 import json
 import os
 import re
@@ -131,3 +132,32 @@ def test_the_peak_of_a_full_scan_has_ions_and_an_expected_pattern(work):
     plain, formula = (json.loads(g["s"])["result"] for g in answers(work, "FS.mzML", [ASKS[0][1], ASKS[1][1]]))
     assert len(plain["ions"]) == 3 and plain["ions"][0]["net"] > 0 and plain["expected"] is None
     assert formula["expected"]["formula"] == "C14H12N4O2S2" and len(formula["expected"]["pattern"]) == 3
+
+
+FIGURE_ASKS = [ASKS[0], ASKS[1], ASKS[6]]   # no formula, a formula with an adduct, a mass with no peak
+
+
+@pytest.mark.parametrize("name", ["FS.mzML", "FS_profile.mzML", "MS2.mzML", "POL.mzML"])
+def test_the_figure_of_the_wasm_route_is_the_svg_file_of_the_cli(work, name):
+    """`--figure PATH` writes the bytes the route answers to `figure=1`, so the site, the app and the CLI draw the same SVG; the file's sha256 is in the answer."""
+    queries = [q + "&figure=1" for _, q in FIGURE_ASKS]
+    for i, ((flags, query), got) in enumerate(zip(FIGURE_ASKS, answers(work, name, queries))):
+        assert "s" in got, f"{name} {query}: {got}"
+        out = work / f"{name}-{i}.svg"
+        doc = json.loads(cli("raw", "isotopes", str(work / name), *flags, "--figure", str(out)).stdout)
+        svg = out.read_bytes()
+        assert got["s"].encode("utf-8") == svg, f"{name} {flags}: the wasm figure differs from the CLI file"
+        assert svg.startswith(b"<svg ") and svg.endswith(b"</svg>\n")
+        fig = doc["figures"][0]
+        assert fig["path"] == str(out) and fig["bytes"] == len(svg) and fig["sha256"] == hashlib.sha256(svg).hexdigest()
+
+
+def test_a_refused_figure_value_has_the_same_error_key(work):
+    got = answers(work, "FS.mzML", ["mz=364&rt=13.9,14.7&figure=2"])[0]
+    assert json.loads(got["e"])["error_key"] == "err.raw.isotopes.param", got
+
+
+def test_the_figure_without_the_flag_changes_no_byte_of_the_answer(work):
+    """No `--figure`: no `figures` member and no `figure` in the query, so the document is what it was."""
+    doc = json.loads(cli("raw", "isotopes", str(work / "FS.mzML"), *ASKS[1][0]).stdout)
+    assert "figures" not in doc and "figure" not in doc["query"]

@@ -51,7 +51,7 @@ pub fn stat_steps() -> Vec<Value> {
     out
 }
 
-/// `raw isotopes` (`/api/rawiso`): the counts alone, with a formula and an adduct, changed thresholds, an offset, a mass with no peak, a question with no mass and a refused adduct.
+/// `raw isotopes` (`/api/rawiso`): the counts alone, with a formula and an adduct, changed thresholds, an offset, a mass with no peak, a question with no mass, a refused adduct and the figure (`figure=1`: with a formula, without, a mass with no peak, and a refused value).
 fn iso_steps() -> Vec<Value> {
     [
         "?mz=241&rt=2.5,3.5",
@@ -61,6 +61,10 @@ fn iso_steps() -> Vec<Value> {
         "?mz=900&rt=2.5,3.5",
         "?rt=2.5,3.5",
         "?mz=241&rt=2.5,3.5&adduct=[M%2BH]%2B",
+        "?mz=241&rt=2.5,3.5&formula=C6H12O6&figure=1",
+        "?mz=241&rt=2.5,3.5&figure=1",
+        "?mz=900&rt=2.5,3.5&figure=1",
+        "?mz=241&rt=2.5,3.5&figure=2",
     ]
     .map(|q| json!({"op": "route", "slot": 0, "path": "/api/rawiso", "query": q}))
     .to_vec()
