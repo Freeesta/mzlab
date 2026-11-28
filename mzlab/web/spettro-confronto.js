@@ -64,7 +64,7 @@ async function engine(params, sides) {
 /** The bars of the mirror from the document: A above the axis, B below, each as a share of its own base peak; `m` marks a matched ion (both sides draw it, joined).
  * @param {any} doc @returns {{ side: string, mz: number, y: number, rel: number, m: boolean }[]} */
 const barsOf = doc => {
-  const top = (/** @type {number[]} */ ys) => Math.max(...ys, 0) || 1, ta = top([...doc.matched.map((/** @type {any} */ r) => r.a), ...doc.only_a.map((/** @type {any} */ r) => r.y)]), tb = top([...doc.matched.map((/** @type {any} */ r) => r.b), ...doc.only_b.map((/** @type {any} */ r) => r.y)]);
+  const top = (/** @type {number[]} */ ys) => maxOf(ys, 0) || 1, ta = top([...doc.matched.map((/** @type {any} */ r) => r.a), ...doc.only_a.map((/** @type {any} */ r) => r.y)]), tb = top([...doc.matched.map((/** @type {any} */ r) => r.b), ...doc.only_b.map((/** @type {any} */ r) => r.y)]);
   return [...doc.matched.map((/** @type {any} */ r) => ({ side: "a", mz: r.mz_a, y: r.a, rel: r.a / ta, m: true })), ...doc.only_a.map((/** @type {any} */ r) => ({ side: "a", mz: r.mz, y: r.y, rel: r.y / ta, m: false })),
     ...doc.matched.map((/** @type {any} */ r) => ({ side: "b", mz: r.mz_b, y: r.b, rel: r.b / tb, m: true })), ...doc.only_b.map((/** @type {any} */ r) => ({ side: "b", mz: r.mz, y: r.y, rel: r.y / tb, m: false }))];
 };
@@ -81,7 +81,7 @@ function mirror(cv, doc) {
   cv.dataset.bars = JSON.stringify(bars.map(b => [b.side, b.mz, +b.rel.toFixed(4), b.m ? 1 : 0]));
   if (!bars.length) return;
   const s = setup(cv), g = s.g, W = s.W, H = s.H, ml = 44, mr = 14, mt = 22, mb = 30, mid = mt + (H - mt - mb) / 2, half = (H - mt - mb) / 2 - 14;
-  const mz = bars.map(b => b.mz), lo = Math.floor(Math.min(...mz) / 10) * 10 - 5, hi = Math.ceil(Math.max(...mz) / 10) * 10 + 5, X = (/** @type {number} */ m) => ml + (m - lo) / (hi - lo) * (W - ml - mr);
+  const mz = bars.map(b => b.mz), lo = Math.floor(minOf(mz) / 10) * 10 - 5, hi = Math.ceil(maxOf(mz) / 10) * 10 + 5, X = (/** @type {number} */ m) => ml + (m - lo) / (hi - lo) * (W - ml - mr);
   const hit = css("--lv1"), miss = css("--lv3b"), ink = css("--ink"), mut = css("--muted"), line = css("--line");
   g.clearRect(0, 0, W, H); g.fillStyle = css("--panel"); g.fillRect(0, 0, W, H);
   g.font = fpx(12);
