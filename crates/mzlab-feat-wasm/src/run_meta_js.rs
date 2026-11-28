@@ -25,8 +25,9 @@ mod export {
         Ok(mzlab_core::flow::value_text(&ix.source))
     }
 
-    /// The meta of a job (`job_meta`, JSON): `lineage` is its text from `flow_job_lineage` of `rotte`. `read(k, offset, length)` reads index 0 (the first of
-    /// the series) and 1 (the file of a detection), `sizes` their sizes; `files` the `.mzfeatf` of an alignment (empty for a detection).
+    /// The meta of a job (`job_meta_series`, JSON): `lineage` is its text from `flow_job_lineage` of `rotte`. `read(k, offset, length)` reads index 0 (the first
+    /// of the series) and 1 (the file of a detection), then, for an alignment, the indexes of all the files of the series from 2 on (they hold the floor each
+    /// file estimated); `sizes` their sizes; `files` the `.mzfeatf` of an alignment (empty for a detection).
     #[wasm_bindgen]
     pub fn flow_job_meta(
         lineage: &str,
@@ -38,8 +39,17 @@ mod export {
         let mut first = crate::open_one(&read, 0, sizes[0]).map_err(crate::js_err)?;
         let mut own = crate::open_one(&read, 1, sizes[1]).map_err(crate::js_err)?;
         let mut src = crate::JsStored { files };
-        let m = meta::job_meta(lineage, (&mut first, &mut own), Some(&mut src), budget_mb)
-            .map_err(crate::js_err)?;
+        let series = (sizes.len().saturating_sub(2), |k: usize| {
+            crate::open_one(&read, k + 2, sizes[k + 2])
+        });
+        let m = meta::job_meta_series(
+            lineage,
+            (&mut first, &mut own),
+            series,
+            Some(&mut src),
+            budget_mb,
+        )
+        .map_err(crate::js_err)?;
         Ok(meta::meta_json(&m))
     }
 }

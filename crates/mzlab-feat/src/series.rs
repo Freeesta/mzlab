@@ -61,6 +61,7 @@ fn find_screened<R: ReadAt>(
     // the table holds corrected m/z; the raw scans are read at m/z + the file's offset
     let fill = FillParams {
         mz_shift: r.screen.offsets.get(k),
+        floor: r.screen.fill_floor(k, r.fill.floor),
         ..r.fill
     };
     if let Some(mut c) = crate::lrscreen::centroids_of_file(index, r, k)? {

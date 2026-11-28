@@ -64,6 +64,7 @@ pub fn recipe_for_estimated<R: ReadAt>(text: &str, index: &mut Index<R>) -> Resu
     recipe_on(text, Recipe::for_index_estimated(index)?)
 }
 
+pub use meta::with_file_floors;
 /// The parameters one feature step writes: its id and the (name, value) pairs (`mzlab_core::flow::lineage`).
 pub use mzlab_core::flow::Layer;
 

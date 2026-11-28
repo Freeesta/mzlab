@@ -948,6 +948,7 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
     } else {
       d.textContent = (it.check ? "\u2713 " : "") + it.label;
     }
+    if (it.key && !it.soloIcona) d.dataset.key = it.key;
     if (it.tip || it.soloIcona) d.title = it.tip || it.label;
     if (it.aria) d.setAttribute("aria-label", it.aria);
     d.setAttribute("role", it.check != null ? "menuitemcheckbox" : "menuitem");

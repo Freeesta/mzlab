@@ -202,7 +202,7 @@ Slices are independent PRs; the setting `qqq.pbar` keeps the old header until th
 2. `PBAR-SKELETON`: `#pbar` and selection model, off by default.
 3. `PBAR-MOVE-COMMON` (done): fit, download, ruler, log, smoothing, link, expand.
 4. `PBAR-MOVE-SPECIFIC` (done): integration, XIC, peak picking, lock, %, area; the bar groups are View, Analyse, Extract, Output.
-5. `PBAR-MENU-SCOPE`: right-click menu with `scope`, per kind.
+5. `PBAR-MENU-SCOPE` (done): right-click menu with `scope`, per kind.
 6. `PBAR-PHONE-KEYS`: 390 px and keyboard.
 7. `PBAR-REMOVE-OLD`: default on, delete the old rows and overflow code and obsolete tests.
 Optional later: multi-select, configurable bar. Effort: slices 1, 3, 4 and 7 medium (25 ids; test migration), 2, 5 and 6 small; no PR touches the engine.

@@ -175,8 +175,10 @@ impl JobId {
     }
 }
 
-/// Steps whose recipe is estimated from the first index of the series (`recipe_of_layers`): their jobs depend on the index job of the first input.
-const RECIPE_STEPS: [&str; 3] = ["features.detect", "features.align", "features.gapfill"];
+/// Steps whose recipe is estimated from the first index of the series (`recipe_of_layers`): their jobs depend on the index job of the first input. A detection is
+/// not one: each file takes the recipe of its own index, so it waits for that index only. The alignment and the gap filling also read the floor of every file, which
+/// their inputs (the detections, the indexes) already wait for.
+const RECIPE_STEPS: [&str; 2] = ["features.align", "features.gapfill"];
 
 /// One job of the graph, in dependency order.
 pub(super) struct Node {

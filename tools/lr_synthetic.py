@@ -6,7 +6,7 @@
 
 Writes `LR_bench-s<N>.mzML` (60 compounds + 12 decoy pairs + background), `LR_bench-blank-s<N>.mzML` (same background, no compounds, other noise draw)
 `LR_bench-noise-s<N>.mzML` (no compounds and no background: only the Poisson counts and the single-scan spikes) and the truth. `--replicates N` writes N noise replicates of one sample (`make_replicate_series`); `--drift-series` writes instead
-the 8-sample series of the screening across samples (`make_drift_series`: the same 24 ions in every sample, the m/z axis of each moved by -0.2..+0.2 Da, as profile and as centroid mzML); `--offset-series` the 5 samples `offs-s<k>.mzML` shifted by +0.24 +- 0.05 Da (the offset of the 3200 QTRAP). Same seed and jitter = same bytes (structure from the seed, noise from separate streams; scalar libm exp as in `dati_sintetici`).
+the 8-sample series of the screening across samples (`make_drift_series`: the same 24 ions in every sample, the m/z axis of each moved by -0.2..+0.2 Da, as profile and as centroid mzML); `--offset-series` the 5 samples `offs-s<k>.mzML` shifted by +0.24 +- 0.05 Da (the offset of the 3200 QTRAP); `--floor-series` the 3 profile samples `floor-s<k>.mzML` with other noise (other estimated floors). Same seed and jitter = same bytes (structure from the seed, noise from separate streams; scalar libm exp as in `dati_sintetici`).
 Intensity = ion counts x GAIN (counts per second at a 50 ms dwell); heights in the truth are in counts.
 """
 from __future__ import annotations
@@ -126,13 +126,15 @@ def make(out: Path, seed: int = 1, jitter: float = 0.05) -> list[Path]:
 DRIFTS = (-0.2, -0.15, -0.1, -0.05, 0.05, 0.1, 0.15, 0.2)   # Da, the m/z axis of each sample of the drift series
 DRIFT_IONS = tuple(130.2 + 9.7 * k for k in range(24))        # nominal m/z with the mass defect 0.2, 9.7 Da apart (no two within 1 Da)
 DRIFT_SCANS = 60                                              # 1 s each
+FLOORS = (70.0, 25.0, 5.0)                                    # counts, the noise of each sample of the floor series: the first file estimates the highest floor
 OFFSETS = (0.19, 0.22, 0.24, 0.26, 0.29)                      # Da, the instrument offset of each sample of the offset series: +0.24 +- 0.05
 
 
-def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = DRIFTS, prefix: str = "drift", mislabel: bool = False) -> list[Path]:
+def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = DRIFTS, prefix: str = "drift", mislabel: bool = False, baseline: tuple = ()) -> list[Path]:
     """`drifts` (`DRIFTS`) samples `<prefix>-s<k>.mzML` of the same ions (apex in RT from the seed, height 2e4 counts), each with its m/z axis moved by its drift: profile
     scans on the 0.1 Da grid (Gaussian of FWHM 0.7 Da, Poisson counts) or one centroid per ion; `mislabel` writes those centroid points under a PROFILE label (MS:1000128, `+ p`),
-    as a reader that flags a whole instrument family does. The same seed gives the same bytes."""
+    as a reader that flags a whole instrument family does. `baseline` (profile only) is the mean count of the noise on every grid point of each sample: the noise lump of the
+    intensities, and the floor estimated from it, differ between the samples. The same seed gives the same bytes."""
     out.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(seed)
     apex = rng.uniform(8.0, DRIFT_SCANS - 8.0, len(DRIFT_IONS))
@@ -146,7 +148,7 @@ def make_drift_series(out: Path, profile: bool, seed: int = 1, drifts: tuple = D
             amp = height * _chrom(t, apex)
             m = np.array(DRIFT_IONS) + drift
             if profile:
-                lam = np.zeros(GRID.size)
+                lam = np.full(GRID.size, float(baseline[k])) if baseline else np.zeros(GRID.size)
                 c0 = np.rint((m - GRID[0]) / 0.1).astype(int)
                 idx = c0[:, None] + OFFS[None, :]
                 x = GRID[np.clip(idx, 0, GRID.size - 1)] - m[:, None]
@@ -185,10 +187,13 @@ if __name__ == "__main__":
     ap.add_argument("--jitter", type=float, default=0.05, help="sigma of the per-scan mass jitter, Da")
     ap.add_argument("--drift-series", choices=("profile", "centroid", "mislabelled"), help="write the 8-sample drift series in this mode instead of the benchmark (mislabelled: centroid points under a profile label)")
     ap.add_argument("--offset-series", choices=("profile", "centroid"), help="write the 5-sample series with the instrument offsets `OFFSETS` (+0.24 +- 0.05 Da) in this mode")
+    ap.add_argument("--floor-series", action="store_true", help="write the 3-sample profile series `floor-s<k>.mzML` whose noise, and so the floor each file estimates, differs (`FLOORS`)")
     ap.add_argument("--replicates", type=int, metavar="N", help="write N replicates of the benchmark sample (`make_replicate_series`) instead of the benchmark")
     n = ap.parse_args()
     if n.replicates:
         files = make_replicate_series(n.out, n.seed, n.replicates, n.jitter)
+    elif n.floor_series:
+        files = make_drift_series(n.out, True, n.seed, (0.0, 0.0, 0.0), "floor", baseline=FLOORS)
     elif n.offset_series:
         files = make_drift_series(n.out, n.offset_series == "profile", n.seed, OFFSETS, "offs")
     else:
