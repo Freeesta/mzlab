@@ -760,4 +760,22 @@ header>:not(#stbar){flex-shrink:0}header .hq{width:24px;height:24px}
 @media (pointer:coarse){#pbar{min-height:44px}#pbar .bt,#pbar select{min-height:44px;min-width:44px}}
 #v-workspace:not([data-work=panels]) #pbar{display:none}
 html[data-pbar] .pnl .tbs .tbg{display:none}
+/* the bar at phone width (pbar.js, under 600 px): one row of 44 px targets with the 4 main tools of the kind (--po orders them), «More» sticks at the right edge with a fade, and the other tools (data-pm) are the same buttons in a bottom sheet while #pbar[data-more] */
+#pbar .pbmore,#pbar .pbscrim{display:none}
+@media (max-width:599px){
+#pbar{gap:4px;padding:0 4px;min-height:44px}
+#pbar .pbchip{max-width:30%}
+#pbar .bt,#pbar select{min-height:44px;min-width:44px}
+#pbar.phone .pbtools{gap:2px}#pbar.phone .tbg{display:contents}#pbar.phone .tbl{display:none}
+#pbar.phone .pbtools [data-a]{order:var(--po,0)}
+#pbar.phone:not([data-more]) .pbtools [data-pm]{display:none}
+#pbar.phone .pbmore:not([hidden]){display:inline-flex;align-items:center;flex:none;position:sticky;right:0;margin-left:auto;background:var(--panel);box-shadow:-12px 0 8px -4px var(--panel)}
+#pbar[data-more]{z-index:1000}
+#pbar[data-more] .pbscrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.35)}
+#pbar[data-more] .pbtools{position:fixed;left:0;right:0;bottom:0;z-index:1;display:flex;flex-wrap:wrap;gap:4px 8px;max-height:60vh;overflow-y:auto;padding:12px 12px calc(12px + env(safe-area-inset-bottom,0px));background:var(--panel);border-top:1px solid var(--line);border-radius:12px 12px 0 0;box-shadow:0 -6px 20px rgba(0,0,0,.3)}
+#pbar[data-more] .tbg{display:flex;flex-wrap:wrap;align-items:center;width:100%;gap:2px;padding:0;border-left:0}
+#pbar[data-more] .tbl{display:block;width:100%;margin:4px 0 0}
+#pbar[data-more] .pbtools [data-a]{order:0}
+#pbar .tbg[hidden],#pbar .pbtools [hidden]{display:none!important}
+}
 .pnl .hd .pdots{display:inline-flex;flex:none;align-items:center;gap:4px;margin-left:6px;white-space:nowrap}.pdot{font-size:11px;line-height:16px;padding:0 6px;border:1px solid var(--line);border-radius:10px;color:var(--muted)}.pdot::before{content:"\25CF";margin-right:3px;font-size:8px;color:var(--accent)}

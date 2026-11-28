@@ -109,6 +109,7 @@ I18N.add("en", {
   "cmd.bio.kw": "biotransformer metaboliti metabolites",
   "cmd.more.kw": "more tools",
   "cmd.panel.lab": "Panel",
+  "cmd.panel.name": "Show or hide side panel",
   "cmd.panel.hide": "Hide panels",
   "cmd.panel.show": "Show panels",
   "cmd.panel.files": "Files ({n})",
