@@ -30,7 +30,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
 | KINETIC-CLASS | `docs/coda/prompt/KINETIC-CLASS.md` | - | mzflow 5: opt-in step `table.kinetic_class`: class, Max/T0, Max/blank, treated/dark, tmax, t1/2 |
 | FEATURE-KINETICS | `docs/coda/prompt/FEATURE-KINETICS.md` | - | mzflow 6: the kinetics slot, `kin-series/1`, `table kinetics` |
-| ROW-ORIGIN | `docs/coda/prompt/ROW-ORIGIN.md` | - | mzflow 7: opt-in origin of each row of `features.union` |
 | FEATURE-UV | `docs/coda/prompt/FEATURE-UV.md` | - | mzflow 8: the UV-Vis slot, `table uv` |
 | MS2-LINK-FILES | `docs/coda/prompt/MS2-LINK-FILES.md` | - | mzflow 9: an executor for `features.ms2_link`, dedicated MS2 files, manual link and unlink |
 | LINK-PILLARS | `docs/coda/prompt/LINK-PILLARS.md` | KINETIC-CLASS | mzflow 10: step `tp.pillars`, the three pillars of the parent-TP link |
@@ -39,7 +38,7 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | INSTRUMENT-PRESETS | `docs/coda/prompt/INSTRUMENT-PRESETS.md` | - | mzflow 12: detection presets named after the instrument (+-0.5 Da, +-5 ppm) |
 | POLPAIR-CLI | `docs/coda/prompt/POLPAIR-CLI.md` | - | mzflow 13: CLI and app route for the wasm `cross_polarity` (`polpair/1`) |
 | AUDIT-ACTOR | `docs/coda/prompt/AUDIT-ACTOR.md` | - | mzflow 14: `actor` user / auto / agent in the logs; an agent never overwrites a user decision |
-| TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD, ROW-ORIGIN | mzflow 15: a TP workflow template (`mzflow/2`) |
+| TP-TEMPLATE | `docs/coda/prompt/TP-TEMPLATE.md` | PARENT-CARD | mzflow 15: a TP workflow template (`mzflow/2`) |
 | AI-FEATURE-PROPOSAL | `docs/coda/prompt/AI-FEATURE-PROPOSAL.md` | FEATURE-CARD-EXPORT, AUDIT-ACTOR | mzflow 16: the assistant proposes 1-3 structures from one feature's text card |
 | PHONE-VIEWER | `docs/coda/prompt/PHONE-VIEWER.md` | - | mzflow 17 (v2): a read-only phone view of tables and one feature |
 | SUSPECT-GEN3 | `docs/coda/prompt/SUSPECT-GEN3.md` | - | mzflow 18 (v2): `tp.generate` up to 3 generations, editable rule list |
