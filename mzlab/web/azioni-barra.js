@@ -19,7 +19,7 @@
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
     ["ddaw", ["spec"], "dd", "dda.win.wait", "", "", "bt ddaw", { hid: 1, gh: 1, at: ' aria-haspopup="listbox" aria-expanded="false"', available: c => !!c.p._dws, run: c => W("DDAELENCO").open(c.p, c.b) }],
-    ["ms2tri", ["chrom", "xic"], "dd", "ctl.ms2tri.title", "ctl.ms2tri", () => T("dda.tri.btn"), "bt tgl hdkeep", { hid: 1, gh: 1, toggle: 1, at: B, available: c => !!c.p._tri, checked: c => !!c.p.ms2tri, run: c => W("DDAELENCO").flip(c.p) }],
+    ["ms2tri", ["chrom", "xic"], "dd", "ctl.ms2tri.title", "ctl.ms2tri", () => T("dda.tri.btn"), "bt tgl", { hid: 1, gh: 1, toggle: 1, at: B, available: c => !!c.p._tri, checked: c => !!c.p.ms2tri, run: c => W("DDAELENCO").flip(c.p) }],
     ["xicb", ["spec"], "xb", "xicbtn.title", "xicbtn.aria", "XIC", "bt xbb", { toggle: 1, run: c => XICBTN.press(c.p, shift(c)) }],
     ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: " hidden" + P, run: c => XICBTN.openPop(c.p) }],
     ["xwc", ["spec"], "xb", "panel.wl.title", "", "XWC", "bt xbb", { visible: uv, at: B, run: xw }],

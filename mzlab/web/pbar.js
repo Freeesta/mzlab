@@ -1,16 +1,16 @@
 // @ts-strict
 "use strict";
-// Shared panel bar #pbar (study docs/studies/PANEL_TOOLBAR_STUDY.md §3), lazy, loaded only when the setting «Panel bar» is on (settings.js, localStorage mzlab.pbar = "1").
+// Shared panel bar #pbar (study docs/studies/PANEL_TOOLBAR_STUDY.md §3), lazy, always on (settings.js loads it at start).
 // One row under the header: a chip with the number, kind and file of the selected panel (E.active) and the tools of that panel, drawn by AZIONI.bar (azioni-barra.js) in the groups View, Analyse, Extract, Output.
 // A group shows only when the kind has an action in it, and an action that is not available for the panel is hidden, never greyed (the rule of AZIONI.clean for the menus).
-// The header buttons of every panel stay in the DOM (hidden by CSS, html[data-pbar]): their state is copied to the bar, and a button without its own action runs the header one.
+// The tool buttons of every panel stay in the DOM as hidden state twins (CSS hides the .tbg groups of the header): their state is copied to the bar, and a button without its own action runs the header one.
 // Expand is in the bar (Output) and in the header, close only in the header. A panel whose smoothing, log scale or zoom link is not the default shows a small dot chip in its header (the state of the others stays visible).
 // Phone (under 600 px, PHONE_W of barra.js): one scrollable row with the 4 tools of the kind that matter most (PRI, in that order, 44 px targets) and a «More» button; the rest of the tools are the same buttons shown in a bottom sheet (CSS, data-more), so state and handlers are never copied.
 // Keyboard: Shift+P (registry action pbar.focus) moves the focus into the bar, arrows move, Esc closes the sheet or gives the focus back to the chart of the selected panel (ESC priority 25). The panel is announced in #sb-live when the selection changes.
 // Classic script, uses by name: E, Q, setActive, tabPanels, plotFiles, ptitleP, fitHdSoon, fitHdNow, LAYOUT, AZIONI, I18N, FRAME, ESP.
 (() => {
   /** @typedef {any} Pannello */
-  const T = (/** @type {string} */ k, /** @type {any} */ a = {}) => I18N.t(k, a), KEY = NOMI.KEY("pbar");
+  const T = (/** @type {string} */ k, /** @type {any} */ a = {}) => I18N.t(k, a);
   /** group of the bar for each header group («s», the spectrum tools, splits by action: peak picking is Analyse); more and close stay in the header. The DDA buttons (dd) and the TIC background (tb) extract a trace or a list from the data, like the XIC: Extract */
   const PB = /** @type {Record<string, string>} */ ({ xb: "x", v: "v", l: "v", s: "v", i: "a", t: "v", x: "x", o: "o", e: "o", dd: "x", tb: "x" });
   /** the groups of the bar: View, Analyse, Extract, Output, each labelled, drawn only when the kind has an action in it */
@@ -21,7 +21,7 @@
   const PHONE = matchMedia("(max-width:599px)"), SEL = ".pbtools button, .pbtools select, .pbmore";
   /** @type {Pannello | null} */ let shown = null;
   /** @type {MutationObserver | null} */ let mo = null;
-  let on = false, raf = 0, said = "", more = false;
+  let raf = 0, said = "", more = false;
   const host = () => /** @type {HTMLElement | null} */ (document.getElementById("pbar"));
   const first = () => /** @type {Pannello | undefined} */ (tabPanels().filter((/** @type {Pannello} */ q) => q.el).sort(LAYOUT.ordine)[0]);
   const hdr = (/** @type {Pannello} */ p) => /** @type {HTMLElement | null} */ (p.el.querySelector(".tbs"));
@@ -63,7 +63,7 @@
   /** the dot chips of the header of p (none when the bar is off or the panel has the defaults); written only when they changed @param {Pannello} p */
   function dots(p) {
     const hd = p.el?.querySelector(".hd"); if (!hd) return;
-    let d = /** @type {HTMLElement | null} */ (hd.querySelector(".pdots")); const l = on ? odd(p) : [], sig = l.map(x => x[1]).join();
+    let d = /** @type {HTMLElement | null} */ (hd.querySelector(".pdots")); const l = odd(p), sig = l.map(x => x[1]).join();
     if (!l.length) { d?.remove(); return; }
     if (!d) { d = document.createElement("span"); d.className = "pdots"; d.setAttribute("role", "group"); d.setAttribute("aria-label", T("pbar.dot.group")); hd.insertBefore(d, hd.querySelector(".tbs")); }
     if (d.dataset.sig !== sig) { d.dataset.sig = sig; d.innerHTML = l.map(([id, k, t]) => h`<span class="pdot" data-d="${id}" title="${T(t)}">${T(k)}</span>`).join(""); fitHdSoon(p); }
@@ -91,7 +91,7 @@
   /** phone: the first ROW tools of the kind (PRI) stay in the row in that order (CSS order from --po), the others get data-pm and live in the sheet; wide: nothing is marked @param {Pannello} p */
   function phone(p) {
     const b = host(); if (!b) return;
-    const ph = on && PHONE.matches, all = /** @type {HTMLElement[]} */ ([...b.querySelectorAll(".pbtools [data-a]")]), mb = /** @type {HTMLElement | null} */ (b.querySelector(".pbmore"));
+    const ph = PHONE.matches, all = /** @type {HTMLElement[]} */ ([...b.querySelectorAll(".pbtools [data-a]")]), mb = /** @type {HTMLElement | null} */ (b.querySelector(".pbmore"));
     b.classList.toggle("phone", ph);
     const row = ph ? (PRI[p.type] || ["fit", "dl"]).map(i => all.find(t => t.dataset.a === i && !t.hidden)).filter(Boolean).slice(0, ROW) : [];
     for (const t of all) { const i = row.indexOf(t); t.toggleAttribute("data-pm", ph && i < 0); if (ph && i >= 0) t.style.setProperty("--po", String(i)); else t.style.removeProperty("--po"); }
@@ -116,19 +116,16 @@
   }
   /** follows E.active: the first panel when none is; the bar is rebuilt only when the selected panel changes */
   function sync() {
-    if (!on) return;
     for (const q of E.panels) dots(q);
     let p = E.active && E.panels.includes(E.active) && E.active.el ? E.active : null;
     if (!p) { const q = first(); if (q) { setActive(q); return; } }
     if (p !== shown || !host()?.firstElementChild) render(p); else if (p) { paintChip(p); mirror(p); rove(/** @type {HTMLElement | null} */ (document.activeElement)); }
   }
   const later = () => { if (!raf) raf = FRAME.next(() => { raf = 0; sync(); }); };
-  function set(/** @type {boolean} */ v) {
-    on = v; document.documentElement.toggleAttribute("data-pbar", v);
+  /** first paint: the bar is shown and follows E.active */
+  function start() {
     const b = host(); if (!b) return;
-    b.hidden = !v; shown = null; more = false; delete b.dataset.more; if (mo) { mo.disconnect(); mo = null; }
-    if (v) sync(); else { b.textContent = ""; for (const q of E.panels) dots(q); }
-    for (const q of E.panels) if (q.el) fitHdNow(q);   // the tool groups leave the header or come back: fit it again
+    b.hidden = false; sync();
   }
   const key = (/** @type {KeyboardEvent} */ e) => {   // arrows, Home and End move inside the bar (one Tab stop)
     const l = tools(), i = l.indexOf(/** @type {HTMLElement} */ (document.activeElement)); if (i < 0 || /SELECT/.test(document.activeElement?.tagName || "")) return;
@@ -140,22 +137,22 @@
     const t = /** @type {Element} */ (e.target);
     if (t.closest(".pbmore")) setMore(!more, true); else if (t.closest(".pbscrim")) setMore(false, true); else if (more && t.closest(".pbtools [data-a]") && !t.closest("select")) setMore(false);
   });
-  PHONE.addEventListener("change", () => { if (on && shown) phone(shown); });
+  PHONE.addEventListener("change", () => { if (shown) phone(shown); });
   /** the focus into the bar (key Shift+P): the tool that holds the tab stop, or the bar itself when it has none */
   function focusBar() {
-    const b = host(); if (!on || !b || !b.offsetParent) return;
+    const b = host(); if (!b || !b.offsetParent) return;
     const l = tools(), t = l.find(x => x.tabIndex === 0) || l[0];
     if (t) { rove(t); t.focus(); } else { b.tabIndex = -1; b.focus(); }
   }
-  AZIONI.register({ id: "pbar.focus", group: "view", views: ["*"], menu: false, iconKey: "side", shortcut: { key: "p", shift: true, where: "view", label: "scorc.pbar" }, listed: () => on, name: () => T("scorc.pbar"), tip: () => T("scorc.pbar.tip"), available: () => on && !!host()?.offsetParent, run: focusBar });
+  AZIONI.register({ id: "pbar.focus", group: "view", views: ["*"], menu: false, iconKey: "side", shortcut: { key: "p", shift: true, where: "view", label: "scorc.pbar" }, name: () => T("scorc.pbar"), tip: () => T("scorc.pbar.tip"), available: () => !!host()?.offsetParent, run: focusBar });
   // Esc in the bar: the sheet closes first, then the focus goes back to the chart of the selected panel
-  ESC.registra({ id: "pbar", prio: 25, aperto: () => on && (more || !!host()?.contains(document.activeElement)), chiudi: () => { if (more) setMore(false, true); else { const c = E.active?.cv; if (c) c.focus(); } } });
+  ESC.registra({ id: "pbar", prio: 25, aperto: () => (more || !!host()?.contains(document.activeElement)), chiudi: () => { if (more) setMore(false, true); else { const c = E.active?.cv; if (c) c.focus(); } } });
   // a state button of any panel changed (the header twins keep their class): redraw the dot chips; a new panel joins as a child of #dpanels
   { const st = document.getElementById("dpanels"); if (st) new MutationObserver(() => later()).observe(st, { childList: true, subtree: true, attributes: true, attributeFilter: ["class", "aria-pressed"] }); }
   document.addEventListener("focusin", e => {   // focus inside a panel selects it
-    if (!on) return; const el = /** @type {Element} */ (e.target).closest?.(".pnl"); if (!el) return;
+    const el = /** @type {Element} */ (e.target).closest?.(".pnl"); if (!el) return;
     const q = E.panels.find((/** @type {Pannello} */ x) => x.el === el); if (q && q !== E.active) setActive(q);
   });
-  window.PBAR = { sync, set, focus: focusBar, on: () => on, height: () => (on && host() && !host()?.hidden ? host()?.offsetHeight || 0 : 0), KEY };
-  set((() => { try { return localStorage.getItem(KEY) === "1"; } catch (_) { return false; } })());
+  window.PBAR = { sync, focus: focusBar, height: () => (host() && !host()?.hidden ? host()?.offsetHeight || 0 : 0) };
+  start();
 })();

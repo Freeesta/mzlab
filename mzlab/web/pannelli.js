@@ -789,7 +789,7 @@ function rngIsOn(/** @type {Pannello} */ p) {
   return (p.type !== "mrm" && !(p.type === "chrom" && p.kind === "pda") && (p.mz0 != null || p.mz1 != null)) || !!p.zoom || (p.type === "chrom" && p.prec != null && /** @type {unknown} */ (p.prec) !== "" && !ms2c);
 }
 // ---- one header row: what does not fit goes into «⋯» (nodes moved with their handlers, put back when there is room); nothing wraps or is cut.
-// Order: the NL note, then the icon groups from the right, then the controls from the right. With the panel bar on (pbar.js) the tool groups live in the bar: only the controls move.
+// Order: the NL note, then the controls from the right. The tool buttons live in the panel bar (pbar.js): only the selectors of the header move into «⋯».
 function hdRestore(/** @type {Pannello} */ p) {
   const l = p._hm || []; p._hm = [];
   l.slice().reverse().forEach((/** @type {HTMLElement & Bag} */ n) => { if (n._ph) { n._ph.replaceWith(n); n._ph = null; } n.classList.remove("hd-ov"); });
@@ -814,8 +814,8 @@ function fitHd(/** @type {Pannello} */ p) {
     const over = () => hdOver(hd, c);
     if (!over()) return;
     mb.hidden = false;
-    const cands = [...el.querySelectorAll(".bnl")], groups = document.documentElement.hasAttribute("data-pbar") ? [] : [...el.querySelectorAll(".tbs > .tbg")].filter(g => !g.matches(".hdkeep") && !g.querySelector(".xbb, .hdkeep")).reverse(), kids = c ? [...c.children].slice(1).reverse() : [];
-    const list = [...cands, ...groups, ...kids], w = list.map(n => n.hidden ? 0 : n.offsetWidth), gone = /** @type {HTMLElement[]} */ ([]);
+    const cands = [...el.querySelectorAll(".bnl")], kids = c ? [...c.children].slice(1).reverse() : [];
+    const list = [...cands, ...kids], w = list.map(n => n.hidden ? 0 : n.offsetWidth), gone = /** @type {HTMLElement[]} */ ([]);
     const put = (/** @type {HTMLElement & Bag} */ n) => { p._hm.push(n); if (n.classList.contains("bnl")) return n.classList.add("hd-ov"); const ph = document.createComment(""); n._ph = ph; n.replaceWith(ph); more.appendChild(n); };
     // a node frees at most its width + a gap: while the overflow is larger it moves with no reflow
     let need = hd.scrollWidth - hd.clientWidth - 1, j = 0;
