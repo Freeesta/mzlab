@@ -11,6 +11,10 @@ def step(name, fn):
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_tabella_picchi.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
+def tabp(pg, S):
+    """Open the peak table from its button in the panel bar (the header copy is hidden); the panel `S` is a JS expression."""
+    pg.evaluate(f"setActive({S})"); wait_for_js(pg, f"!!document.querySelector('#pbar [data-a=tabp]') && document.querySelector('#pbar .pbchip').textContent.startsWith({S}.num + ' ')")
+    pg.locator("#pbar [data-a=tabp]").first.click()
 S1 = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
 S2 = "E.panels.find(p=>p.type==='spec'&&p.tab==='ms2')"
 r = Run(port=8879, wd="/tmp/wd79")
@@ -40,7 +44,7 @@ try:
             t = pg.evaluate(f"{S2}._a.yticks"); assert t and max(t) == 100, t
         step("MS2 in %: the last tick of the y axis is 100", ms2_pct)
         def opened():
-            pg.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
+            tabp(pg, S2); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
             head = pg.evaluate("[...document.querySelectorAll('.tp-pop th')].map(t=>t.textContent)"); print(head)
             assert head == ["m/z", "Intensity", "Relative intensity (%)", "Δm/z from precursor", "Neutral loss"], head
             facts = pg.inner_text(".tp-facts"); print(facts)
@@ -95,7 +99,7 @@ try:
             pg.evaluate(f"{S2}.el.querySelector('[data-a=dl]').click()"); wait_for_js(pg, "[...document.querySelectorAll('.menu *,[role=menu] *')].some(e=>e.textContent==='Peak list (CSV)')")
             with pg.expect_download() as dw: pg.click("text=Peak list (CSV)")
             assert dw.value.suggested_filename.endswith("_peaks.csv")
-            pg.evaluate(f"{S2}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
+            tabp(pg, S2); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
         step("the download menu has «Peak list (CSV)»", menu_item)
         def zoom_range():
             n0 = pg.evaluate("document.querySelectorAll('.tp-pop tbody tr').length")
@@ -111,9 +115,9 @@ try:
             assert t.split("\n")[0].startswith("m/z\tIntensity") and len(t.split("\n")) == n + 1, t[:80]
         step("select all + Ctrl+C on the table gives the same TSV", ctrl_c)
         def a11y():
-            for sel in ("[data-a=tabp]", ".tp-pop [data-f=copy]", ".tp-pop [data-f=no]", ".tp-pop [data-f=thr]", ".tp-pop [data-f=lab]", ".tp-pop [data-f=sort]"):
+            for sel in ("#pbar [data-a=tabp]", ".tp-pop [data-f=copy]", ".tp-pop [data-f=no]", ".tp-pop [data-f=thr]", ".tp-pop [data-f=lab]", ".tp-pop [data-f=sort]"):
                 sz = pg.evaluate("s=>{const r=document.querySelector(s).getBoundingClientRect();return [r.width,r.height]}", sel); assert sz[0] >= 24 and sz[1] >= 24, (sel, sz)
-            assert pg.get_attribute("[data-a=tabp]", "aria-label")
+            assert pg.get_attribute("#pbar [data-a=tabp]", "aria-label")
             if AXE:
                 pg.add_script_tag(path=AXE); v = pg.evaluate(RUN % "'#dpanels'"); assert not v, v
         step("targets >= 24 px, labels, axe: no serious violation", a11y)
@@ -121,7 +125,7 @@ try:
             pg.keyboard.press("Escape"); assert pg.evaluate("!document.querySelector('.tp-pop')") and pg.evaluate("document.activeElement.dataset.a") == "tabp"
         step("Esc closes the table and gives the focus back", esc)
         def ms1_table():
-            pg.evaluate(f"{S1}.el.querySelector('[data-a=tabp]').click()"); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
+            tabp(pg, S1); wait_for_js(pg, "!!document.querySelector('.tp-pop')")
             head = pg.evaluate("[...document.querySelectorAll('.tp-pop th')].map(t=>t.textContent)"); assert head == ["m/z", "Intensity", "Relative intensity (%)"], head
             pg.keyboard.press("Escape")
         step("MS1 table: three columns (no precursor)", ms1_table)

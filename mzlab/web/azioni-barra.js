@@ -4,7 +4,7 @@
 // The shared bar (pbar.js) draws them too (`pb` groups them); `bonly` rows exist only there.
 (() => {
   const T = (/** @type {string} */ k) => I18N.t(k), G = ["dd", "xb", "v", "l", "s", "i", "t", "x", "tb", "o", "xp", "tp"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
-  /** map zoom and gestures (the header keeps .mznav) @param {string} id */
+  /** map zoom and gestures (the hidden header twin is .mznav) @param {string} id */
   const nav = id => ({ bonly: 1, run: (/** @type {Ctx} */ c) => MAPPA.runCmd(id, MAPPA.ad2(c.p, null)) });
   const navIc = (/** @type {string} */ id) => () => MAPPA.SV(MAPPA.ICO[/** @type {any} */ (AZIONI.get(id)).ic]);
   const ic = (/** @type {string} */ w, /** @type {string} */ d) => `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="${w}" aria-hidden="true" focusable="false">${d}</svg>`;

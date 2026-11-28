@@ -288,8 +288,8 @@ dialog.masscal{max-width:min(96vw,860px)}dialog.masscal .bt{min-width:24px;min-h
 .pnl.spec .hd>*,.pnl.spec .hd .ctl>*{flex-shrink:0;white-space:nowrap}
 .pnl.spec .hd .ctl select{flex-shrink:1;min-width:16ch}
 .pnl .hd.hd-tight .ttl{min-width:5ch}.pnl .hd.hd-tight .ctl label{min-width:0;flex-shrink:1;overflow:hidden}.pnl .hd.hd-tight .ctl input.mzf{width:auto;min-width:6ch;flex:0 1 78px}.pnl.spec .hd.hd-tight .ctl select,.pnl .hd.hd-tight .ctl select{min-width:7ch;text-overflow:ellipsis}
-html{scroll-padding-top:60px;scroll-padding-bottom:16px}
-:focus-visible{scroll-margin-top:60px}
+html{scroll-padding-top:calc(60px + var(--pbh,0px));scroll-padding-bottom:16px}
+:focus-visible{scroll-margin-top:calc(60px + var(--pbh,0px))}
 .pnl canvas:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}.pnl canvas[data-ptr]:focus-visible{outline:none}
 .clh{display:none;position:absolute;z-index:3;width:14px;height:14px;margin:-7px 0 0 -7px;padding:0;border-radius:50%;border:2px solid var(--panel);background:var(--accent);cursor:ew-resize;touch-action:none;box-shadow:0 0 0 1px var(--accent)}
 .clh::before{content:"";position:absolute;inset:-5px}

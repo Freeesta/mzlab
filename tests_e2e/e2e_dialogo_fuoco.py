@@ -1,5 +1,5 @@
-"""Focus after a dialog closes: a window opened from the «⋯» menu of a chart header (the menu hides itself, so its item cannot take the focus back)
-gives the focus to the menu's button, never to the body; with Escape and with the window's own close button. The floating calculator of the Draw view
+"""Focus after a dialog closes: a window opened from a button of the panel bar gives the focus back to that button, never to the body; with Escape
+and with the window's own close button. The floating calculator of the Draw view
 gives it back to its toolbar button. Found by tools/fuzz_ui.py. Synthetic data."""
 # covers: mzlab/web/azioni-esc.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -16,24 +16,25 @@ try:
     with sync_playwright() as p:
         pg = r.page(p); pg.set_viewport_size({"width": 1024, "height": 768})
         load(pg, [D / "B_FullMass-t0.mzML"], 4000, 1)
-        more = pg.locator("#dpanels .hmb:visible").first
+        def xbtn(a):
+            bar_loc(pg, ".pnl.chrom", a); return pg.locator(f"#pbar [data-a={a}]").first
         def xic_esc():
-            more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
+            xbtn("xic").click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
-            try: wait_for_js(pg, f"{FOCUS} === 'More chart tools'")
+            try: wait_for_js(pg, "document.activeElement === document.querySelector('#pbar [data-a=xic]')")
             except Exception: raise AssertionError(pg.evaluate("document.activeElement.outerHTML.slice(0, 160)"))
-        step("XIC from the ⋯ menu, Esc: the focus goes back to the ⋯ button", xic_esc)
+        step("XIC from the bar, Esc: the focus goes back to the bar button", xic_esc)
         def xic_cancel():
-            more.click(); pg.locator("#dpanels .hmore [data-a=xic]:visible").first.click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
+            xbtn("xic").click(); wait_for_js(pg, "document.querySelector('#xicdlg').open")
             pg.click("#xic-no"); wait_for_js(pg, "!document.querySelector('#xicdlg').open")
-            try: wait_for_js(pg, f"{FOCUS} === 'More chart tools'")
+            try: wait_for_js(pg, "document.activeElement === document.querySelector('#pbar [data-a=xic]')")
             except Exception: raise AssertionError(pg.evaluate("document.activeElement.outerHTML.slice(0, 160)"))
-        step("XIC from the ⋯ menu, Cancel: the same", xic_cancel)
+        step("XIC from the bar, Cancel: the same", xic_cancel)
         def shortcuts():
-            more.click(); pg.locator("#dpanels .hmore [data-a=log]:visible").first.focus(); pg.keyboard.press("Shift+?"); wait_for_js(pg, "document.querySelector('#scorc') && document.querySelector('#scorc').open")
+            xbtn("log").focus(); pg.keyboard.press("Shift+?"); wait_for_js(pg, "document.querySelector('#scorc') && document.querySelector('#scorc').open")
             pg.keyboard.press("Escape"); wait_for_js(pg, "!document.querySelector('#scorc').open")
             wait_for_js(pg, f"{FOCUS} !== 'body'")
-        step("the shortcuts panel opened from a ⋯ menu item: Esc does not leave the focus on the body", shortcuts)
+        step("the shortcuts panel opened from a bar button: Esc does not leave the focus on the body", shortcuts)
         def plain():
             pg.locator("#np-xic").focus() if pg.locator("#np-xic").is_visible() else None
             pg.evaluate("document.activeElement.blur()"); pg.evaluate("openXic(null)"); wait_for_js(pg, "document.querySelector('#xicdlg').open")

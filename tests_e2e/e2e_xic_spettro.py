@@ -8,12 +8,18 @@ AXE = axe_path()
 RUN = "axe.run(%s, {runOnly: {type: 'tag', values: ['wcag2a','wcag2aa','wcag21a','wcag21aa','wcag22aa']}}).then(r => r.violations.filter(v => ['serious','critical'].includes(v.impact)).map(v => [v.id, v.impact, v.nodes.length, v.nodes.slice(0,3).map(n => n.target.join(' ') + ' :: ' + (n.failureSummary||'').split('\\n').slice(0,3).join(' | '))]))"
 steps = []
 def step(name, fn):
-    try: fn(); steps.append((name, "ok"))
+    try: act(); fn(); steps.append((name, "ok"))
     except Exception as e:
         import traceback; ln = [f.lineno for f in traceback.extract_tb(e.__traceback__) if f.filename.endswith("e2e_xic_spettro.py")][-1]
         steps.append((name, f"FAIL line {ln}: " + str(e).split("\n")[0][:240]))
 SPEC = "E.panels.find(p=>p.type==='spec'&&p.tab==='full')"
 XP = "E.panels.find(p=>p.type==='xic')"
+def act():
+    """Select the full-scan spectrum: its XIC button is in the shared bar (the header copy is hidden)."""
+    try:
+        pg.evaluate(f"(() => {{ const q = {SPEC}; if (q) setActive(q); }})()")
+        wait_for_js(pg, f"!{SPEC} || (document.querySelector('#pbar .pbchip') && document.querySelector('#pbar .pbchip').textContent.startsWith({SPEC}.num + ' '))")
+    except NameError: pass
 r = Run(port=8878, wd="/tmp/wd78")
 try:
     with sync_playwright() as p:
@@ -28,12 +34,12 @@ try:
         def xic_panel():      # the series the XIC panel drew, as the engine gave them
             pg.wait_for_function(f"(()=>{{const p={XP};return p&&p._a&&p._a.sr&&p._a.sr.length}})()", timeout=20000)
             return pg.evaluate(f"(()=>{{const s={XP}._a.sr.find(q=>q.k=={K});return {{x:s.x,y:s.y}}}})()")
-        def pressed(): return pg.evaluate(f"document.querySelector('[data-a=xicb]').getAttribute('aria-pressed')")
+        def pressed(): return pg.evaluate(f"document.querySelector('#pbar [data-a=xicb]').getAttribute('aria-pressed')")
         def lr_extract():
             pk = peak(364.4)
-            pg.click(f"{SPEC and ''}[data-a=xicb]"); assert pressed() == "true"        # no peak chosen: the mode «choose a peak»
+            pg.click(f"#pbar [data-a=xicb]"); assert pressed() == "true"        # no peak chosen: the mode «choose a peak»
             pg.mouse.click(pk["x"], pk["y"]); ready(pg); assert pressed() == "false"
-            lab = pg.inner_text("[data-a=xicl]"); print(lab); assert lab.startswith("m/z ") and "–" in lab, lab
+            lab = pg.inner_text("#pbar [data-a=xicl]"); print(lab); assert lab.startswith("m/z ") and "–" in lab, lab
             n = pg.evaluate("E.panels.filter(p=>p.type==='xic').length"); assert n == 1, n
             a, b = pg.evaluate(f"xicWin({pk['mz']},true)"); c, w = round((a + b) / 2, 2), round((b - a) / 2, 2)
             want = xic_api(c, w); got = xic_panel(); print(list(want.keys()))
@@ -46,10 +52,10 @@ try:
         step("LR: api/xicbin gives the numbers of api/xic, element by element (Object.is)", xicbin_same)
         def lr_replace():
             pk = peak(194.2); pg.mouse.click(pk["x"], pk["y"]); ready(pg)
-            pg.click("[data-a=xicb]"); ready(pg)
+            pg.click("#pbar [data-a=xicb]"); ready(pg)
             assert pg.evaluate("E.panels.filter(p=>p.type==='xic').length") == 1
             assert pg.evaluate(f"{XP}.traces.length") == 1
-            pk = peak(152.2); pg.mouse.click(pk["x"], pk["y"]); pg.keyboard.down("Shift"); pg.click("[data-a=xicb]"); pg.keyboard.up("Shift"); ready(pg)
+            pk = peak(152.2); pg.mouse.click(pk["x"], pk["y"]); pg.keyboard.down("Shift"); pg.click("#pbar [data-a=xicb]"); pg.keyboard.up("Shift"); ready(pg)
             assert pg.evaluate(f"{XP}.traces.length") == 2
         step("LR: the same panel is reused; Shift adds a trace", lr_replace)
         def lr_cursor():
@@ -62,10 +68,10 @@ try:
             assert pg.evaluate(f"{XP}.ints.length") == 0       # unit resolution: no area until the student integrates
         step("scan line follows the spectrum, apex text, no area in LR", lr_cursor)
         def typed():
-            pg.click("[data-a=xicl]"); pg.fill("[data-f=mz]", "194,2"); pg.fill("[data-f=tol]", "0,3"); pg.press("[data-f=tol]", "Enter"); ready(pg)
-            lab = pg.inner_text("[data-a=xicl]"); print(lab); assert "193.9" in lab and "194.5" in lab, lab
+            pg.click("#pbar [data-a=xicl]"); pg.fill("[data-f=mz]", "194,2"); pg.fill("[data-f=tol]", "0,3"); pg.press("[data-f=tol]", "Enter"); ready(pg)
+            lab = pg.inner_text("#pbar [data-a=xicl]"); print(lab); assert "193.9" in lab and "194.5" in lab, lab
             want = xic_api(194.2, 0.3); got = xic_panel(); assert got["y"] == want["y"]
-            pg.click("[data-a=xicl]"); pg.fill("[data-f=mz]", "abc"); pg.press("[data-f=mz]", "Enter")
+            pg.click("#pbar [data-a=xicl]"); pg.fill("[data-f=mz]", "abc"); pg.press("[data-f=mz]", "Enter")
             assert pg.get_attribute("[data-f=mz]", "aria-invalid") == "true"
             pg.keyboard.press("Escape"); assert pg.evaluate("!document.querySelector('.xb-pop')")
         step("typed ion and tolerance (comma ok); not a number: aria-invalid, Esc closes", typed)
@@ -74,21 +80,21 @@ try:
             m1 = pg.evaluate("XICBTN.chosen(" + SPEC + ")"); pg.keyboard.press(","); frames(pg, 4)
             m2 = pg.evaluate("XICBTN.chosen(" + SPEC + ")"); assert m2 < m1, (m1, m2)
             pg.keyboard.press("."); frames(pg, 4); assert pg.evaluate("XICBTN.chosen(" + SPEC + ")") == m1
-            pg.focus("[data-a=xicb]"); pg.keyboard.press("Enter"); ready(pg)
+            pg.focus("#pbar [data-a=xicb]"); pg.keyboard.press("Enter"); ready(pg)
             assert pg.evaluate(f"{XP}.traces.length") == 1
-            pg.focus("[data-a=xicb]"); pg.keyboard.press(" "); ready(pg)
+            pg.focus("#pbar [data-a=xicb]"); pg.keyboard.press(" "); ready(pg)
             assert pg.evaluate("document.querySelector('.xb-info')") is not None
         step("keyboard only: , and . choose, Enter and Space on the button extract", keys)
         def esc():
             pg.evaluate(f"XICBTN.chosen({SPEC})"); pg.evaluate(f"(()=>{{const p={SPEC};}})()")
         def a11y():
-            sz = pg.evaluate("(()=>{const b=document.querySelector('[data-a=xicb]').getBoundingClientRect();return [b.width,b.height]})()")
+            sz = pg.evaluate("(()=>{const b=document.querySelector('#pbar [data-a=xicb]').getBoundingClientRect();return [b.width,b.height]})()")
             assert sz[0] >= 24 and sz[1] >= 24, sz
-            assert pg.get_attribute("[data-a=xicb]", "aria-label")
+            assert pg.get_attribute("#pbar [data-a=xicb]", "aria-label")
         step("target size and labels", a11y)
         def esc():
             pg.evaluate(f"(()=>{{const p={SPEC};XICBTN.chosen(p)}})()")
-            pg.evaluate(f"{SPEC}.el.querySelector('[data-a=xicl]').click()"); assert pg.evaluate("!!document.querySelector('.xb-pop')")
+            pg.click("#pbar [data-a=xicl]"); assert pg.evaluate("!!document.querySelector('.xb-pop')")
             assert pg.evaluate("getComputedStyle(document.querySelector('.xb-pop')).animationName") == "none"      # prefers-reduced-motion
             pg.keyboard.press("Escape"); assert pg.evaluate("!document.querySelector('.xb-pop')")
             assert pg.evaluate("document.activeElement&&document.activeElement.dataset.a")=="xicl"
@@ -96,7 +102,7 @@ try:
         def axe():
             if not AXE: return
             pg.add_script_tag(path=AXE)
-            pg.evaluate(f"{SPEC}.el.querySelector('[data-a=xicl]').click()")
+            pg.click("#pbar [data-a=xicl]")
             v = pg.evaluate(RUN % "'#dpanels'"); assert not v, v
             pg.keyboard.press("Escape")
         step("axe: spectrum, XIC and the pop-up have no serious or critical violation", axe)

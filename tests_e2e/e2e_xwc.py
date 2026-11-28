@@ -31,7 +31,10 @@ def load(pg, files):
     wait_for_js(pg, f"document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Load data"); ready(pg)
     wait_for_js(pg, "E.files.length >= 1", timeout=120000)
 def visible(pg, panel, a):
-    return pg.evaluate(f"(() => {{ const b = {panel} && {panel}.el.querySelector('[data-a={a}]'); return !!b && !b.hidden && b.offsetParent !== null; }})()")
+    """The panel button `a` is shown in the shared bar #pbar while `panel` is the selected one (the header copy is hidden)."""
+    pg.evaluate(f"(() => {{ const q = {panel}; if (q) setActive(q); }})()")
+    wait_for_js(pg, f"!{panel} || (document.querySelector('#pbar .pbchip') && document.querySelector('#pbar .pbchip').textContent.startsWith({panel}.num + ' '))")
+    return pg.evaluate(f"(() => {{ const b = {panel} && document.querySelector('#pbar [data-a={a}]'); return !!b && !b.hidden && b.offsetParent !== null; }})()")
 r = Run(port=8881, wd="/tmp/wd_xwc")
 try:
     with sync_playwright() as p:
@@ -56,30 +59,11 @@ try:
             assert got["after"] and got["tl"] and abs(got["at"] - TRUE["a"]["rt"]) < 0.05, got
         step("one click: the band the engine proposes (274 ± 2 nm, 4 nm wide) opens under the TWC, time-linked, its apex at compound A", click)
         def popover():
-            pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').focus()"); pg.keyboard.press("Enter")
-            wait_for_js(pg, f"!!{XWC}.el.querySelector('.xb-pop[role=dialog]') && document.activeElement.dataset.f === 'nm'")
-            assert pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').getAttribute('aria-expanded')") == "true"
-            pg.keyboard.press("Escape")
-            wait_for_js(pg, f"!{XWC}.el.querySelector('.xb-pop') && document.activeElement.dataset.a === 'xwcl'")
-            pg.keyboard.press("Enter"); wait_for_js(pg, "document.activeElement.dataset.f === 'nm'")
-            pg.keyboard.type("230"); pg.keyboard.press("Tab"); pg.keyboard.press("Control+A"); pg.keyboard.type("4"); pg.keyboard.press("Shift+Enter")
-            wait_for_js(pg, f"{XWC}._a && {XWC}._a.sr.length === 2", timeout=60000)
-            got = pg.evaluate(f"(() => {{ const q = {XWC}; return {{ xw: q.xw, n: E.panels.filter(x => x.type === 'chrom' && x.kind === 'pda').length, keys: q._a.sr.map(s => s.key), max: Math.max(...q._a.sr[1].y), c: q._a.sr.map(s => s.color) }}; }})()")
-            assert got["xw"] == [[228, 232]] and got["n"] == 2, got
-            assert len(set(got["keys"])) == 2 and got["keys"][1].endswith("|pda|228-232"), got
-            assert abs(got["max"] - TRUE["b"]["max"]) < 0.02 * TRUE["b"]["max"] and got["c"][0] != got["c"][1], (got, TRUE["b"])
-        step("popover by keyboard: Enter opens it on λ, Esc closes it back on the arrow; 230 nm with Shift+Enter is one more trace of the XWC panel", popover)
-        def undo():
-            pg.evaluate("HISTORY.undo()")
-            wait_for_js(pg, f"{XWC}._a && {XWC}._a.sr.length === 1 && !({XWC}.xw || []).length", timeout=30000)
-        step("the added band is undone like any change of the panel's source", undo)
-        def pbar_popover():
-            pg.evaluate("(async () => { uipWrite(NOMI.KEY('pbar'), '1'); await loadScript('pbar.js'); PBAR.set(true); })()")   # the shared panel bar, as the setting turns it on (MZLAB_PBAR=1 does it for a whole run)
             pg.evaluate(f"setActive({XWC})")
             ARROW = "#pbar [data-a=xwcl]:not([hidden])"
             wait_for_js(pg, f"!!document.querySelector('{ARROW}') && document.querySelector('#pbar .pbchip').textContent.startsWith({XWC}.num + ' ')", timeout=30000)
-            assert pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').offsetParent") is None, "the header arrow is not shown with the bar on"
-            pg.locator(ARROW).click()
+            assert pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').offsetParent") is None, "the header arrow is not shown: the bar has it"
+            pg.evaluate(f"document.querySelector('{ARROW}').focus()"); pg.keyboard.press("Enter")
             wait_for_js(pg, f"!!{XWC}.el.querySelector('.xb-pop[role=dialog]') && document.activeElement.dataset.f === 'nm'")
             got = pg.evaluate(f"(() => {{ const q = {XWC}.el.getBoundingClientRect(), b = {XWC}.el.querySelector('.xb-pop').getBoundingClientRect(); return {{ top: b.top - q.top, bottom: q.bottom - b.bottom, left: b.left - q.left, right: q.right - b.right, bar: document.querySelector('{ARROW}').getAttribute('aria-expanded'), hd: {XWC}.el.querySelector('[data-a=xwcl]').getAttribute('aria-expanded') }}; }})()")
             assert got["top"] >= 0 and got["left"] >= 0 and got["right"] >= 0 and got["bottom"] >= 0, ("the popover is inside its panel", got)
@@ -87,8 +71,18 @@ try:
             pg.keyboard.press("Escape")
             wait_for_js(pg, f"!{XWC}.el.querySelector('.xb-pop') && document.activeElement === document.querySelector('{ARROW}')")
             assert pg.evaluate(f"document.querySelector('{ARROW}').getAttribute('aria-expanded')") == "false" and pg.evaluate(f"{XWC}.el.querySelector('[data-a=xwcl]').getAttribute('aria-expanded')") == "false"
-            pg.evaluate("uipWrite(NOMI.KEY('pbar'), '0'); PBAR.set(false)")
-        step("shared panel bar on: the XWC arrow opens the popover under the panel header, Esc closes it back on the bar arrow", pbar_popover)
+            pg.keyboard.press("Enter"); wait_for_js(pg, "document.activeElement.dataset.f === 'nm'")
+            pg.keyboard.type("230"); pg.keyboard.press("Tab"); pg.keyboard.press("Control+A"); pg.keyboard.type("4"); pg.keyboard.press("Shift+Enter")
+            wait_for_js(pg, f"{XWC}._a && {XWC}._a.sr.length === 2", timeout=60000)
+            got = pg.evaluate(f"(() => {{ const q = {XWC}; return {{ xw: q.xw, n: E.panels.filter(x => x.type === 'chrom' && x.kind === 'pda').length, keys: q._a.sr.map(s => s.key), max: Math.max(...q._a.sr[1].y), c: q._a.sr.map(s => s.color) }}; }})()")
+            assert got["xw"] == [[228, 232]] and got["n"] == 2, got
+            assert len(set(got["keys"])) == 2 and got["keys"][1].endswith("|pda|228-232"), got
+            assert abs(got["max"] - TRUE["b"]["max"]) < 0.02 * TRUE["b"]["max"] and got["c"][0] != got["c"][1], (got, TRUE["b"])
+        step("popover by keyboard from the bar arrow: Enter opens it on λ, inside its panel, Esc closes it back on the arrow; 230 nm with Shift+Enter is one more trace of the XWC panel", popover)
+        def undo():
+            pg.evaluate("HISTORY.undo()")
+            wait_for_js(pg, f"{XWC}._a && {XWC}._a.sr.length === 1 && !({XWC}.xw || []).length", timeout=30000)
+        step("the added band is undone like any change of the panel's source", undo)
         def spec():
             pg.evaluate(f"(() => {{ const q = {XWC}; q.sel = null; }})()")
             pg.evaluate(f"uvOpen({TWC}, {TWC}.k ?? E.files[0].k, {TRUE['b']['rt']}, {TRUE['b']['rt']})")

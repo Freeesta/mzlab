@@ -1,4 +1,4 @@
-"""Chromatogram header: Smoothing and Log buttons on the right, «Range» popover (m/z, RT) with a clear ×, «Correz.» menu with 4 entries and a file chooser."""
+"""Chromatogram: Smoothing and Log buttons in the panel bar, «Range» popover (m/z, RT) with a clear ×, «Correz.» menu with 4 entries and a file chooser."""
 # covers: mzlab/web/xic-bordi.js, mzlab/web/pannelli.js, mzlab/web/fondo.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from lib import *
@@ -25,7 +25,7 @@ try:
         XP = "E.panels.find(p=>p.type==='xic')"
         SH = f"(q=>{{const c=q.cv;return c.toDataURL().length+':'+c.toDataURL().slice(-200)}})(E.panels.find(p=>p.type==='xic'))"
         def smooth():
-            b = pg.locator(f'{X} .tbs [data-a=smooth]'); assert b.count() == 1 and b.locator("svg").count() == 1
+            b = bar_loc(pg, X, "smooth"); assert pg.locator("#pbar [data-a=smooth]").count() == 1 and b.locator("svg").count() == 1
             assert pg.locator(f'{X} .ctl [data-o=smooth]').count() == 0, "not in the left controls"
             assert b.get_attribute("aria-label") == "Smoothing" and b.get_attribute("aria-pressed") == "true" and "on" in b.get_attribute("class").split()
             a = pg.evaluate(SH); b.click(); wait_for_js(pg, f"{XP}.smooth === false && {SH} !== {json.dumps(a)}")
@@ -35,7 +35,7 @@ try:
             b.click(); wait_for_js(pg, f"{XP}.smooth === true")
         step("Smoothing: right-hand button, aria-pressed, effect on the trace, per panel", smooth)
         def log():
-            b = pg.locator(f'{X} .tbs [data-a=log]'); assert b.count() == 1 and b.get_attribute("aria-label") == "Log scale" and b.get_attribute("title") == "Logarithmic scale" and b.get_attribute("aria-pressed") == "false"
+            b = bar_loc(pg, X, "log"); assert pg.locator("#pbar [data-a=log]").count() == 1 and b.get_attribute("aria-label") == "Log scale" and b.get_attribute("title") == "Logarithmic scale" and b.get_attribute("aria-pressed") == "false"
             assert pg.locator(f'{X} [data-o=log]').count() == 0, "no checkbox any more"
             b.click(); wait_for_js(pg, f"{XP}.log === true")
             assert b.get_attribute("aria-pressed") == "true" and pg.evaluate("E.panels.find(p=>p.type==='xic').log") is True
@@ -85,7 +85,7 @@ try:
             assert pg.evaluate("E.panels.find(p=>p.type==='xic').bk") == ""
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():
-            b = pg.locator(f'{C} [data-a=tlink]'); assert b.get_attribute("aria-pressed") == "true" and "Link zoom and cursor" in b.get_attribute("aria-label")
+            b = bar_loc(pg, C, "tlink"); assert b.get_attribute("aria-pressed") == "true" and "Link zoom and cursor" in b.get_attribute("aria-label")
             b.click(); assert b.get_attribute("aria-pressed") == "false" and "on" not in b.get_attribute("class").split(); b.click()
         step("chromatogram link button: own icon, label and aria-pressed", tlink)
         def follow():

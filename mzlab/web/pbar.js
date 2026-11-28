@@ -126,6 +126,8 @@
   function start() {
     const b = host(); if (!b) return;
     b.hidden = false; sync();
+    // --pbh: the sticky bar's height, so a control scrolled into view stops below it (app.css scroll-padding)
+    new ResizeObserver(() => document.documentElement.style.setProperty("--pbh", (b.offsetParent ? b.offsetHeight + 6 : 0) + "px")).observe(b);
   }
   const key = (/** @type {KeyboardEvent} */ e) => {   // arrows, Home and End move inside the bar (one Tab stop)
     const l = tools(), i = l.indexOf(/** @type {HTMLElement} */ (document.activeElement)); if (i < 0 || /SELECT/.test(document.activeElement?.tagName || "")) return;
