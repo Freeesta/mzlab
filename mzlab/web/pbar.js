@@ -12,7 +12,7 @@
   /** @typedef {any} Pannello */
   const T = (/** @type {string} */ k, /** @type {any} */ a = {}) => I18N.t(k, a);
   /** group of the bar for each header group («s», the spectrum tools, splits by action: peak picking is Analyse); more and close stay in the header. The DDA buttons (dd) and the TIC background (tb) extract a trace or a list from the data, like the XIC: Extract */
-  const PB = /** @type {Record<string, string>} */ ({ xb: "x", v: "v", l: "v", s: "v", i: "a", t: "v", x: "x", o: "o", e: "o", dd: "x", tb: "x" });
+  const PB = /** @type {Record<string, string>} */ ({ xb: "x", v: "v", l: "v", s: "v", i: "a", t: "v", x: "x", o: "o", e: "o", dd: "x", tb: "x", xp: "x", tp: "a" });
   /** the groups of the bar: View, Analyse, Extract, Output, each labelled, drawn only when the kind has an action in it */
   const GRP = { of: (/** @type {any} */ a) => a.bid === "more" || a.nodata ? "" : a.bid === "par" ? "a" : PB[a.bar] || "", groups: [["v", "pbar.g.view"], ["a", "pbar.g.analyse"], ["x", "pbar.g.extract"], ["o", "pbar.g.output"]],
     wrap: (/** @type {string} */ k, /** @type {string} */ t, /** @type {string} */ s) => h`<span class="tbg" role="group" data-pg="${k}" aria-label="${T(t)}"><span class="tbl" aria-hidden="true">${T(t)}</span>${raw(s)}</span>` };

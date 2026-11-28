@@ -121,9 +121,9 @@ try:
         def wheels():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("MAPPA.whole(" + M + ")"); x, y = at(.5, .45); pg.mouse.move(x, y)
             pg.keyboard.down("Shift"); pg.mouse.wheel(0, -300); pg.keyboard.up("Shift"); wait_for_js(pg, f"{M}.zoom && {M}.zoomY == null"); a = z(); assert a[0] and a[1] is None, a        # Shift = RT only
-            bar(pg, ".pnl.map", "fit"); x, y = at(.5, .45); pg.mouse.move(x, y)      # through «⋯» the page may have scrolled: aim again
+            bar(pg, ".pnl.map", "fit"); pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .45); pg.mouse.move(x, y)      # the bar does not scroll the page to the map: bring it back and aim again
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -300); pg.keyboard.up("Alt"); wait_for_js(pg, f"{M}.zoomY && {M}.zoom == null"); a = z(); assert a[1] and a[0] is None, a             # Alt = m/z only
-            bar(pg, ".pnl.map", "fit"); x, y = at(.5, .45); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); wait_for_js(pg, ZSET); a = z(); assert a[0] and a[1], a
+            bar(pg, ".pnl.map", "fit"); pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .45); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); wait_for_js(pg, ZSET); a = z(); assert a[0] and a[1], a
             before = z(); pg.mouse.wheel(0, -300); pg.mouse.wheel(120, 0); frames(pg, 8); assert z() == before, ("the wheel alone does not touch the map", before, z())      # it scrolls the page
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); x, y = at(.5, .45)
             pg.mouse.dblclick(x, y); wait_for_js(pg, ZNULL); assert z() == [None, None]                                                                             # double click = reset
