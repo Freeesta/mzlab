@@ -82,4 +82,5 @@ pub(crate) static RELATED: &[Rel] = &[
     r("export.table_csv", "export table csv", &["export.mztab", "features"]),
     r("mol find", "compound name synonym formula mass look up built-in catalogue list pesticide herbicide fungicide insecticide pharmaceutical contaminant is this compound in the list m/z of a compound my own compounds user added lab list saved molecules origin level", &["mol search", "ion mz", "mol label"]),
     r("quant.curve", "calibration curve quantification lod loq", &["quant.calibrate", "peak table", "chrom.transitions"]),
+    r("quant.kinetics", "rate constant k first order half life decay kinetics time series degradation photolysis injection check uv reference normalise t0 fixed rt windows", &["quant.targets", "chrom.uv_peaks", "quant.curve"]),
 ];

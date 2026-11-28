@@ -5,6 +5,10 @@ pub mod curve;
 mod curve_read;
 mod curve_write;
 pub mod filterspec;
+pub mod kinetics;
+pub mod kinetics_read;
+#[cfg(test)]
+mod kinetics_tests;
 pub mod pol;
 pub mod quant;
 pub mod rows_mgf;

@@ -40,6 +40,7 @@
           "qc.run_order",
           "quant.calibrate",
           "quant.curve",
+          "quant.kinetics",
           "quant.targets",
           "report.methods",
           "rt.predict",
@@ -113,6 +114,7 @@
               "qc.run_order@1",
               "quant.calibrate@1",
               "quant.curve@1",
+              "quant.kinetics@1",
               "quant.targets@1",
               "report.methods@1",
               "rt.predict@1",
@@ -1662,6 +1664,62 @@
                     "default":"",
                     "description":"analyte|sample|reason separated by semicolons; * as analyte = every analyte; each one is logged."
                   }
+                ]
+              }
+            },
+            "required":["step","name","value"]
+          },
+          {
+            "properties":{
+              "step":{"const":"quant.kinetics@1"},
+              "name":{"enum":["ids","use_t0","missing","uv_mode","uv_rt","uv_rt_tol","uv_tol","boot","seed"]},
+              "value":{
+                "anyOf":[
+                  {
+                    "type":"string",
+                    "default":"",
+                    "description":"Ids of the areas table separated by semicolons; empty = every id."
+                  },
+                  {
+                    "type":"boolean",
+                    "default":true,
+                    "description":"The files with role t0 join every series at their time (0 when the samples give none; logged)."
+                  },
+                  {
+                    "enum":["skip","zero"],
+                    "default":"skip",
+                    "description":"skip: the point is left out and counted; zero: its area is 0. Either way the points list says so."
+                  },
+                  {
+                    "enum":["normalise","check"],
+                    "default":"normalise",
+                    "description":"normalise: every area is divided by the UV area of its file over the median UV area; check: the factors are reported and the areas stay as they are. Without the uv input nothing is divided."
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0,
+                    "description":"Apex of the UV peak that does not react (an internal reference, or the parent in a dark control); 0 = the median apex of the largest peak of each file, logged."
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":0.2,
+                    "description":"A file whose UV peak is farther than this from the reference RT has no reference peak."
+                  },
+                  {
+                    "type":"number",
+                    "minimum":0,
+                    "default":10,
+                    "description":"A file whose factor differs from 1 by more than this is flagged uv_off and warned; it is never dropped."
+                  },
+                  {
+                    "type":"integer",
+                    "minimum":10,
+                    "default":200,
+                    "description":"Residual bootstrap of k for its 95 % interval."
+                  },
+                  {"type":"integer","minimum":0,"default":0,"description":"Bootstrap seed"}
                 ]
               }
             },
@@ -3383,6 +3441,7 @@
                 "qc.run_order@1",
                 "quant.calibrate@1",
                 "quant.curve@1",
+                "quant.kinetics@1",
                 "quant.targets@1",
                 "report.methods@1",
                 "rt.predict@1",

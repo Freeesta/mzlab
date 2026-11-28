@@ -2501,6 +2501,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "mzlab-flowkin-wasm"
+version = "1.0.0"
+dependencies = [
+ "mzlab-core",
+ "mzlab-ops",
+ "wasm-bindgen",
+]
+
+[[package]]
 name = "mzlab-ionfacts-wasm"
 version = "1.0.0"
 dependencies = [

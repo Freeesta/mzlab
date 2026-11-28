@@ -1,12 +1,12 @@
 // @ts-check
-// Flow (administrator mode): quant.calibrate and quant.curve in this browser. Applying the imported calibration curves to the areas is `flow_quant` of the `flowcal` .wasm (`mzlab_ops::run::table::quant::quant_text`,
+// Flow (administrator mode): quant.calibrate, quant.curve and quant.kinetics in this browser (kinetics is `flow_kinetics` of the `flowkin` .wasm, `kinetics::kinetics_text`). Applying the imported calibration curves to the areas is `flow_quant` of the `flowcal` .wasm (`mzlab_ops::run::table::quant::quant_text`,
 // the function `flow run` calls), so the concentrations CSV is the same bytes. The table is the alignment (or gap filling) of the same plan kept in OPFS, or the table a `table.filter` view of it
 // stands for (`F.liveJobs.tableOf`); `curves` and `samples` are files of the plan (their text in S.samplesJson). quant.curve is `flow_curve` of the same module (`curve::curve_text`): its responses are a file of the plan or the
 // text an earlier step of the plan kept (chrom.transitions), its standards too; both outputs (`<id>.json`, `<id>.csv`) are kept, the CSV also under `<id>.concentrations` for a later step wired to that port. The warnings go to the card of the step. The text is kept under the key of the job. English only.
 (() => {
   "use strict";
   const F = /** @type {any} */ (globalThis).FLOW;
-  const STEPS = ["quant.calibrate", "quant.curve"];
+  const STEPS = ["quant.calibrate", "quant.curve", "quant.kinetics"];
   /** the words of the warnings of the step on its card (`ev.note` of flow-live.js), none when it has none @param {any} x @param {any} inst @param {string[] | undefined} w */
   const note = (x, inst, w) => { if (w && w.length) x.notes.set(inst.id, w.map(k => F.message({ key: k, params: {} })).join(" ")); else x.notes.delete(inst.id); };
   const J = () => F.liveJobs, kit = () => F.runners.web.kit;
@@ -68,5 +68,24 @@
     });
   };
 
-  F.webQuant = { run, curve, STEPS };
+  /** quant.kinetics: areas (the table of quant.targets), samples (a file of the plan) and the optional UV peaks, one JSON out under `<id>.json` @param {any} x @param {any} spec @param {any} inst */
+  const kinetics = async (x, spec, inst) => {
+    const j = J().job(spec), p = await kit().getPool(), areas = portText(x, inst, "areas"), samples = fileText(x, inst, "samples");
+    const wired = F.refs(inst, "uv").length > 0, uv = wired ? portText(x, inst, "uv") : "";
+    if (areas === null || samples === null || uv === null) { await x.call("block", { job: j, by: "platform.computer" }); return {}; }
+    const key = await J().sha(spec.key + "\n" + await J().sha(areas) + "\n" + await J().sha(samples) + "\n" + await J().sha(uv)), hit = await J().recall(p, key);
+    if (hit) { x.files.set(inst.id, { id: inst.id, name: hit.name, text: hit.text }); note(x, inst, hit.warnings); await F.webMsn.keep(hit.name, hit.text); await x.call("cached", { job: j }); return {}; }
+    await x.call("started", { job: j });
+    const t0 = performance.now(), params = JSON.stringify({ ...F.defaults(inst, F.stepOf(x.S.reg, inst), true), ...(inst.params || {}) });
+    return J().detached(x, spec, inst, async () => {
+      let made;
+      try { made = JSON.parse(await p.ident("flowkin", "flow_kinetics", { params, areas: enc(areas), samples: enc(samples), uv: enc(uv) })); } catch (e) { throw asError(e); }
+      const r = { name: inst.id + ".json", text: made.kinetics }, warnings = made.warnings || [];
+      await F.webMsn.keep(r.name, r.text); await J().remember(p, key, { ...r, warnings }); note(x, inst, warnings);
+      x.files.set(inst.id, { id: inst.id, ...r });
+      await x.call("finished", { job: j, result: warnings.length ? { ms: performance.now() - t0, warnings } : { ms: performance.now() - t0 } });
+    });
+  };
+
+  F.webQuant = { run, curve, kinetics, STEPS };
 })();

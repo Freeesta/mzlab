@@ -38,6 +38,7 @@ Before writing any script, ask the CLI: `mzlab-cli commands --find TASK WORDS --
 | a compound by name, synonym, formula or mass (pesticides, pharmaceuticals, contaminants) | `mol find dimethomorph`; with your own saved compounds `mol find NAME --user mine.csv` (each hit has a `level`) |
 | structure picture (SVG, PNG, CDXML, KET, molfile) | `mol draw SMILES --format svg --out a.svg`; pathway: Flow step `tp.network` |
 | calibration curve, LOD, LOQ | Flow step `quant.curve` |
+| first-order rate constant k of a time series, with UV injection check | Flow step `quant.kinetics` (`docs/agenti/kinetics-series.md`) |
 | export | `export.table_csv`, `export.mztab`, `export.annotations` (steps); `peak table --columns sn,fig,quality` |
 | provenance | `flow record RUN --roles roles.json`, `flow verify`; `prov.json` is in every run |
 

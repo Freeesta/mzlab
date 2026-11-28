@@ -165,6 +165,7 @@ fn descriptor_export_is_up_to_date() {
         crate::flow_digl::uv::uv_step(),
         crate::flow_quant::quant_step(),
         crate::flow_curve::curve_step(),
+        crate::flow_curve::kinetics::kinetics_step(),
         crate::flow_massacc::massacc_step(),
         crate::flow_quant_targets::quant_targets_step(),
         mzlab_feat::steps::run_order(),

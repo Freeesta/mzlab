@@ -1,0 +1,8 @@
+uscita = "wasm-feat/flowkin"
+pacchetto = "mzlab-flowkin-wasm"
+chiavi = { flowkin = 42 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 163840
+misura = 155075
+nota = "quant.kinetics of the Flow (first-order k per ion and series from the areas of fixed RT windows, with the UV injection check); a module of its own because inside `flowcal` it grew that module +24 % (over the per-PR rule); 155,075 B after wasm-opt (local build with tools/cargo_wasm.sh, NEW module so no base; the CI size step is authoritative), cap = measurement x 1.05 rounded up to 4 KiB"

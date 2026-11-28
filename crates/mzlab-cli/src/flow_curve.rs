@@ -10,6 +10,9 @@ use mzlab_ops::run::table::curve::curve_text;
 
 use crate::flow::{io, read_one, FileRunner, Made};
 
+#[path = "flow_kinetics.rs"]
+pub(crate) mod kinetics;
+
 /// The descriptor of `quant.curve@1`: responses and standards CSV in, the `calibration/1` JSON and the concentrations CSV out.
 pub fn curve_step() -> Step {
     Step {

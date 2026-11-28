@@ -26,7 +26,8 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | TP-GENERATE-M2-OBSERVED | `docs/coda/prompt/TP-GENERATE-M2-OBSERVED.md` | - | feed the observed parent M+2/M of `raw isotopes` to the `m2_ref` of the `tp.generate` formula filter, logged, instead of a typed number |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
 | NOMINAL-BIN-MINUS | `docs/coda/prompt/NOMINAL-BIN-MINUS.md` | - | `--bin nominal` on a blank-subtracted (`--minus`) or summed (`--sum`) spectrum; today refused with exit 2 |
-| TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
+| KINETICS-VIEW | `docs/coda/prompt/KINETICS-VIEW.md` | - | the decay plot of `quant.kinetics`: points, fit and k interval per ion and series, the UV factor per file, the flagged points |
+| KINETICS-FORMATION | `docs/coda/prompt/KINETICS-FORMATION.md` | - | opt-in formation-decay fit of a product in `quant.kinetics` (`fit_consecutive`, k1 of the parent as input), logged |
 | POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | FLOW-TABLE-DISK | `docs/coda/prompt/FLOW-TABLE-DISK.md` | - | the facts (rows, files, polarity) of a `.mzfeat` opened from disk in the Flow list, from a head slice and `table_entry` |
 | FLOW-TABLE-FINAL | `docs/coda/prompt/FLOW-TABLE-FINAL.md` | - | mzflow 2b: mark one feature table of the Flow list as the final one; the choice is kept and logged |
