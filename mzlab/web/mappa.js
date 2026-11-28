@@ -815,7 +815,7 @@ window.MAPPA = (() => {
     const mo = new MutationObserver(() => { if (!m.hidden) return; mo.disconnect(); s.frz = null; frame(ad.p); navSync(ad.p); });
     mo.observe(m, { attributes: true, attributeFilter: ["hidden"] });
   }
-  function showMenu(/** @type {Record<string, any>} */ ad, /** @type {MenuEv} */ ev) { if (ad.host) ad.host(); menu(ev, itemsFor(ad)); holdSight(ad); }
+  function showMenu(/** @type {Record<string, any>} */ ad, /** @type {MenuEv} */ ev) { if (!window.PANELMENU) { loadScript("panel-menu.js").then(() => showMenu(ad, ev)); return; } if (ad.host) ad.host(); menu(ev, itemsFor(ad)); holdSight(ad); }
   // zoom around a point (default: the middle of the view); axes "x" = RT, "y" = m/z
   function scaleView(/** @type {Pannello} */ p, /** @type {number} */ f, /** @type {Record<string, any> | null} */ c, /** @type {string} */ axes) {
     const a = p._a, x = c ? c.rt : (a.x0 + a.x1) / 2, y = c ? c.mz : (a.y0 + a.y1) / 2;

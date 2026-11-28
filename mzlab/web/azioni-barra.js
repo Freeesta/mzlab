@@ -15,10 +15,6 @@
   const mode = (/** @type {string} */ m) => (/** @type {Ctx} */ c) => c.p._mode(m);
   /** @typedef {any} Ctx
    * @typedef {(c: Ctx) => any} F @typedef {{ toggle?: number, bonly?: number, hid?: number, gh?: number, bid?: string, visible?: F, at?: string, nodata?: number, tag?: string, after?: () => string, ti0?: F, tip?: F, checked?: F, available?: F, run?: F }} Opt */
-  /** the bar tools that the right-click menu repeats in its «panel» block (one registry, two views): their short menu label; the ones that open a popover on their own button stay in the bar */
-  const MENU = /** @type {Record<string, string>} */ ({ izoom: "ctx.panel.izoom", iauto: "ctx.panel.iauto", iman: "ctx.panel.iman", idel: "ctx.panel.idel", tlink: "ctx.panel.tlink", smooth: "ctx.panel.smooth", log: "ctx.panel.log", rul: "ctx.panel.rul", rel: "ctx.panel.rel", lock: "ctx.panel.lock", tabp: "ctx.panel.tabp", dl: "ctx.panel.dl", ms2tri: "ctx.panel.ms2tri" });
-  /** the download menu opens where the right click was; run from the menu it is deferred (the click on the entry would close it at once) @param {Ctx} c */
-  const dlAt = c => { const e = c.e; if (e && e.type === "click") return dlMenu(c.p, e); setTimeout(() => dlMenu(c.p, /** @type {any} */ ({ preventDefault() {}, stopPropagation() {}, clientX: e ? e.clientX : 0, clientY: e ? e.clientY : 0, kbd: !!(e && e.kbd) })), 0); };
   // [data-a, views, group, title key, aria key ("=": title), text or icon, class, Opt]
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
@@ -49,15 +45,14 @@
     ["xic", ["chrom"], "x", "panel.xic.title", "", c => c.p.kind === "pda" ? "XWC" : "XIC", "bt", { available: c => !MS(c), ti0: c => T(c.p.kind === "pda" ? "panel.wl.title" : MS(c) ? "panel.xic.off" : "panel.xic.title"), run: c => c.p.kind === "pda" ? xw(c) : openXic(null, { after: c.p }) }],
     ["xwcl", ["chrom"], "x", "xwc.pop.open", "=", "▾", "bt xbl", { at: B + " hidden" + P, run: pop }],
     ["ticbg", ["chrom"], "tb", "ctl.ticbg.on", "=", "", "bt tgl", { hid: 1, gh: 1, toggle: 1, at: B + P, available: c => W("TICBG")?.applies(c.p), checked: c => !!W("TICBG")?.on(c.p), run: c => W("TICBG").press(c.p) }],
-    ["dl", ALL, "o", "panel.dl.title", "=", () => IC_DL.replace(";margin-right:4px", ""), "bt", { run: dlAt }],
+    ["dl", ALL, "o", "panel.dl.title", "=", () => IC_DL.replace(";margin-right:4px", ""), "bt", { run: c => dlMenu(c.p, c.e) }],
     ["xicp", ["spec"], "xp", "xiclens.toggle", "=", IC_LENS, "bt xbp", { toggle: 1, hid: 1, visible: c => !uv(c), checked: c => !!UIP.xicLens && lens(c), available: lens, run: () => XICBTN.setLens(!UIP.xicLens) }],
     ["tabp", ["spec"], "tp", "tabp.btn.title", "=", IC_TAB, "bt tpb", { at: B + P, run: c => TABPICCHI.open(c.p) }],
     ["more", ALL, "e", "panel.more.title", "=", "⋯", "bt hmb", { at: B + ' hidden aria-haspopup="true" aria-expanded="false"', after: () => h`<span class="hmore" hidden role="group" aria-label="${T("panel.more.title")}"></span>` }],
     ["max", ALL, "e", "panel.max.title", "", () => IC_FS, "bt fsb", { run: c => c.p._setMax(!c.p.el.classList.contains("max")) }],
     ["close", ALL, "e", "panel.close", "", "&times;", "x", { nodata: 1, run: c => closePanelWithUndo(c.p) }],
   ];
-  for (const [id, views, bar, ti, al, tx, cl, o] of ROWS) AZIONI.register({ id: "panel." + id, group: "tools", views, menu: false, barra: true, scope: "panel", bar, bid: id, ti, al, tx, cl, name: () => T(ti), svg: () => "",
-    ...(MENU[id] ? { menu: true, menuLabel: () => T(MENU[id]), aria: () => T(MENU[id]), tip: () => T(ti) } : {}), ...o });
+  for (const [id, views, bar, ti, al, tx, cl, o] of ROWS) AZIONI.register({ id: "panel." + id, group: "tools", views, menu: false, barra: true, scope: "panel", bar, bid: id, ti, al, tx, cl, name: () => T(ti), svg: () => "", ...o });
   const html = (a, c, shared) => {
     const ok = !a.available || a.available(c), on = a.checked ? !!a.checked(c) : false, tip = (a.tip || a.ti0 || (() => T(a.ti)))(c), al = a.al === "=" ? tip : a.al ? T(a.al) : "", tag = a.tag || "button", tx = typeof a.tx === "function" ? a.tx(c) : a.tx;
     return h`<${raw(tag)} class="${a.cl + (on ? " on" : "")}"${raw((a.nodata ? "" : ` data-a="${a.bid}"`) + (a.toggle ? ` aria-pressed="${on}"` : "") + (a.at || "") + (ok ? "" : shared || a.hid ? " hidden" : " disabled"))}${raw(al ? h` aria-label="${al}"` : "")} title="${tip}">${raw(tx)}</${raw(tag)}>${raw(a.after ? a.after() : "")}`;
@@ -85,4 +80,5 @@
       if (a.tip) b.title = a.tip(c);
     }
   };
+  setTimeout(() => loadScript("panel-menu.js"), 1000);
 })();

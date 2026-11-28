@@ -349,6 +349,7 @@ function kbdMenu(p) {
 }
 function ctxFor(p, e, x, px, py) {
   if (!p._a) return e.preventDefault();
+  if (!window.PANELMENU) { e.preventDefault(); loadScript("panel-menu.js").then(() => ctxFor(p, e, x, px, py)); return; }
   const items = [];
   const inLbl = a => (p._a.lbls || []).some(l => l.ann === a && px >= l.x && px <= l.x + l.w && py >= l.y && py <= l.y + l.h);
   const near = p.anns.find(a => a.x >= p._a.x0 && a.x <= p._a.x1 && (inLbl(a) || Math.abs(p._a.X(a.x) - px) < 14));

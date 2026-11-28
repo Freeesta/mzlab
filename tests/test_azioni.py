@@ -15,6 +15,14 @@ def run(code):
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
+def run_panel_menu(code):
+    """Like run(), with the lazy panel-menu.js loaded on top (scope, the panel block with keys, the 12-row cap)."""
+    js = (f"const fs=require('fs');const AZIONI=new Function(fs.readFileSync({str(WEB / 'azioni.js')!r},'utf8')+';return AZIONI;')();"
+          "global.window=global;global.AZIONI=AZIONI;global.I18N={t:k=>k};global.AZIONI_ICONE={POR_ID:{},svg:n=>'<'+n+'>'};"
+          f"new Function(fs.readFileSync({str(WEB / 'panel-menu.js')!r},'utf8'))();{code}")
+    return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
+
+
 def test_menu_order_separators_and_grey_entries():
     r = run("""const log=[];
       const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>log.push(id),...o});
@@ -56,7 +64,7 @@ def test_rows_of_one_action_and_order_inside_a_group():
 
 def test_menu_point_actions_then_panel_actions_with_their_key():
     """Study §3.7: what is under the pointer first, a separator, then the panel commands (the menu ones before the ones that come from the bar), each with its key."""
-    r = run("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>0,...o});
+    r = run_panel_menu("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>0,...o});
       reg('bar','tools',{scope:'panel',barra:true,menu:true});
       reg('fs','view',{scope:'panel',shortcut:{key:'f',where:'chart',label:'x'}});
       reg('help','help');reg('pt','extract',{shortcut:{key:'x',where:'chart',label:'x'}});reg('rz','reset',{scope:'panel'});
@@ -69,13 +77,13 @@ def test_menu_point_actions_then_panel_actions_with_their_key():
 
 
 def test_unknown_scope_is_refused():
-    r = run("let e=null;try{AZIONI.register({id:'a',group:'help',scope:'row',views:[],name:()=>'',run:()=>0})}catch(x){e=x.message}console.log(JSON.stringify(e))")
+    r = run_panel_menu("let e=null;try{AZIONI.register({id:'a',group:'help',scope:'row',views:[],name:()=>'',run:()=>0})}catch(x){e=x.message}console.log(JSON.stringify(e))")
     assert r and r.startswith("AZIONI:")
 
 
 def test_menu_never_has_more_than_12_rows_the_tail_goes_in_one_submenu():
-    r = run("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>log.push(id),...o});
-      globalThis.I18N={t:k=>k};const log=[];
+    r = run_panel_menu("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>log.push(id),...o});
+      const log=[];
       for(let i=0;i<8;i++)reg('p'+i,'extract');
       for(let i=0;i<9;i++)reg('q'+i,'view',{scope:'panel',shortcut:i==0?{key:'f',where:'chart',label:'x'}:undefined,checked:i==1?()=>true:undefined});
       const top=a=>AZIONI.clean(AZIONI.forContext({view:'v'})).filter(i=>i!=='-');
@@ -88,7 +96,7 @@ def test_menu_never_has_more_than_12_rows_the_tail_goes_in_one_submenu():
     assert r["sub"][0] == ["q3", None, None] and len(r["sub"]) == 6
     assert r["log"] == ["q4"], "a row of the submenu runs its action"
     assert r["small"] == 3, "a short menu is left alone"
-    r = run("""const x=[];for(let i=0;i<15;i++)x.push({id:'d'+i,label:'d'+i,fn:()=>0});console.log(AZIONI.clean(x).length)""")
+    r = run_panel_menu("""const x=[];for(let i=0;i<15;i++)x.push({id:'d'+i,label:'d'+i,fn:()=>0});console.log(AZIONI.clean(x).length)""")
     assert r == 15, "a menu that does not come from the registry (the drawing) is never capped"
 
 
@@ -203,7 +211,7 @@ BAR_ONLY = {"map": "mapzin mapzout maphelp"}
 def bar(view, extra="", fn="bar"):
     js = ("const fs=require('fs');const AZIONI=new Function(fs.readFileSync(%r,'utf8')+';return AZIONI;')();" % str(WEB / "azioni.js")
           + "global.AZIONI=AZIONI;global.I18N={t:k=>k};global.EH=s=>s;for(const k of ['ZOOM','FIT','SYNC','RULER','UNLOCK','AUTO','MAN','DEL_INT','SMOOTH','DL','FS'])global['IC_'+k]='<svg/>';"
-          + "global.window=global;global.XICBTN={lens:{ok:p=>!p.nolens}};global.UIP={xicLens:true};global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
+          + "global.window=global;global.loadScript=()=>0;global.XICBTN={lens:{ok:p=>!p.nolens}};global.UIP={xicLens:true};global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
           + "const host={innerHTML:'',querySelector:()=>null};const p={type:%r,tl:true,smooth:true,log:false,imode:null};" % view + extra
           + "AZIONI.bar({view:%r,p},host%s);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id),runs:AZIONI.list({view:%r,p},'barra').filter(a=>typeof a.run==='function').map(a=>a.id)}));" % (view, "," + fn if fn != "bar" else "", view, view))
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)

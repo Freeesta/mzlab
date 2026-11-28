@@ -146,6 +146,19 @@ try:
             right_at(MAP, w[0] * 0.5, w[1] * 0.5); rc = pg.evaluate(LABELS); close()
             lp = long_at(MAP, w[0] * 0.5, w[1] * 0.5); assert rc and lp == rc, ("map: a long press opens the menu of the right click", rc, lp)
         step("map: point actions, separator, panel actions; a long press = right click", map_scope)
+        def early_click():
+            ctx = r.b.new_context(viewport={"width": 1500, "height": 2200}, reduced_motion="reduce"); pg2 = ctx.new_page(); held = []
+            pg2.route("**/panel-menu.js", lambda route: held.append(route))      # the lazy file is held: the right click comes before it has loaded
+            pg2.add_init_script("try{sessionStorage.setItem('mzlab.coiReload','1');localStorage.setItem('mzlab.tour.lr',JSON.stringify({state:'skipped'}));localStorage.setItem('mzlab.bar.hint','1');localStorage.setItem('mzlab.panels.side_by_side.hint','1');}catch(_){}")
+            pg2.goto(f"http://127.0.0.1:{r.port}/"); stage(pg2, [mz(f) for f in FILES]); pg2.click("text=Load data"); ready(pg2)
+            open_kind(pg2, "full"); ready(pg2); wait_for_js(pg2, SP + "&&" + SP + "._a"); wait_for_js(pg2, "!window.PANELMENU")
+            b = pg2.evaluate(f"(()=>{{const c={SP}.cv;c.scrollIntoView({{block:'center'}});const r=c.getBoundingClientRect();return [r.left+r.width/2,r.top+r.height/2]}})()")
+            pg2.mouse.click(b[0], b[1], button="right"); wait_for_js(pg2, "document.querySelector('#ctx').hidden && !window.PANELMENU")
+            assert len(held) == 1, "the menu asked for the lazy file"
+            held[0].continue_(); wait_for_js(pg2, OPEN)
+            r_ = pg2.evaluate(SHAPE); ctx.close()
+            assert r_["panel"] and r_["sep"] and not r_["bad"] and r_["top"] <= 12 and not r_["keyless"], ("the full menu one tick later", r_)
+        step("a right click before the lazy menu file has loaded waits for it and still gets the full menu", early_click)
         def every_action():
             r = pg.evaluate("""(()=>{const none=AZIONI.actions.filter(a=>!a.svg&&!(a.iconKey&&AZIONI_ICONE.DISEGNI[a.iconKey])).map(a=>a.id);
               const bad=AZIONI.actions.filter(a=>a.iconKey&&!AZIONI_ICONE.DISEGNI[a.iconKey]).map(a=>a.id);

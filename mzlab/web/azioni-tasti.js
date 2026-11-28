@@ -20,7 +20,7 @@
   reg({ id: "spec.measureKey", group: "tools", views: ["spec"], iconKey: "measure", shortcut: { key: "r", where: "chart", label: "scorc.misura" },
     name: () => T("scorc.misura"), tip: () => T("scorc.misura.tip"), available: (/** @type {any} */ c) => c.has && typeof measSet === "function", run: (/** @type {any} */ c) => measSet(c.p, c.m) });
   // full screen on every panel (the map keeps its own F, which runs first)
-  reg({ id: "view.fullscreen", group: "view", scope: "panel", menu: true, views: ["*"], visible: (/** @type {any} */ c) => c.view !== "map" && c.view !== "map3d", iconKey: "wide", shortcut: { key: "f", where: "chart", label: "scorc.schermo" },
+  reg({ id: "view.fullscreen", group: "view", views: ["*"], iconKey: "wide", shortcut: { key: "f", where: "chart", label: "scorc.schermo" },
     name: () => T("scorc.schermo"), tip: () => T("scorc.schermo.tip"), available: (/** @type {any} */ c) => !!(c.p && c.p._setMax),
     run: (/** @type {any} */ c) => c.p._setMax(!c.p.el.classList.contains("max")) });
   // whole view of the active chart (Backspace; with a peak selected it deletes the peak first) and Delete of the selected peak: keys of the view, as the zoom history is

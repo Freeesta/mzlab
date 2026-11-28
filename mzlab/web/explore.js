@@ -948,7 +948,6 @@ function menu(/** @type {CtxEv} */ ev, /** @type {(Bag | string)[]} */ items) {
     } else {
       d.textContent = (it.check ? "\u2713 " : "") + it.label;
     }
-    // the key of the action (⌘O, Ctrl+O, X…) drawn by CSS on the right: an attribute, so the row's text stays its label
     if (it.key && !it.soloIcona) d.dataset.key = it.key;
     if (it.tip || it.soloIcona) d.title = it.tip || it.label;
     if (it.aria) d.setAttribute("aria-label", it.aria);
