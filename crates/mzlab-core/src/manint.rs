@@ -404,6 +404,16 @@ pub fn valleys_text(files: &str, window: &str, depth: f64) -> Result<String> {
 /// Channels in the order they first appear in the files, the windows of a channel by file then start; `sums` adds after each channel a row `sum` with the sum of its areas. `err.manint.channel` for a window
 /// that names no channel or no times, `err.manint.baseline` for an unknown baseline or a `line` without its four numbers.
 pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
+    table_with(files, windows, sums, &csv::NoExtra)
+}
+
+/// `table_text` with the ion scale of `ions` (`manint_ions`: `{"samples":[{"scan_type"?, method values?, "traces"?}]}`): the columns `IONS_HEAD` are
+/// appended after every other column; the cps columns are the bytes of `table_text`. Lives in its own `.wasm` (`mzlab-manions-wasm`).
+pub fn table_text_ions(files: &str, windows: &str, sums: bool, ions: &str) -> Result<String> {
+    table_with(files, windows, sums, &ions::Ions::parse(ions)?)
+}
+
+fn table_with<X: csv::Extra>(files: &str, windows: &str, sums: bool, extra: &X) -> Result<String> {
     let (samples, keys) = samples_and_keys(files)?;
     let doc = parse(windows.as_bytes())?;
     let (list, cols) = fig::split(&doc)?;
@@ -433,7 +443,7 @@ pub fn table_text(files: &str, windows: &str, sums: bool) -> Result<String> {
             .then(x.1.a.total_cmp(&y.1.a))
     });
     Ok(csv_text(
-        &rows, &labels, &corrs, &keys, &samples, sums, cols,
+        &rows, &labels, &corrs, &keys, &samples, sums, cols, extra,
     ))
 }
 
@@ -444,6 +454,12 @@ use edges::{drop_line, edge3, edges_area};
 mod csv;
 use csv::csv_text;
 pub use csv::EXT_HEAD;
+#[path = "manint_ions.rs"]
+mod ions;
+pub use ions::{choices_text, IONS_HEAD};
+#[cfg(test)]
+#[path = "manint_ions_tests.rs"]
+mod ions_tests;
 pub use fig::{FIG_HEAD, QUALITY_HEAD, SN_HEAD, STATE_HEAD};
 #[path = "manint_fig.rs"]
 mod fig;

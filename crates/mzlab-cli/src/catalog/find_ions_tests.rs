@@ -1,4 +1,4 @@
-//! `commands --find` for the ion scale of a trace (`trace xic --ions`, `peak noise --ions`): the words of the task reach the command that has it.
+//! `commands --find` for the ion scale of a trace (`trace xic --ions`, `peak noise --ions`, `peak table --ions`): the words of the task reach the command that has it.
 
 use super::{search, words};
 
@@ -12,6 +12,10 @@ fn the_ions_of_a_trace_and_its_noise_are_found_from_the_task() {
         (
             "noise of an ion counting trace with a floor of one ion",
             "peak noise",
+        ),
+        (
+            "area height and noise of every integrated peak in ions with the fill time of the scan type",
+            "peak table",
         ),
         (
             "how many ions is this summed ms2 spectrum made of, the fill time is in the file",

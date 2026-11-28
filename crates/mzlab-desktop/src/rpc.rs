@@ -357,7 +357,7 @@ impl State {
                 }
                 text(pl.finish(&rows))
             }
-            "manint" => text(mzlab_core::manint::table_text(s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true").unwrap_or_else(|e| format!("E{}", e.to_json()))),
+            "manint" | "manionchoices" => { let (f, w, sums, ions) = (s("files"), s("windows"), p["sums"].as_bool() == Some(true) || s("sums") == "true", s("ions")); text(match (op, ions) { ("manionchoices", i) => mzlab_core::manint::choices_text(f, i), (_, "") => mzlab_core::manint::table_text(f, w, sums), (_, i) => mzlab_core::manint::table_text_ions(f, w, sums, i) }.unwrap_or_else(|e| format!("E{}", e.to_json()))) }
             "follow" => text(mzlab_core::manint::follow_text(s("files"), s("window")).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "auto" => text(mzlab_core::manint::auto_text(s("files"), s("params")).unwrap_or_else(|e| format!("E{}", e.to_json()))),
             "valleys" => text(mzlab_core::manint::valleys_text(s("files"), s("window"), p["depth"].as_f64().unwrap_or(f64::NAN)).unwrap_or_else(|e| format!("E{}", e.to_json()))),

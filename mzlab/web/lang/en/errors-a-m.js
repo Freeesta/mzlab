@@ -1,6 +1,7 @@
 I18N.add("en", {
   "err.manint.channel": "An integration window names no trace of the open files.",
   "err.manint.maxShift": "The farthest a followed window may move (max_shift) is a number of minutes, 0 or more.",
+  "err.manint.ions": "Unknown scan type of the ion scale of the integrations table: {scan_type} (ems, epi, q1, sim, other).",
   "err.manint.columns": "Unknown column group of the integrations table: {column} (sn, fig, quality).",
   "err.manint.baseline": "Unknown baseline of an integration: {baseline} (zero, edges, or line with its two points).",
   "err.http": "error {status}",
@@ -101,6 +102,7 @@ I18N.add("en", {
   "err.cli.rawxic.needsIons": "The method values of the ion scale (--scan-type, --set fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) need --ions.",
   "err.cli.rawxic.limit": "--limit takes a whole number of rows, 1 or more, not \u201c{value}\u201d.",
   "err.cli.rawxic.polarity": "--polarity takes + or -, not \u201c{value}\u201d.",
+  "err.cli.peaktable.needsIons": "The method values of the ion scale (--scan-type, --set fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) need --ions.",
   "err.cli.tracexic.needsIons": "The method values of the ion scale (--scan-type, --set fill_ms, dwell_ms, scan_s, step_da, mass_lo, mass_hi) need --ions.",
   "err.cli.design.samplesAndFiles": "--samples and FILE paths do not go together: give one or the other.",
   "err.cli.design.needsInput": "sample design {op} needs --samples SAMPLES.json or one or more FILE paths.",
