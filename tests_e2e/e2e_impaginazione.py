@@ -33,8 +33,10 @@ CHECK = r"""((scope) => {
     for (let a = e; a && a !== de; a = a.parentElement) if (+getComputedStyle(a).opacity < 0.05) return false; return true; };
   // the part of a box on screen: the viewport and every ancestor that clips (overflow other than visible)
   // and, for what scrolls with the page, the bottom of the sticky header (what went under it is out of sight, not overlapping)
-  const hd = document.querySelector("header"), hb = hd ? hd.getBoundingClientRect().bottom : 0;
-  const clipOf = e => { let r = { l: 0, t: 0, r: vw, b: vh }, fixed = !!hd && hd.contains(e);
+  // the sticky panel bar sits under the header: what went under it is out of sight too
+  const hd = document.querySelector("header"), pbar = document.querySelector("#pbar"), pbs = !!pbar && pbar.offsetParent !== null && getComputedStyle(pbar).position === "sticky";
+  const hb = Math.max(hd ? hd.getBoundingClientRect().bottom : 0, pbs ? pbar.getBoundingClientRect().bottom : 0);
+  const clipOf = e => { let r = { l: 0, t: 0, r: vw, b: vh }, fixed = (!!hd && hd.contains(e)) || (pbs && pbar.contains(e));
     for (let a = e.parentElement; a && a !== de && a !== document.body; a = a.parentElement) { const s = getComputedStyle(a);
       if (s.overflowX !== "visible" || s.overflowY !== "visible" || s.contain.includes("paint")) { const q = a.getBoundingClientRect(); r = { l: Math.max(r.l, q.left), t: Math.max(r.t, q.top), r: Math.min(r.r, q.right), b: Math.min(r.b, q.bottom) }; }
       if (s.position === "fixed" || a.tagName === "DIALOG") { fixed = true; break; } }
@@ -54,7 +56,7 @@ CHECK = r"""((scope) => {
       if (!scroller) add("cut", e, `${Math.round(cutW)}x${Math.round(cutH)} px`); }
   }
   // the control with the focus is in sight: not under the sticky header
-  const f = document.activeElement; if (f && f !== document.body && hd && !hd.contains(f) && root.contains(f) && shown(f)) { const fb = f.getBoundingClientRect(), fc = clipOf(f); if (fc.t === hb && fb.bottom <= hb + 2) add("under the header", f, "has the focus"); }
+  const f = document.activeElement; if (f && f !== document.body && hd && !hd.contains(f) && !(pbs && pbar.contains(f)) && root.contains(f) && shown(f)) { const fb = f.getBoundingClientRect(), fc = clipOf(f); if (fc.t === hb && fb.bottom <= hb + 2) add("under the header", f, "has the focus"); }
   const same = (a, b) => a.contains(b) || b.contains(a) || (a.labels && [...a.labels].some(l => l.contains(b))) || (b.labels && [...b.labels].some(l => l.contains(a))) || (!!a.closest("label") && a.closest("label") === b.closest("label"));
   // the 44 px handles of two integration bars that sit close on the data share their place: the handle is where the bar is (keyboard: ← →)
   const bars = (a, b) => a.classList.contains("ibh") && b.classList.contains("ibh") && a.parentElement === b.parentElement;

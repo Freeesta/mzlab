@@ -28,11 +28,10 @@ function group(I, p) {
   place(p, g);
   return g;
 }
-/** Before «XIC» in its group; with the shared panel bar on that group is hidden (the bar draws the XIC), so ‹ i/N › sits in the header before the tool groups, where it stays visible. @param {Bag} p @param {HTMLElement} g */
+/** In the header before the (hidden) tool groups: the XIC group is drawn in the panel bar, so ‹ i/N › sits where it stays visible. @param {Bag} p @param {HTMLElement} g */
 function place(p, g) {
-  const bar = !!(window.PBAR && PBAR.on()), tbs = p.el.querySelector(".hd > .tbs"), xb = p.el.querySelector('[data-a="xicb"]');
-  if (bar && tbs) { if (g.parentElement !== tbs.parentElement) tbs.before(g); }
-  else if (xb) { if (g.nextElementSibling !== xb) xb.before(g); }
+  const tbs = p.el.querySelector(".hd > .tbs");
+  if (tbs) { if (g.parentElement !== tbs.parentElement) tbs.before(g); }
   else if (!g.isConnected) p.el.querySelector(".hd")?.append(g);
 }
 /** The state of ‹ i/N › for what the panel shows (nothing, an average or one MS2). @param {Bag} I @param {Bag} p */

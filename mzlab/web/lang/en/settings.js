@@ -73,8 +73,6 @@ I18N.add("en", {
   "settings.pal.bw": "Black and white",
   "settings.xiclens": "XIC lens on peak hover",
   "settings.xiclens.title": "XIC preview on a peak; a click opens it",
-  "settings.pbar": "Panel bar",
-  "settings.pbar.title": "One tool bar above the panels, for the selected panel",
   "pbar.aria": "Tools for panel {n}, {name}",
   "pbar.aria.none": "Panel tools",
   "pbar.chip.title": "The selected panel: its tools are in this bar",

@@ -105,7 +105,7 @@ try:
             with pg.expect_download() as d: (bar(pg, ".pnl.xic", "dl"), pg.locator("#ctx div", has_text="Excel").first.click())
             f = d.value.path(); rows = xlsx_rows(f); assert xlsx_sheets(f) and rows[0][0][0] == "s" and "RT (min)" in rows[0][0][1]
             nums = [c[1] for r_ in rows[1:] for c in r_ if c and c[0] == "n"]; assert len(nums) > 400 and max(nums) > 1000, len(nums)
-            xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); xp.locator("[data-a=iauto]").click()
+            xi = pg.evaluate("E.panels.findIndex(p=>p.type==='xic')"); bar(pg, ".pnl.xic", "iauto")
             xbox = xp.locator("canvas").bounding_box(); xx = pg.evaluate(f"E.panels[{xi}]._a.X(14.33)")
             pg.mouse.click(xbox["x"] + xx, xbox["y"] + 120); wait_for_js(pg, "!!document.querySelector('#manint-h')", timeout=60000)
             pg.evaluate("(h => { if (h.getAttribute('aria-expanded') !== 'true') h.click(); })(document.querySelector('#manint-h'))"); wait_for_js(pg, "!!document.querySelector('#manint-x tbody tr')", timeout=60000)

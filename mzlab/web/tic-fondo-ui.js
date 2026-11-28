@@ -63,7 +63,7 @@ export function wire(p, b) {
 }
 
 /** the header button and its twin in the shared bar (only while the bar shows this panel) @param {Bag} p @returns {HTMLElement[]} */
-const twins = p => /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="ticbg"]'), window.PBAR?.on() && E.active === p ? document.querySelector('#pbar [data-a="ticbg"]') : null].filter(Boolean));
+const twins = p => /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="ticbg"]'), E.active === p ? document.querySelector('#pbar [data-a="ticbg"]') : null].filter(Boolean));
 /** @param {Bag} p @param {boolean} [back] focus returns to the button that opened the options (Esc) */
 function close(p, back = false) {
   const pop = p.el && p.el.querySelector(".tb-pop"); if (!pop) return;

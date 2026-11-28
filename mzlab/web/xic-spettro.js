@@ -202,7 +202,8 @@
   function closePop(p) {
     const s = st(p); if (!s.pop) return;
     s.pop.remove(); s.pop = null;
-    const l = p.el.querySelector('[data-a="xicl"]'); if (l) { l.setAttribute("aria-expanded", "false"); /** @type {HTMLElement} */ (l).focus({ preventScroll: true }); }
+    const ls = /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="xicl"]'), document.querySelector('#pbar [data-a="xicl"]')].filter(Boolean));   // the header copy is hidden: the bar's arrow takes the focus back
+    ls.forEach(l => l.setAttribute("aria-expanded", "false")); (ls.find(l => l.offsetParent) || ls[0])?.focus({ preventScroll: true });
   }
   /** the ion and its tolerance as two fields; Enter extracts (Shift+Enter: as one more trace), Esc closes @param {any} p */
   function openPop(p) {

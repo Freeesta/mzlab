@@ -1,5 +1,5 @@
-"""e2e_pbar: the shared panel bar #pbar (setting «Panel bar», off by default).
-Off: no bar, the tools stay in every panel header. On: one toolbar with a chip (number, kind, file) that follows the selected panel (click or keys 1-9),
+"""e2e_pbar: the shared panel bar #pbar (always on).
+One toolbar with a chip (number, kind, file) that follows the selected panel (click or keys 1-9),
 the common buttons (fit, download, expand, ruler, log, smoothing, zoom link) work on that panel from the bar and leave the header (expand and close stay in both), a panel with a non-default state shows a dot chip in its header, a click on empty space keeps the selection, the first panel is selected when none is."""
 # covers: mzlab/web/pbar.js, mzlab/web/azioni-barra.js, tests_e2e/lib.py, mzlab/web/settings.js, mzlab/web/explore.js, mzlab/web/pannelli.js
 import os, sys; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -17,19 +17,13 @@ try:
         pg.evaluate("addPanel('xic',{traces:[{id:E.seq++,mz:364.4,w:0.5,label:'m/z 364'}]})")
         wait_for_js(pg, "tabPanels().filter(q=>q.el&&q._a).length>=3")
         ORD = "tabPanels().filter(q=>q.el).sort(LAYOUT.ordine)"
-        def off():
-            assert pg.evaluate("document.querySelector('#pbar').hidden && !document.documentElement.hasAttribute('data-pbar')"), "off: no bar"
-            assert pg.evaluate(f"{ORD}[0].el.querySelector('.tbs .tbg [data-a=fit]').offsetParent!==null"), "off: the tools are in the header"
-        step("off by default: no bar, the header keeps its tools", off)
-        def turn_on():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-pbar"); pg.click("#uip-pbar"); pg.keyboard.press("Escape")
+        def on():
             wait_for_js(pg, "!document.querySelector('#pbar').hidden")
             assert pg.evaluate("document.querySelector('#pbar').getAttribute('role')") == "toolbar"
-            assert pg.evaluate("localStorage.getItem(NOMI.KEY('pbar'))") == "1"
-            assert pg.evaluate(f"{ORD}[0].el.querySelector('.tbs .tbg [data-a=fit]').offsetParent===null"), "on: the header tool groups are hidden"
+            assert pg.evaluate(f"{ORD}[0].el.querySelector('.tbs .tbg [data-a=fit]').offsetParent===null"), "the header tool groups are hidden"
             assert pg.evaluate(f"{ORD}[0].el.querySelector('.x').offsetParent!==null"), "close stays in the header"
             h = pg.evaluate("document.querySelector('#pbar').offsetHeight"); assert h == 40, h
-        step("the setting turns the bar on; the header keeps close, loses the tool groups", turn_on)
+        step("the bar is always on; the header keeps close, has no tool groups", on)
         def follows():
             n = pg.evaluate(f"{ORD}.length"); assert n >= 3, n
             def check(i, how):
@@ -90,11 +84,6 @@ try:
             pg.keyboard.press("ArrowRight"); b = pg.evaluate("document.activeElement.dataset.a"); assert a != b, (a, b)
             pg.keyboard.press("Home"); assert pg.evaluate("document.activeElement.dataset.a") == a
         step("one tab stop, arrows and Home move inside the bar", toolbar)
-        def turn_off():
-            pg.click("#np-set"); pg.wait_for_selector("#uip-pbar"); pg.click("#uip-pbar"); pg.keyboard.press("Escape")
-            wait_for_js(pg, "document.querySelector('#pbar').hidden")
-            assert pg.evaluate(f"{ORD}[0].el.querySelector('.tbs .tbg [data-a=fit]').offsetParent!==null"), "off again: the header tools are back"
-        step("the setting off gives today's header back", turn_off)
     r.close()
 except Exception as e:
     steps.append(("run", "FAIL " + str(e)[:300])); r.close()

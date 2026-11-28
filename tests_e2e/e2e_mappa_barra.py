@@ -1,4 +1,4 @@
-"""Controls of the RT x m/z map: they sit in the toolbar of the panel head (same .bt size as the others), nothing floats over the plot, there is no
+"""Controls of the RT x m/z map: they sit in the panel bar (same .bt size as the others), nothing floats over the plot, there is no
 «How it is extracted» button, and zoom, reset, lock (L) and full screen still work."""
 # covers: mzlab/web/azioni.js
 import sys, os; sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -26,16 +26,17 @@ try:
         menu_open = lambda: pg.evaluate("!document.querySelector('#ctx').hidden")
         settle = lambda: (ready(pg), pg.wait_for_timeout(400))
         def place():
-            r = pg.evaluate("""(()=>{const el=document.querySelector('.pnl.map'),hd=el.querySelector('.hd').getBoundingClientRect(),cv=el.querySelector('canvas').getBoundingClientRect(),
-              bs=[...el.querySelectorAll('.mznav button')].filter(b=>!b.hidden),o=[...el.querySelectorAll('.hd .tbg:not(.mznav) .bt')].filter(b=>!b.hidden);
+            bar_loc(pg, ".pnl.map", "fit")
+            r = pg.evaluate("""(()=>{const el=document.querySelector('.pnl.map'),pb=document.querySelector('#pbar').getBoundingClientRect(),cv=el.querySelector('canvas').getBoundingClientRect(),
+              bs=[...document.querySelectorAll('#pbar [data-a]')].filter(b=>['mapzin','mapzout','maphelp'].includes(b.dataset.a)&&!b.hidden),o=document.querySelector('#pbar [data-a=fit]');
               const ov=bs.map(b=>b.getBoundingClientRect()).some(r=>r.left<cv.right&&r.right>cv.left&&r.top<cv.bottom&&r.bottom>cv.top);
-              return {n:bs.length,inHead:bs.every(b=>b.closest('.hd')),overlap:ov,floating:bs.some(b=>b.closest('.mzgrid')),
-                h:bs.map(b=>b.getBoundingClientRect().height),ho:o.map(b=>b.getBoundingClientRect().height),names:bs.map(b=>b.dataset.nav),explain:!!el.querySelector('[data-nav=mapexplain]'),
-                row:bs.every(b=>{const r=b.getBoundingClientRect();return r.top>=hd.top-1&&r.bottom<=hd.bottom+1})}})()""")
-            assert r["n"] >= 3 and r["inHead"] and not r["floating"] and not r["overlap"] and r["row"], r
+              return {n:bs.length,inBar:bs.every(b=>b.closest('#pbar')),overlap:ov,floating:bs.some(b=>b.closest('.mzgrid')),
+                h:bs.map(b=>b.getBoundingClientRect().height),ho:[o.getBoundingClientRect().height],names:bs.map(b=>b.dataset.a),explain:!!el.querySelector('[data-nav=mapexplain]'),
+                row:bs.every(b=>{const r=b.getBoundingClientRect();return r.top>=pb.top-1&&r.bottom<=pb.bottom+1})}})()""")
+            assert r["n"] >= 3 and r["inBar"] and not r["floating"] and not r["overlap"] and r["row"], r
             assert r["names"][:2] == ["mapzin", "mapzout"] and "maplock" not in r["names"] and not r["explain"], r
             assert abs(r["h"][0] - r["ho"][0]) <= 1, r
-        step("controls are in the panel head, none over the plot, no «How it is extracted»", place)
+        step("controls are in the panel bar, none over the plot, no «How it is extracted»", place)
         def works():
             z = lambda: pg.evaluate(f"[{M}.zoom,{M}.zoomY]")
             bar(pg, ".pnl.map", "mapzin"); settle(); zz = z(); assert zz[0] and zz[1], zz

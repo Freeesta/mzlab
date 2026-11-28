@@ -85,7 +85,8 @@ try:
             wait_for_js(pg, "navigator.clipboard.readText().then(t => t.startsWith('RT '))"); t = pg.evaluate("navigator.clipboard.readText()"); assert t.startswith("RT ") and "m/z" in t, t
         step("Copy coordinates", copy)
         def nav_bar():
-            btns = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>[b.dataset.nav,b.getAttribute('aria-label'),b.title])")
+            bar_loc(pg, ".pnl.map", "fit")
+            btns = pg.evaluate("[...document.querySelectorAll('#pbar [data-a=mapzin],#pbar [data-a=mapzout],#pbar [data-a=maphelp]')].filter(b=>!b.hidden).map(b=>[b.dataset.a,b.getAttribute('aria-label'),b.title])")
             assert [b[0] for b in btns] == ["mapzin", "mapzout", "maphelp"], btns
             assert all(b[1] for b in btns), btns
             zoom_in(); bar(pg, ".pnl.map", "fit"); wait_for_js(pg, ZNULL); assert z() == [None, None]
@@ -120,9 +121,9 @@ try:
         def wheels():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("MAPPA.whole(" + M + ")"); x, y = at(.5, .45); pg.mouse.move(x, y)
             pg.keyboard.down("Shift"); pg.mouse.wheel(0, -300); pg.keyboard.up("Shift"); wait_for_js(pg, f"{M}.zoom && {M}.zoomY == null"); a = z(); assert a[0] and a[1] is None, a        # Shift = RT only
-            bar(pg, ".pnl.map", "fit"); x, y = at(.5, .45); pg.mouse.move(x, y)      # through «⋯» the page may have scrolled: aim again
+            bar(pg, ".pnl.map", "fit"); pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .45); pg.mouse.move(x, y)      # the bar does not scroll the page to the map: bring it back and aim again
             pg.keyboard.down("Alt"); pg.mouse.wheel(0, -300); pg.keyboard.up("Alt"); wait_for_js(pg, f"{M}.zoomY && {M}.zoom == null"); a = z(); assert a[1] and a[0] is None, a             # Alt = m/z only
-            bar(pg, ".pnl.map", "fit"); x, y = at(.5, .45); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); wait_for_js(pg, ZSET); a = z(); assert a[0] and a[1], a
+            bar(pg, ".pnl.map", "fit"); pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .45); pg.mouse.move(x, y); ctrl_wheel(pg, 0, -300); wait_for_js(pg, ZSET); a = z(); assert a[0] and a[1], a
             before = z(); pg.mouse.wheel(0, -300); pg.mouse.wheel(120, 0); frames(pg, 8); assert z() == before, ("the wheel alone does not touch the map", before, z())      # it scrolls the page
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); pg.evaluate("new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))"); x, y = at(.5, .45)
             pg.mouse.dblclick(x, y); wait_for_js(pg, ZNULL); assert z() == [None, None]                                                                             # double click = reset
@@ -156,9 +157,10 @@ try:
         step("touch: long press opens the menu", longpress)
         def targets():
             assert pg.evaluate("matchMedia('(pointer:coarse)').matches"), "touch context"
-            sizes = pg.evaluate("[...document.querySelectorAll('.pnl.map .mznav button')].filter(b=>!b.hidden).map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
+            bar_loc(pg, ".pnl.map", "fit")
+            sizes = pg.evaluate("[...document.querySelectorAll('#pbar [data-a=mapzin],#pbar [data-a=mapzout],#pbar [data-a=maphelp]')].filter(b=>!b.hidden).map(b=>{const r=b.getBoundingClientRect();return [r.width,r.height]})")
             assert len(sizes) == 3 and all(w >= 40 and h >= 40 for w, h in sizes), sizes
-        step("touch screen: the buttons of the bar are at least 40 px, like the others of the head", targets)
+        step("touch screen: the buttons of the bar are at least 40 px", targets)
         def palette():
             pg.evaluate(M + ".el.scrollIntoView({block:'center'})"); x, y = at(.5, .5); pg.mouse.move(x, y); pg.wait_for_timeout(300)
             pg.evaluate(M + ".cv.focus()"); pg.keyboard.press("Control+k"); pg.wait_for_timeout(400)      # kept: the point under the pointer is lost when the palette covers the map (mouseleave), so the typing races with it

@@ -111,7 +111,7 @@ const TOUR = (() => {
   const STEPS_CAP2 = [
     {
       id: "zoom",
-      target: () => document.querySelector('.pnl.chrom [data-a="izoom"]')?.closest(".tbg") || document.querySelector('.pnl.chrom [data-a="izoom"]') || document.querySelector(".pnl.chrom .tbg")
+      target: () => document.querySelector('#pbar [data-a="izoom"]')?.closest(".tbg") || document.getElementById("pbar") || document.querySelector(".pnl.chrom .hd")
     },
     {
       id: "keys",
@@ -131,7 +131,7 @@ const TOUR = (() => {
     },
     {
       id: "panel",
-      target: () => document.querySelector(".pnl.chrom .tbs") || document.querySelector(".pnl.chrom .hd")
+      target: () => document.getElementById("pbar") || document.querySelector(".pnl.chrom .hd")
     },
     {
       id: "bar",

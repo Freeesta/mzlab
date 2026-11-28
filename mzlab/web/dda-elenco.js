@@ -33,7 +33,7 @@ function close(p, back = false) {
   if (back) { const l = twins(p); (l.find(a => a.offsetParent) || l[0])?.focus({ preventScroll: true }); }   // the bar twin when the header one is hidden
 }
 /** the button of the list in the header and its twin in the shared bar (only while the bar shows this panel) @param {Bag} p @returns {HTMLElement[]} */
-const twins = p => /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="ddaw"]'), window.PBAR?.on() && E.active === p ? document.querySelector('#pbar [data-a="ddaw"]') : null].filter(Boolean));
+const twins = p => /** @type {HTMLElement[]} */ ([p.el.querySelector('[data-a="ddaw"]'), E.active === p ? document.querySelector('#pbar [data-a="ddaw"]') : null].filter(Boolean));
 /** The list under the button (the run of `panel.ddaw`). @param {Bag} p @param {HTMLButtonElement} b */
 export function open(p, b) {
   const I = II; if (!I) return;

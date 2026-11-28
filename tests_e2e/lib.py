@@ -171,7 +171,6 @@ def _start_prefs(k):
     js = ""
     if k.get("color_scheme") == "dark": js += "if(!localStorage.getItem('mzlab.prefs'))localStorage.setItem('mzlab.prefs',JSON.stringify({v:2,theme:'auto'}));"
     # once per tab: a test that resets the site's data must see the default afterwards, not the seeded choice again
-    if os.environ.get("MZLAB_PBAR") == "1": js += "if(!localStorage.getItem('mzlab.pbar'))localStorage.setItem('mzlab.pbar','1');"   # the whole run with the shared panel bar on
     return ("try{if(window.name.indexOf('|mzseed')<0){window.name+='|mzseed';" + js + "}}catch(e){}") if js else None
 def _new_page(self, *a, **k):
     k.setdefault("locale", "en-US")

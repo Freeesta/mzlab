@@ -4,7 +4,7 @@
 // The shared bar (pbar.js) draws them too (`pb` groups them); `bonly` rows exist only there.
 (() => {
   const T = (/** @type {string} */ k) => I18N.t(k), G = ["dd", "xb", "v", "l", "s", "i", "t", "x", "tb", "o", "xp", "tp"], LENS = ["chrom", "xic", "mrm"], ALL = [...LENS, "spec", "map"], MS = (/** @type {Ctx} */ c) => ms2Chrom(c.p);
-  /** map zoom and gestures (the header keeps .mznav) @param {string} id */
+  /** map zoom and gestures (the hidden header twin is .mznav) @param {string} id */
   const nav = id => ({ bonly: 1, run: (/** @type {Ctx} */ c) => MAPPA.runCmd(id, MAPPA.ad2(c.p, null)) });
   const navIc = (/** @type {string} */ id) => () => MAPPA.SV(MAPPA.ICO[/** @type {any} */ (AZIONI.get(id)).ic]);
   const ic = (/** @type {string} */ w, /** @type {string} */ d) => `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="${w}" aria-hidden="true" focusable="false">${d}</svg>`;
@@ -19,7 +19,7 @@
   /** @type {[string, string[], string, string, string, string | ((c: Ctx) => string), string, Opt][]} */
   const ROWS = [
     ["ddaw", ["spec"], "dd", "dda.win.wait", "", "", "bt ddaw", { hid: 1, gh: 1, at: ' aria-haspopup="listbox" aria-expanded="false"', available: c => !!c.p._dws, run: c => W("DDAELENCO").open(c.p, c.b) }],
-    ["ms2tri", ["chrom", "xic"], "dd", "ctl.ms2tri.title", "ctl.ms2tri", () => T("dda.tri.btn"), "bt tgl hdkeep", { hid: 1, gh: 1, toggle: 1, at: B, available: c => !!c.p._tri, checked: c => !!c.p.ms2tri, run: c => W("DDAELENCO").flip(c.p) }],
+    ["ms2tri", ["chrom", "xic"], "dd", "ctl.ms2tri.title", "ctl.ms2tri", () => T("dda.tri.btn"), "bt tgl", { hid: 1, gh: 1, toggle: 1, at: B, available: c => !!c.p._tri, checked: c => !!c.p.ms2tri, run: c => W("DDAELENCO").flip(c.p) }],
     ["xicb", ["spec"], "xb", "xicbtn.title", "xicbtn.aria", "XIC", "bt xbb", { toggle: 1, run: c => XICBTN.press(c.p, shift(c)) }],
     ["xicl", ["spec"], "xb", "xicbtn.ion.title", "", "", "bt xbl", { at: " hidden" + P, run: c => XICBTN.openPop(c.p) }],
     ["xwc", ["spec"], "xb", "panel.wl.title", "", "XWC", "bt xbb", { visible: uv, at: B, run: xw }],

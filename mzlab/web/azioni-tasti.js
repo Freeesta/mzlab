@@ -63,7 +63,7 @@
     const riga = (/** @type {any} */ a) => h`<li><span class="sc-i" aria-hidden="true">${raw(AZIONI.iconOf(a, { view: "*" }))}</span><span class="sc-n" title="${a.tip ? a.tip({}) : ""}">${T(a.shortcut.label)}</span><kbd>${AZIONI.keyText(a.shortcut)}</kbd></li>`;
     function list() {
       const p = typeof E !== "undefined" && E.active && E.active.el ? E.active : null, view = p ? p.type : "";
-      const all = AZIONI.actions.filter((/** @type {any} */ a) => a.shortcut && (!a.listed || a.listed()));   // `listed`: a key of a lazy module that is on only in some settings (pbar.focus)
+      const all = AZIONI.actions.filter((/** @type {any} */ a) => a.shortcut);
       // chart keys once per label and key; with no chart in focus under their own heading
       const k = (/** @type {any} */ a) => a.shortcut.label + AZIONI.keyText(a.shortcut);
       const c = all.filter(a => a.shortcut.where === "chart" && (!view || a.views.includes(view) || a.views.includes("*"))), g = c.filter((a, i) => c.findIndex(b => k(b) === k(a)) === i);
