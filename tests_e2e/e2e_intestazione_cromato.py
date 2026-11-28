@@ -38,6 +38,7 @@ try:
             b = bar_loc(pg, X, "log"); assert pg.locator("#pbar [data-a=log]").count() == 1 and b.get_attribute("aria-label") == "Log scale" and b.get_attribute("title") == "Logarithmic scale" and b.get_attribute("aria-pressed") == "false"
             assert pg.locator(f'{X} [data-o=log]').count() == 0, "no checkbox any more"
             b.click(); wait_for_js(pg, f"{XP}.log === true")
+            wait_for_js(pg, "document.querySelector('#pbar [data-a=log]').getAttribute('aria-pressed') === 'true'")      # the bar mirrors the state a frame later
             assert b.get_attribute("aria-pressed") == "true" and pg.evaluate("E.panels.find(p=>p.type==='xic').log") is True
             assert pg.get_attribute(f'{C} [data-a=log]', "aria-pressed") == "false"
             b.click(); wait_for_js(pg, f"{XP}.log === false"); assert pg.evaluate("E.panels.find(p=>p.type==='xic').log") is False
@@ -86,7 +87,7 @@ try:
         step("Subtract file: default = session reference, choosing updates the chip", pick)
         def tlink():
             b = bar_loc(pg, C, "tlink"); assert b.get_attribute("aria-pressed") == "true" and "Link zoom and cursor" in b.get_attribute("aria-label")
-            b.click(); assert b.get_attribute("aria-pressed") == "false" and "on" not in b.get_attribute("class").split(); b.click()
+            b.click(); wait_for_js(pg, "document.querySelector('#pbar [data-a=tlink]').getAttribute('aria-pressed') === 'false'"); assert "on" not in b.get_attribute("class").split(); b.click()
         step("chromatogram link button: own icon, label and aria-pressed", tlink)
         def follow():
             pg.evaluate("(()=>{const c=E.panels.find(p=>p.type==='chrom');newSpec(c,5,5.2,E.cur)})()"); ready(pg); pg.wait_for_selector(".pnl.spec .ppair.fol:has-text('\u2190')")
