@@ -68,6 +68,13 @@ pub fn composition(name: &str) -> Option<(u8, &'static str, &'static str, i8)> {
         .map(|a| (a.k, a.add, a.sub, a.z))
 }
 
+/// The terms of a catalogue adduct for the neutral mass of an ion: molecules `k` of M, the signed mass the adduct adds (electrons included) and the
+/// charge, so that m/z = (k * M + shift) / |z|. `None` for a name the catalogue does not hold.
+pub fn ion_terms(name: &str) -> Option<(u8, f64, i8)> {
+    let a = CATALOG.iter().find(|a| a.name == name)?;
+    Some((a.k, shift(a).ok()?, a.z))
+}
+
 /// Pairs worth knowing by heart (same compound, same RT): label, adduct, reference adduct.
 const PAIRS: [(&str, &str, &str); 7] = [
     ("Na − H", "[M+Na]+", "[M+H]+"),

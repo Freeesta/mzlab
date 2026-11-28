@@ -25,7 +25,6 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | ISOTOPES-SPILL-RAW | `docs/coda/prompt/ISOTOPES-SPILL-RAW.md` | - | spill-over verdict in `raw isotopes` from the Q1 scan itself: the +1 channel against M inside the peak, with the shape correlation, for a file with no feature table |
 | TP-GENERATE-M2-OBSERVED | `docs/coda/prompt/TP-GENERATE-M2-OBSERVED.md` | - | feed the observed parent M+2/M of `raw isotopes` to the `m2_ref` of the `tp.generate` formula filter, logged, instead of a typed number |
 | TIMESERIES | `docs/coda/prompt/TIMESERIES.md` | - | fixed-window areas, UV injection check, first-order k; reuse the AU-8 recipe and `quant curve` |
-| POLARITY-PAIR | `docs/coda/prompt/POLARITY-PAIR.md` | - | pair [M+H]+ with [M-H]- across the two polarity tables |
 | FLOW-TABLE-DISK | `docs/coda/prompt/FLOW-TABLE-DISK.md` | - | the facts (rows, files, polarity) of a `.mzfeat` opened from disk in the Flow list, from a head slice and `table_entry` |
 | FLOW-TABLE-FINAL | `docs/coda/prompt/FLOW-TABLE-FINAL.md` | - | mzflow 2b: mark one feature table of the Flow list as the final one; the choice is kept and logged |
 | PARENT-CARD | `docs/coda/prompt/PARENT-CARD.md` | - | mzflow 4: the parent card as a Flow input, `parent/1`, `mol parent` |
@@ -89,3 +88,5 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | WIFF-OPEN-INSTANT | `docs/coda/prompt/WIFF-OPEN-INSTANT.md` | - | after the index ahead, Open selected still opens each index in the engine (`lrOpen`, `native_attach`, about 240 ms for 4 samples): open it while the dialog is open so Open is instant |
 | PBAR-REMOVE-OLD | `docs/coda/prompt/PBAR-REMOVE-OLD.md` | - | panel toolbar slice: default `qqq.pbar` on and delete the per-panel tool rows and their overflow code |
 | TIP-SINGLE-FILE-LEGEND | `docs/coda/prompt/TIP-SINGLE-FILE-LEGEND.md` | needs owner decision: whether a single-file session drops the file name from the legends and other readouts too | the chromatogram hover box drops the file name with one file loaded; the legend chips, the XIC lens and the peak label box still repeat it |
+| POLARITY-PAIR-VIEW | `docs/coda/prompt/POLARITY-PAIR-VIEW.md` | - | the result of `features.pair` in the Flow page: a table of the pairs with the mass error, RT difference and the unmatched rows listed, from `pair/1` |
+| POLARITY-PAIR-RTMAP | `docs/coda/prompt/POLARITY-PAIR-RTMAP.md` | - | optional RT map between the two polarity methods in `features.pair` (two gradients), logged like `rt_warp` of `features.union` |

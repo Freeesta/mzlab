@@ -1,10 +1,10 @@
 # Command line (`crates/mzlab-cli`)
-Part of the Rust engine (`rust.md`). Native binary `mzlab-cli` (never in the site; `mzlab` is the app's binary). Plans and `prov/1`: `rust-flow.md`; `step/1` descriptors: `rust-step.md`; canvas: `flow-graphics.md`.
+Rust engine (`rust.md`). Native binary `mzlab-cli` (never in the site; `mzlab` is the app's binary). Plans and `prov/1`: `rust-flow.md`; `step/1` descriptors: `rust-step.md`; canvas: `flow-graphics.md`.
 
 ## Commands
 Generated list (`python3 tools/cli_doc.py`):
 <!--cli-->
-`features`, `table compare|row|slots`, `quant targets|union`, `estimate`, `flow run|check|steps|tables|defaults|report|record|verify|command`, `file list|info|index|inventory|verify|items|method|channels|pair|validate|pack|unpack|check-pack|convert`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`
+`features`, `table compare|row|slots|pair`, `quant targets|union`, `estimate`, `flow run|check|steps|tables|defaults|report|record|verify|command`, `file list|info|index|inventory|verify|items|method|channels|pair|validate|pack|unpack|check-pack|convert`, `raw info|cache|xic|scan`, `sample vars|group|table|import|pair|list|select`, `sample design propose|validate|canonical`, `trace chrom|xic|background`, `dad subtract|spectrum|trace|ms-at|delay|peaks`
 `spectrum get|compare|list|dda-window`, `peak auto|auto-lr|noise|edges|area|window|split|table`, `msn graph|complete|compare|figure`, `msn lib add|build|export|search`, `msn rules`, `msn rules sum`, `raw isotopes`, `ion mz|pattern|match|elements`, `mol label|anal|check|cip|measure|hilite|sel|link|draw|export|open|cut|mech|find|search`, `db normative build|pack|listings|import-official`, `db insilico pack`, `db ref-list`, `llm tools|inspect|params|context|replay|eval`
 `completions bash|zsh|fish`, `commands`, `schema`
 <!--/cli-->

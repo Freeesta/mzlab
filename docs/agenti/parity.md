@@ -20,6 +20,7 @@ Rule (`CLAUDE.md`): every function exists in the site (`.wasm` + OPFS) and in th
 | Copyable command, short line (`lr_flow_command`, `flow/line`) | `.wasm` `rotte` | `rpc_lr.rs`, `flow/line` | `flow run` | `parity_flow_command.rs` |
 | Step defaults, `step-params/1` (`lr_flow_defaults`) | `.wasm` `rotte` | `rpc_lr.rs` | `flow defaults` | `parity_flow_defaults.rs` |
 | Series union, `union/1` (`lr_union`) | `.wasm` `rotte` (`union_tables`) | `rpc_lr.rs` | `quant union` | `parity_union.rs` |
+| Flow step `features.pair@1`, `table pair` (`pair/1`) | `.wasm` `flowtab` (`flow_pair`) | `flow run` | `flow run`, `table pair` | `test_flowtab_pair_wasm.py` |
 | Flow step `features.union@1` | `.wasm` `flowtab` (`flow_series_csv`) + `rotte` (`union_tables`) | `flow run` | `flow run` | `test_flowtab_union_wasm.py` |
 | Estimated parameters, `estimate/1` (`lr_estimate`; ships: the `.wasm` export and the app op, no page caller, the site has no command line; its per-file part is `features.estimate` of Flow) | `.wasm` `rotte` (`estimate_set`) | `rpc_lr.rs` | `estimate` | `parity_estimate.rs` (the `.wasm` leg runs in `test_parita_rotte_app.py`) |
 | mzML validation (`api/mzml_valida`) | `valida` module | `lr_valida` | `validate` | `test_valida_wasm.py`, `crates/mzlab-desktop/tests/rpc.rs` |

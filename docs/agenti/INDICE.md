@@ -150,6 +150,7 @@ One row per area file, in file-name order (max 300 characters): if you touch the
 | spectrum peak table to copy (TSV), y axis in % up to 100, XIC button only on MS¹ | `docs/agenti/peak-table.md` |
 | periodic table dialog and `elements/1` (`crates/mzlab-core/src/periodic.rs`, `tavola-periodica.js`, `mzlab-cli ion elements`) | `docs/agenti/periodic-table.md` |
 | built-in list of pesticides and environmental contaminants (`mzlab/chem/pesticides.csv`, `pesticides_meta.json`, `tools/download_pesticides.py`, second list of `contaminanti.json`) | `docs/agenti/pesticides.md` |
+| `table pair` and step `features.pair`: [M+H]+ with [M-H]- features of two polarity methods paired by neutral mass and RT (`pair/1`, adduct lists, `polarity_pair/`) | `docs/agenti/polarity-pair.md` |
 | substitution position in TP isomers (MS2-compatible classes, `chem/positions.rs`, `posiz/1`) | `docs/agenti/positions.md` |
 | single loading bar for every format (`progresso.js`, `PROGRESSO`, `mzlab-index` event, phase weights, monotonicity tests) | `docs/agenti/progress.md` |
 | `qc.mass_accuracy` (mass accuracy, table correction, calibration check from the TIC right-click `masscal.js`: `crates/mzlab-feat/src/massacc/`, `flow_massacc.rs`, `flow-web-qc.js`, `flow-views-qc.js`) | `docs/agenti/qc-mass.md` |

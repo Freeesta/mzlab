@@ -159,3 +159,20 @@ impl Companioned {
 pub fn flow_series_csv(table: &[u8]) -> std::result::Result<String, JsValue> {
     mzlab_feat::union::series_csv(table).map_err(crate::js_err)
 }
+
+/// The `pair/1` text of a positive and a negative table (the bytes of two `.mzfeat`, named as the page names them): the pairs by neutral mass and RT
+/// (`mzlab_feat::pair::pair_text`, the function `flow run` calls); the CSV of the pairs is in its `csv` member. `params_json` is the step's parameters
+/// merged with its defaults. Errors are JSON `{"error_key","params"}` texts (`err.pair.param`, `err.pair.table`, `err.pair.empty`).
+#[wasm_bindgen]
+pub fn flow_pair(
+    params_json: &str,
+    pos_name: &str,
+    pos: &[u8],
+    neg_name: &str,
+    neg: &[u8],
+) -> std::result::Result<String, JsValue> {
+    let params = json_params(params_json).map_err(crate::js_err)?;
+    let m = mzlab_feat::pair::pair_text(&params, (pos_name, pos), (neg_name, neg))
+        .map_err(crate::js_err)?;
+    Ok(m.doc)
+}

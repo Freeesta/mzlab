@@ -95,6 +95,7 @@ pub mod nature;
 pub mod nominal_hint;
 pub mod norm;
 mod histbin;
+pub mod pair;
 #[cfg(feature = "chem")]
 pub mod parent;
 pub mod parent_formula;

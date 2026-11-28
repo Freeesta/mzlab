@@ -31,7 +31,7 @@ fn bad(table: &str, line: usize, detail: &str) -> Error {
 }
 
 /// The fields of a line; a field in double quotes may hold the delimiter, `""` is a quote.
-fn split(line: &str, d: char) -> Vec<String> {
+pub(crate) fn split(line: &str, d: char) -> Vec<String> {
     let (mut out, mut cur, mut quoted) = (Vec::new(), String::new(), false);
     let mut it = line.chars().peekable();
     while let Some(c) = it.next() {
@@ -50,7 +50,7 @@ fn split(line: &str, d: char) -> Vec<String> {
 }
 
 /// The delimiter that cuts the header into most fields (`,` on a tie).
-fn delimiter(header: &str) -> char {
+pub(crate) fn delimiter(header: &str) -> char {
     [',', ';', '\t']
         .into_iter()
         .max_by_key(|d| (split(header, *d).len(), *d == ','))
@@ -66,7 +66,7 @@ fn polarity(t: &str) -> Option<Option<i8>> {
     }
 }
 
-fn number(t: &str) -> Option<f64> {
+pub(crate) fn number(t: &str) -> Option<f64> {
     t.trim().parse::<f64>().ok().filter(|v| v.is_finite())
 }
 

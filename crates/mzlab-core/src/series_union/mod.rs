@@ -5,7 +5,7 @@
 
 mod merge;
 mod params;
-mod read;
+pub(crate) mod read;
 mod report;
 mod warp;
 
