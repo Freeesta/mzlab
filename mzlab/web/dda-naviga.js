@@ -25,14 +25,20 @@ function group(I, p) {
   };
   const n = document.createElement("span"); n.className = "ddann"; n.setAttribute("aria-hidden", "true");    // the count is in the names of the buttons
   g.append(btn(-1), n, btn(1));
-  const xb = p.el.querySelector('[data-a="xicb"]');
-  if (xb) xb.before(g); else p.el.querySelector(".hd")?.append(g);
+  place(p, g);
   return g;
+}
+/** Before «XIC» in its group; with the shared panel bar on that group is hidden (the bar draws the XIC), so ‹ i/N › sits in the header before the tool groups, where it stays visible. @param {Bag} p @param {HTMLElement} g */
+function place(p, g) {
+  const bar = !!(window.PBAR && PBAR.on()), tbs = p.el.querySelector(".hd > .tbs"), xb = p.el.querySelector('[data-a="xicb"]');
+  if (bar && tbs) { if (g.parentElement !== tbs.parentElement) tbs.before(g); }
+  else if (xb) { if (g.nextElementSibling !== xb) xb.before(g); }
+  else if (!g.isConnected) p.el.querySelector(".hd")?.append(g);
 }
 /** The state of ‹ i/N › for what the panel shows (nothing, an average or one MS2). @param {Bag} I @param {Bag} p */
 export function sync(I, p) {
   if (!p.el) return;
-  const s = same(I, p), g = group(I, p), n = /** @type {HTMLElement} */ (g.querySelector(".ddann"));
+  const s = same(I, p), g = group(I, p); place(p, g); const n = /** @type {HTMLElement} */ (g.querySelector(".ddann"));
   const i = s ? s.at + 1 : 0, N = s ? s.same.length : 0, txt = s ? `${i}/${N}` : "–";
   if (n.textContent !== txt) n.textContent = txt;
   for (const b of /** @type {NodeListOf<HTMLButtonElement>} */ (g.querySelectorAll("button"))) {

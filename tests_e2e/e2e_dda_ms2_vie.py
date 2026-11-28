@@ -17,6 +17,12 @@ def step(name, fn):
 D = synth("ddavie")
 r = Run(port=8977, wd="/tmp/wdddavie")
 TRIO = "(()=>{const s1=E.panels.find(p=>p.type==='spec'&&p.duo!=null),c=s1&&E.panels.find(p=>p.id===s1.link),s2=s1&&E.panels.find(p=>p.id===s1.duo);return {c,s1,s2}})()"
+def tw(pg, who, id):
+    """the button `id` of the trio panel `who` (s1, c, s2): the twin in #pbar when the shared bar is on (MZLAB_PBAR=1), else the header one"""
+    if not pg.evaluate("!!document.querySelector('#pbar') && !document.querySelector('#pbar').hidden"): return pg.locator(f"[data-a='{id}']").first
+    pg.evaluate("(()=>{const t=" + TRIO + f";setActive(t.{who})}})()")
+    wait_for_js(pg, "(()=>{const t=" + TRIO + f";return E.active===t.{who}&&!!document.querySelector('#pbar [data-a={id}]:not([hidden])')}})()")
+    return pg.locator(f"#pbar [data-a='{id}']:not([hidden])").first
 D0 = "(()=>{const t=" + TRIO + ";const a=t.s1._a;return a&&a.data&&a.data[0]&&a.data[0].d})()"
 try:
     with sync_playwright() as p:
@@ -62,19 +68,20 @@ try:
         def button():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);const j=D.sid.findIndex((_,i)=>D.parent[i]!=null&&(D.byParent.get(D.parent[i])||[]).length>1);await DDA.selectMs2(t.s2,D.sid[j]);window._kn=D.byParent.get(D.parent[j]).length;t.s2.sid=null;t.s2.ion=null;t.s2.avg=null;draw(t.s2)})()"); ready(pg)
             wait_for_js(pg, "(()=>{const v=" + BTN + ";return v&&v.w&&v.txt===I18N.t('dda.win.btn',{n:_kn})&&v.dis==='false'})()")
-            pg.locator("[data-a='ddaw']").first.focus(); pg.keyboard.press("Enter")
+            tw(pg, "s1", "ddaw").focus(); pg.keyboard.press("Enter")
             wait_for_js(pg, "(()=>{const l=document.querySelector('.dw-pop[role=listbox]');return l&&document.activeElement===l&&l.querySelectorAll('[role=option]').length>0})()")
             pg.keyboard.press("End"); pg.keyboard.press("Enter"); ready(pg)
             v = pg.evaluate("(()=>{const t=" + TRIO + ";const g=t.s1._dw.groups;return {sid:t.s2.sid,want:g[g.length-1].sid,pop:!!document.querySelector('.dw-pop'),focus:document.activeElement&&document.activeElement.dataset.a}})()"); print(v)
             assert v["sid"] in v["want"] and not v["pop"] and v["focus"] == "ddaw", v
-            pg.evaluate("(()=>{const t=" + TRIO + ";const st=t.s1.el.style;for(const k of ['width','min-width','max-width'])st.setProperty(k,'300px','important');fitHd(t.s1);return t.s1.el.offsetWidth})()")     # a tight header: the button goes into «⋯» and still opens the list
-            assert pg.evaluate("(()=>{const t=" + TRIO + ";return !!t.s1.el.querySelector('.hmore [data-a=\"ddaw\"]')&&!!t.s1.el.querySelector('.hd [data-a=\"xicb\"]')})()")
-            pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.el.querySelector('[data-a=more]').click()})()")
-            pg.locator(".hmore [data-a='ddaw']").first.click()
-            wait_for_js(pg, "!!document.querySelector('.dw-pop[role=listbox]')"); pg.keyboard.press("Escape")
-            wait_for_js(pg, "!document.querySelector('.dw-pop')")
-            pg.evaluate("(()=>{const t=" + TRIO + ";const st=t.s1.el.style;for(const k of ['width','min-width','max-width'])st.removeProperty(k);apply(t.s1);fitHd(t.s1)})()")
-            assert pg.evaluate("(()=>{const t=" + TRIO + ";return !t.s1.el.querySelector('.hmore [data-a=\"ddaw\"]')})()")
+            if not pg.evaluate("!!document.querySelector('#pbar') && !document.querySelector('#pbar').hidden"):     # with the shared bar the header tools are hidden: no «⋯» to test
+                pg.evaluate("(()=>{const t=" + TRIO + ";const st=t.s1.el.style;for(const k of ['width','min-width','max-width'])st.setProperty(k,'300px','important');fitHd(t.s1);return t.s1.el.offsetWidth})()")     # a tight header: the button goes into «⋯» and still opens the list
+                assert pg.evaluate("(()=>{const t=" + TRIO + ";return !!t.s1.el.querySelector('.hmore [data-a=\"ddaw\"]')&&!!t.s1.el.querySelector('.hd [data-a=\"xicb\"]')})()")
+                pg.evaluate("(()=>{const t=" + TRIO + ";t.s1.el.querySelector('[data-a=more]').click()})()")
+                pg.locator(".hmore [data-a='ddaw']").first.click()
+                wait_for_js(pg, "!!document.querySelector('.dw-pop[role=listbox]')"); pg.keyboard.press("Escape")
+                wait_for_js(pg, "!document.querySelector('.dw-pop')")
+                pg.evaluate("(()=>{const t=" + TRIO + ";const st=t.s1.el.style;for(const k of ['width','min-width','max-width'])st.removeProperty(k);apply(t.s1);fitHd(t.s1)})()")
+                assert pg.evaluate("(()=>{const t=" + TRIO + ";return !t.s1.el.querySelector('.hmore [data-a=\"ddaw\"]')})()")
             a, b = xy(8.0), xy(8.4)
             pg.mouse.move(a["x"], a["y"]); pg.mouse.down(); pg.mouse.move(b["x"], b["y"], steps=5); pg.mouse.up(); ready(pg)
             wait_for_js(pg, "(()=>{const t=" + TRIO + ";const d=" + D0 + ";return d&&d.scans>1&&t.s1._dw&&t.s1._a.flags.length>0})()")
@@ -87,6 +94,25 @@ try:
             c = xy(8.2); pg.mouse.click(c["x"], c["y"]); ready(pg)
             wait_for_js(pg, "(()=>{const d=" + D0 + ";return d&&d.scans===1})()")
         step("«N MS²» button: the count of the engine, the list with the keyboard, also from «⋯»; flags on an averaged Full Scan, a click keeps the average", button)
+        def bar_list():
+            on = pg.evaluate("!!document.querySelector('#pbar') && !document.querySelector('#pbar').hidden")
+            if not on: pg.evaluate("(async () => { uipWrite(NOMI.KEY('pbar'), '1'); await loadScript('pbar.js'); PBAR.set(true); })()")   # the shared panel bar, as the setting turns it on
+            pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k);const j=D.sid.findIndex((_,i)=>D.parent[i]!=null&&(D.byParent.get(D.parent[i])||[]).length>1);await DDA.selectMs2(t.s2,D.sid[j]);window._kids=D.byParent.get(D.parent[j]).map(i=>D.tgt[i]??D.prec[i])})()"); ready(pg)
+            wait_for_js(pg, "(()=>{const t=" + TRIO + ";return t.s1._dw&&t.s1._dw.n>0&&t.s1._dw.n===window._kn})()", 30000)
+            pg.evaluate("(()=>{const t=" + TRIO + ";setActive(t.s1)})()")
+            B = "#pbar [data-a=ddaw]:not([hidden])"
+            wait_for_js(pg, f"(()=>{{const t={TRIO};return E.active===t.s1&&!!document.querySelector('{B}')}})()", 30000)
+            assert pg.evaluate(f"document.querySelector('{B}').closest('.tbg').dataset.pg") == "x", "the DDA list is in Extract"
+            assert pg.evaluate("(()=>{const t=" + TRIO + ";return t.s1.el.querySelector('[data-a=ddaw]').offsetParent})()") is None, "the header twin is not shown with the bar on"
+            pg.locator(B).click()
+            wait_for_js(pg, "(()=>{const l=document.querySelector('.dw-pop[role=listbox]');return l&&document.activeElement===l})()")
+            got = pg.evaluate("(()=>{const t=" + TRIO + ";const q=t.s1.el.getBoundingClientRect(),o=t.s1.el.querySelector('.dw-pop').getBoundingClientRect(),h=t.s1.el.querySelector('.hd').getBoundingClientRect();return {top:o.top-h.bottom,left:o.left-q.left,right:q.right-o.right,bar:document.querySelector('#pbar [data-a=ddaw]').getAttribute('aria-expanded'),hd:t.s1.el.querySelector('[data-a=ddaw]').getAttribute('aria-expanded')}})()")
+            assert got["top"] >= 0 and got["left"] >= 0 and got["right"] >= 0 and got["bar"] == "true" and got["hd"] == "true", got
+            pg.keyboard.press("Escape")
+            wait_for_js(pg, f"!document.querySelector('.dw-pop') && document.activeElement===document.querySelector('{B}')")
+            assert pg.evaluate("[...document.querySelectorAll('[data-a=ddaw]')].every(b=>b.getAttribute('aria-expanded')==='false')")
+            if not on: pg.evaluate("uipWrite(NOMI.KEY('pbar'), '0'); PBAR.set(false)")
+        step("shared panel bar on: «N MS²» is in Extract, the list opens under the panel header, Esc returns to the bar button, aria-expanded on both twins", bar_list)
         NAV = "(()=>{const t=" + TRIO + ";const g=t.s2.el.querySelector('.ddanav');return g&&{n:g.querySelector('.ddann').textContent,prev:g.querySelector('[data-a=\"ddaprev\"]').getAttribute('aria-disabled'),sid:t.s2.sid}})()"
         def nav():
             pg.evaluate("(async()=>{const t=" + TRIO + ";const D=await DDA.get(t.s1.k),f=E.files[t.s1.k];let l=[];for(let i=0;i<D.sid.length;i++){if(D.prec[i]==null)continue;const tl=DDA._in.tolOf(f,D.prec[i]),q=[];for(let j=0;j<D.sid.length;j++)if(D.prec[j]!=null&&Math.abs(D.prec[j]-D.prec[i])<=tl)q.push(j);if(q.length>l.length)l=q}window._nv=l.map(i=>D.sid[i]);window._nx=D.sid[l[0]+1];await DDA.selectMs2(t.s2,D.sid[l[0]],{zoom:false})})()"); ready(pg)
@@ -126,12 +152,13 @@ try:
             v = pg.evaluate("(()=>{const q=document.querySelector('#qnote');return q&&!q.hidden?q.textContent:''})()"); print(v)
             assert v.startswith(pg.evaluate("I18N.t('dda.peak.near',{d:'X'}).split('X')[0]")), v
             pg.evaluate("(()=>{const t=" + TRIO + ";t.s2.ion=null;t.c.el.scrollIntoView({block:'center'})})()")
-            T = "(()=>{const t=" + TRIO + ";const b=t.c.el.querySelector('[data-a=\"ms2tri\"]');return b&&{p:b.getAttribute('aria-pressed'),n:(t.c._a.tri||[]).length,w:b.getBoundingClientRect().width,h:b.getBoundingClientRect().height}})()"
+            T = "(()=>{const t=" + TRIO + ";const b=document.querySelector('#pbar:not([hidden]) [data-a=\"ms2tri\"]')||t.c.el.querySelector('[data-a=\"ms2tri\"]');return b&&{p:b.getAttribute('aria-pressed'),n:(t.c._a.tri||[]).length,w:b.getBoundingClientRect().width,h:b.getBoundingClientRect().height}})()"
+            tw(pg, "c", "ms2tri")     # with the shared bar on, it shows the tools of the panel that has the button
             wait_for_js(pg, "(()=>{const v=" + T + ";return v&&v.p==='false'})()")
-            pg.locator("[data-a='ms2tri']").first.click(); ready(pg)
+            tw(pg, "c", "ms2tri").click(); ready(pg)
             wait_for_js(pg, "(()=>{const v=" + T + ";return v&&v.p==='true'&&v.n>0})()")
             v = pg.evaluate(T); print(v); assert v["w"] >= 24 and v["h"] >= 24, v
-            pg.locator("[data-a='ms2tri']").first.focus(); pg.keyboard.press("Enter"); ready(pg)
+            tw(pg, "c", "ms2tri").focus(); pg.keyboard.press("Enter"); ready(pg)
             wait_for_js(pg, "(()=>{const v=" + T + ";return v&&v.p==='false'&&v.n===0})()")
         step("a click on a peak: its MS2 (own scan, else the closest in time with a note); 24 px flag boxes; «▲ MS²» on the chromatogram", peak)
         def other_file():
