@@ -41,7 +41,7 @@ fn dir(tag: &str) -> PathBuf {
     d
 }
 
-fn go(d: &PathBuf, extra: &[&str]) -> crate::Outcome {
+fn go(d: &std::path::Path, extra: &[&str]) -> crate::Outcome {
     let mut a: Vec<String> = vec![
         "table".into(),
         "pair".into(),
