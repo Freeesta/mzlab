@@ -13,7 +13,7 @@
  * @typedef {{ key?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, where: "chart" | "view", label?: string }} Shortcut
  *   key = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; where = "chart": only with the focus on a chart, "view": anywhere in the view; label = i18n key of the short label
  * @typedef {{ name: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, info?: boolean, icon?: string, run: () => any }} Row
- * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, key?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} MenuEntry
+ * @typedef {{ id: string, scope?: string, label: string, aria: string, tip?: string, icon?: string, key?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} MenuEntry
  */
 // an entry not available now (`off`, set by AZIONI.forContext) is not shown at all; a separator left first, last or doubled by that goes too.
 // A menu never has more than MAX_ROWS rows at the top level (study §3.7): the tail (the panel block comes last, so it spills first) goes into ONE submenu «More panel actions».
@@ -37,7 +37,8 @@ const cleanMenu = items => {
   }
   out = trimSeps(out);
   const rows = out.filter(it => it !== "-").length;
-  if (rows > MAX_ROWS) {
+  // only a menu built from the registry (its entries carry a `scope`) is capped: the menu of the drawing has its own rows
+  if (rows > MAX_ROWS && out.some(it => it !== "-" && (it.scope || it.fila?.[0].scope))) {
     // from the end: only a plain entry can move (an entry that already has a submenu, a grey row or the readout row stays)
     const move = /** @type {Set<any>} */ (new Set()), need = rows - (MAX_ROWS - 1);
     for (let i = out.length - 1; i >= 0 && move.size < need; i--) { const it = out[i]; if (it !== "-" && !it.sub && !it.dim && (it.fn || it.fila)) move.add(it); }
@@ -101,14 +102,14 @@ const AZIONI = (() => {
         const ok = ready(a, c), rs = a.rows(c);
         if (rs.length && last && sec !== last) items.push("-");
         if (rs.length) last = sec;
-        rs.forEach(r => items.push({ id: a.id, label: r.name, aria: r.aria || r.name, tip: r.tip, icon: r.icon || iconOf(a, c), key: keyOf(a), check: r.check ?? null, dim: !ok || !!r.dim, off: !ok || (!!r.dim && !r.info), fn: r.run }));
+        rs.forEach(r => items.push({ id: a.id, scope: a.scope, label: r.name, aria: r.aria || r.name, tip: r.tip, icon: r.icon || iconOf(a, c), key: keyOf(a), check: r.check ?? null, dim: !ok || !!r.dim, off: !ok || (!!r.dim && !r.info), fn: r.run }));
         continue;
       }
       if (last && sec !== last) items.push("-");
       last = sec;
       const name = a.name ? a.name(c) : a.id;
-      if (a.submenu) { items.push({ id: a.id, label: name, aria: name, icon: iconOf(a, c), check: null, dim: !ready(a, c), off: !ready(a, c), fn: () => {}, sub: () => a.submenu(c) }); continue; }
-      items.push({ id: a.id, label: a.menuLabel ? a.menuLabel(c) : name, aria: a.aria ? a.aria(c) : name, tip: a.tip && a.tip(c), icon: iconOf(a, c), key: keyOf(a),
+      if (a.submenu) { items.push({ id: a.id, scope: a.scope, label: name, aria: name, icon: iconOf(a, c), check: null, dim: !ready(a, c), off: !ready(a, c), fn: () => {}, sub: () => a.submenu(c) }); continue; }
+      items.push({ id: a.id, scope: a.scope, label: a.menuLabel ? a.menuLabel(c) : name, aria: a.aria ? a.aria(c) : name, tip: a.tip && a.tip(c), icon: iconOf(a, c), key: keyOf(a),
         check: a.checked ? a.checked(c) : null, dim: !ready(a, c), off: !ready(a, c), fn: () => run(a.id, c), fila: a.fila, soloIcona: !!a.fila });
     }
     // consecutive entries of the same `fila` share one row of the menu

@@ -88,6 +88,8 @@ def test_menu_never_has_more_than_12_rows_the_tail_goes_in_one_submenu():
     assert r["sub"][0] == ["q3", None, None] and len(r["sub"]) == 6
     assert r["log"] == ["q4"], "a row of the submenu runs its action"
     assert r["small"] == 3, "a short menu is left alone"
+    r = run("""const x=[];for(let i=0;i<15;i++)x.push({id:'d'+i,label:'d'+i,fn:()=>0});console.log(AZIONI.clean(x).length)""")
+    assert r == 15, "a menu that does not come from the registry (the drawing) is never capped"
 
 
 def test_spectrum_actions_have_texts():
