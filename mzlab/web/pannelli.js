@@ -342,7 +342,7 @@ function addPanel(type, o, after) {
   };
   hdMoreInit(p);
   ARRANGE.grip(p);
-  if (p.type === "spec") { if (window.XICBTN) XICBTN.wire(p); if (window.TABPICCHI) TABPICCHI.wire(p); }
+  if (p.type === "spec" && window.XICBTN) XICBTN.wire(p);
   if (el.querySelector('[data-a="iauto"]')) {  // tools (one at a time): zoom (drag an interval), automatic integration (click a peak), manual integration (drag an interval), delete integration (click a peak); the buttons follow p.imode (AZIONI.refresh)
     p._mode = (/** @type {string} */ m) => { p.imode = p.imode === m ? null : m; if (p.imode && p.imode !== "zoom") toOverlaid(p); AZIONI.refresh({ view: p.type, p }); p.cv.style.cursor = p.imode === "zoom" ? "zoom-in" : p.imode === "idel" ? "pointer" : p.imode ? "cell" : "crosshair"; refreshIntf(p); cursorLine(p); };
     if (p.imode) p.cv.style.cursor = p.imode === "idel" ? "pointer" : "cell";  // MRM panels open with the manual integration tool ready

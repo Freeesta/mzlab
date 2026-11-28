@@ -152,10 +152,10 @@ def test_downloads_of_a_view_come_from_the_registry_not_from_the_menu():
 
 # the header buttons of a panel (azioni-barra.js): the ids and the order of every kind are those of the old hand-written header
 HEADER = {
-    "chrom": "izoom fit tlink iauto iall iman idel intf iclr smooth log xic dl more max close",
+    "chrom": "izoom fit tlink iauto iall iman idel intf iclr smooth log xic xwcl dl more max close",
     "xic": "izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
     "mrm": "izoom fit tlink iauto iall iman idel intf iclr smooth log dl more max close",
-    "spec": "xicb xicl fit rul par rel lock dl more max close",
+    "spec": "xicb xicl fit rul par rel lock dl xicp tabp more max close",
     "map": "fit dl more max close",
 }
 # the actions drawn only by the shared panel bar (AZIONI.pbar): the zoom and gestures buttons of the map, whose header keeps its own .mznav group
@@ -165,9 +165,9 @@ BAR_ONLY = {"map": "mapzin mapzout maphelp"}
 def bar(view, extra="", fn="bar"):
     js = ("const fs=require('fs');const AZIONI=new Function(fs.readFileSync(%r,'utf8')+';return AZIONI;')();" % str(WEB / "azioni.js")
           + "global.AZIONI=AZIONI;global.I18N={t:k=>k};global.EH=s=>s;for(const k of ['ZOOM','FIT','SYNC','RULER','UNLOCK','AUTO','MAN','DEL_INT','SMOOTH','DL','FS'])global['IC_'+k]='<svg/>';"
-          + "global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
+          + "global.window=global;global.XICBTN={lens:{ok:p=>!p.nolens}};global.UIP={xicLens:true};global.ms2Chrom=p=>!!p.ms2;global.specRel=p=>!!p.rel;global.ESP={mrm:p=>p.type==='mrm'};global.MAPPA={SV:s=>s,ICO:{plus:'+'},ad2:()=>({}),runCmd:()=>{}};for(const id of ['mapzin','mapzout','maphelp'])AZIONI.register({id,group:'zoom',ic:'plus',views:['map'],menu:false,name:()=>id,svg:()=>''});eval(fs.readFileSync(%r,'utf8')+';global.h=h;global.raw=raw;');" % str(WEB / "html-sicuro.js") + "" + "eval(fs.readFileSync(%r,'utf8'));" % str(WEB / "azioni-barra.js")
           + "const host={innerHTML:'',querySelector:()=>null};const p={type:%r,tl:true,smooth:true,log:false,imode:null};" % view + extra
-          + "AZIONI.bar({view:%r,p},host%s);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id)}));" % (view, "," + fn if fn != "bar" else "", view))
+          + "AZIONI.bar({view:%r,p},host%s);console.log(JSON.stringify({html:host.innerHTML,ids:AZIONI.list({view:%r,p},'barra').map(a=>a.id),runs:AZIONI.list({view:%r,p},'barra').filter(a=>typeof a.run==='function').map(a=>a.id)}));" % (view, "," + fn if fn != "bar" else "", view, view))
     return json.loads(subprocess.run(["node", "-e", js], check=True, capture_output=True, encoding="utf-8").stdout)
 
 
@@ -178,6 +178,21 @@ def test_header_buttons_are_registry_actions_drawn_in_order(view):
     assert ids == HEADER[view].split(), "the ids and the order of the old header"
     assert sorted(i[len("panel."):] for i in r["ids"]) == sorted(HEADER[view].split() + BAR_ONLY.get(view, "").split())
     assert all(i.startswith("panel.") for i in r["ids"])
+
+
+# the buttons the modules used to append by hand are registry actions too; the UV spectrum has the XWC split button instead of the XIC lens
+def test_buttons_of_the_modules_are_actions_with_a_run():
+    r = bar("spec", "p.uv=true;")
+    ids = re.findall(r'data-a="(\w+)"', r["html"])
+    assert ids == "xicb xicl xwc xwcl fit rul par rel lock dl tabp more max".split(), "XWC in the XIC group, no lens switch"
+    assert {"panel.xwc", "panel.xwcs"} <= set(r["ids"]) and "panel.xicp" not in r["ids"]
+    for view in ("spec", "chrom"):
+        r = bar(view)
+        assert {i for i in r["ids"] if i != "panel.more"} <= set(r["runs"]), "every header button has a run"
+    tag = lambda html, i: re.search(r'<button[^>]*data-a="%s"[^>]*>' % i, html).group(0)
+    spec = bar("spec", "p.nolens=true;")["html"]
+    assert "hidden" in tag(spec, "xicp") and "hidden" in tag(spec, "xicl") and "hidden" in tag(bar("chrom")["html"], "xwcl")
+    assert 'aria-pressed="true"' in tag(bar("spec")["html"], "xicp") and "hidden" not in tag(bar("spec")["html"], "xicp")
 
 
 def test_header_button_state_comes_from_the_panel():

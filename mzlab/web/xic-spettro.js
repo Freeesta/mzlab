@@ -67,8 +67,8 @@
   /** tooltip of the XIC button: the infusion note, «XIC of N files» in overlay, else the how-to @param {any} p @param {boolean} off */
   const tipOf = (p, off) => { const n = window.SPECBAR ? SPECBAR.nFiles(p) : 1; return off ? T("xicbtn.infusion") : n > 1 ? T("xicbtn.n", { n }) : T("xicbtn.title"); };
   function refresh(p) {
-    const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]'), pv = /** @type {HTMLButtonElement | null} */ (p.el.querySelector('[data-a="xicp"]'));
-    if (p.uv) { for (const x of [b, l, pv]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
+    const s = st(p), b = p.el.querySelector('[data-a="xicb"]'), l = p.el.querySelector('[data-a="xicl"]');
+    if (p.uv) { for (const x of [b, l]) if (x) x.hidden = true; return; }          // a UV spectrum has no ion to extract
     if (ms2(p)) { for (const x of [b, l]) if (x) x.hidden = true; s.pend = false; s.sel = null; return; }   // an MS2 spectrum has no XIC of its own
     if (b) b.hidden = false;
     const off = infusion(p);
@@ -79,11 +79,7 @@
       if (bt.disabled !== off) bt.disabled = off;
       if (bt.title !== tip) bt.title = tip;
     }
-    if (pv) {
-      const ok = lens.ok(p), on = !!UIP.xicLens && ok;
-      pv.classList.toggle("on", on); pv.setAttribute("aria-pressed", String(on));
-      if (pv.hidden === ok) pv.hidden = !ok;
-    }
+    AZIONI.refresh({ view: "spec", p });                    // the lens switch (xicp): pressed and hidden from its action
     if (l) {
       l.hidden = !s.sel;
       if (s.sel) { const t = ionText(p, s.sel); l.textContent = t; l.setAttribute("aria-label", T("xicbtn.ion.aria", { ion: t })); }
@@ -247,22 +243,14 @@
   }
 
   // ---------------------------------------------------------------- hooks used by the classic scripts
-  /** the toolbar of one spectrum panel @param {any} p */
+  /** what is not a click on the buttons of one spectrum panel: the Space key and the first refresh @param {any} p */
   function wire(p) {
     const b = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicb"]')), l = /** @type {HTMLElement | null} */ (p.el.querySelector('[data-a="xicl"]'));
     if (!b || !l || /** @type {any} */ (b)._xb) return;
     if (p.uv) { b.hidden = true; return; }
     /** @type {any} */ (b)._xb = true;
-    b.onclick = e => press(p, e.shiftKey);
-    // Space on the button presses it: the walk over the scans (scroll.js) must not take it
+    // Space on the button presses it: the walk over the scans (scroll.js) must not take it; the clicks are the actions xicb / xicl (azioni-barra.js)
     for (const t of ["keydown", "keyup"]) b.addEventListener(t, e => { if (/** @type {KeyboardEvent} */ (e).key === " ") e.stopPropagation(); });
-    l.onclick = () => openPop(p);
-    const pv = document.createElement("button");           // the lens switch is built here (pannelli.js is at its start-up size cap)
-    pv.className = "bt xbp"; pv.dataset.a = "xicp"; pv.title = T("xiclens.toggle"); pv.setAttribute("aria-label", T("xiclens.toggle"));
-    pv.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" focusable="false"><circle cx="8" cy="8" r="4.5"/><path d="M8 1v4M8 11v4M1 8h4M11 8h4"/></svg>';
-    pv.onclick = () => setLens(!UIP.xicLens);
-    const mb = p.el.querySelector('.tbs [data-a="more"]'), g = document.createElement("span");       // its own group, the rightmost: the first one the header moves into the «⋯» menu when it is tight (fitHd)
-    g.className = "tbg"; g.append(pv); if (mb) mb.before(g); else b.after(pv);
     refresh(p);
   }
   /** the lens preference from the button of any spectrum panel (the Settings switch is the other place) @param {boolean} on */
@@ -333,6 +321,6 @@
     } catch (e) { /* draw() asks again */ }
   }
 
-  /** @type {any} */ (window).XICBTN = { wire, prefetch, setLens, lens, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
+  /** @type {any} */ (window).XICBTN = { wire, press, openPop, prefetch, setLens, lens, click, target, lensArgs, commit, mark, sync, chosen: (/** @type {any} */ p) => { const s = ST.get(p); return s && s.sel ? s.sel.m : null; }, pending: (/** @type {any} */ p) => { const s = ST.get(p); return !!(s && s.pend); } };
   E.panels.forEach((/** @type {any} */ p) => { if (p.type === "spec" && p.el) wire(p); });
 })();
