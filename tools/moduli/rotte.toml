@@ -3,6 +3,6 @@ pacchetto = "mzlab-rotte-wasm"
 chiavi = { rotte = 19 }
 wasm_opt = "@motore"
 parte = "a"
-tetto = 1015808
-misura = 1013630
-nota = "statistics, molecules, Data and Flow routes out of the engine, loaded on the first request of one of them; `hints` and the note `note.estimate.nominal` of `estimate_set` (nominal-resolution hint): +6,737 B (+0.67 %, measured by the CI size step: 1,006,893 -> 1,013,630), cap 1,011,712 -> 1,015,808 (+0.40 %, rounded up to 4 KiB)"
+tetto = 1019904
+misura = 1017378
+nota = "statistics, molecules, Data and Flow routes out of the engine, loaded on the first request of one of them; `hints` and the note `note.estimate.nominal` of `estimate_set` (nominal-resolution hint): +6,737 B (+0.67 %, measured by the CI size step: 1,006,893 -> 1,013,630), cap 1,011,712 -> 1,015,808 (+0.40 %, rounded up to 4 KiB); `origin` of `union/1` (`features.union`, opt-in column naming the input tables of each target): +3,748 B (+0.37 %, CI size step: 1,013,630 -> 1,017,378), cap 1,015,808 -> 1,019,904 (+0.40 %, rounded up to 4 KiB)"

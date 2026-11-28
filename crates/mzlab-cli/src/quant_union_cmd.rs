@@ -13,7 +13,7 @@ use crate::Outcome;
 pub const HELP: &str = "mzlab-cli quant union: the feature tables of several series joined into one target list for `quant targets`.
 
 usage: mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off|piecewise] [--rt-gap MIN] [--min-series N] [--pad MIN]
-                             [--polarity +|-] [--set NAME=VALUE...] [--json] [--out PATH]
+                             [--polarity +|-] [--origin on|off] [--set NAME=VALUE...] [--json] [--out PATH]
 
   TABLE.csv        one feature table per series (the CSV of `mzlab-cli features`): columns id, mz, rt and, if there, rt_range:min and rt_range:max
                    (`rt_min`, `rt_max`), polarity; the sample columns are not read. The first table is the reference of the RT frame; run it once per polarity
@@ -25,7 +25,9 @@ usage: mzlab-cli quant union TABLE.csv... [--da D] [--rt-tol MIN] [--rt-warp off
   --min-series N   a target seen in fewer series is listed as dropped and not written (default 1: every row is kept)
   --pad MIN        minutes added on both sides of every window (default 0)
   --polarity P     the polarity of rows that have none of their own: + or - (default or `any`: every scan)
-  --set NAME=VALUE any of the parameters above by its name (da, rt_tol, rt_warp, rt_gap, min_series, pad, polarity)
+  --origin on|off  on adds an `origin` column (the series that hold the target, joined by `+`) to the list and `origin` and `origins` to --json (default off:
+                   the bytes of a run without it do not change)
+  --set NAME=VALUE any of the parameters above by its name (da, rt_tol, rt_warp, rt_gap, min_series, pad, polarity, origin)
   --json           union/1 on stdout: params, counts, series (with the RT map), targets with the rows each came from, conflicts, dropped, choices, csv
   --out PATH       write the output there instead of the standard output
 
@@ -35,7 +37,7 @@ one: RT +- --rt-tol), then --pad. Stderr: one line per conflict, drop and automa
 Exit codes: 0 ok; 2 usage (bad option or parameter value); 3 a table that cannot be used (the row and the field are named); 4 a file missing or unreadable; 6 --out cannot be written.";
 
 /// The flags that are parameters: flag, parameter name.
-const PARAMS: [(&str, &str); 7] = [
+const PARAMS: [(&str, &str); 8] = [
     ("--da", "da"),
     ("--rt-tol", "rt_tol"),
     ("--rt-warp", "rt_warp"),
@@ -43,6 +45,7 @@ const PARAMS: [(&str, &str); 7] = [
     ("--min-series", "min_series"),
     ("--pad", "pad"),
     ("--polarity", "polarity"),
+    ("--origin", "origin"),
 ];
 
 fn usage(msg: &str) -> Outcome {

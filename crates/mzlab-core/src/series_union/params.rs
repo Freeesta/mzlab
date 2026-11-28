@@ -24,6 +24,8 @@ pub struct Params {
     pub pad: f64,
     /// Polarity of the rows that have none of their own: `None` = every scan.
     pub polarity: Option<i8>,
+    /// Write the series each target came from (`origin`) in the CSV and the document; off by default so the bytes of a run without it never change.
+    pub origin: bool,
 }
 
 fn bad(name: &str, value: &str) -> Error {
@@ -60,6 +62,7 @@ impl Params {
             min_series: 1,
             pad: 0.0,
             polarity: None,
+            origin: false,
         }
     }
 
@@ -91,6 +94,13 @@ impl Params {
                         Some("+") => Some(1),
                         Some("-") => Some(-1),
                         Some(s) => return Err(bad(k, s)),
+                    }
+                }
+                "origin" => {
+                    p.origin = match x.str() {
+                        Some("off") => false,
+                        Some("on") => true,
+                        s => return Err(bad(k, s.unwrap_or(""))),
                     }
                 }
                 _ => return Err(bad(k, "unknown parameter")),

@@ -17,7 +17,8 @@
         "rt_warp": {"enum": ["off", "piecewise"]},
         "min_series": {"type": "integer"},
         "pad": {"type": "number", "description": "Minutes added on both sides of every window."},
-        "polarity": {"enum": ["", "+", "-"], "description": "Polarity given to the rows that have none of their own; empty: every scan."}
+        "polarity": {"enum": ["", "+", "-"], "description": "Polarity given to the rows that have none of their own; empty: every scan."},
+        "origin": {"const": "on", "description": "Present only when `origin` was asked for; a run without it has no such key and the same bytes as before."}
       }
     },
     "counts": {
@@ -68,6 +69,7 @@
           "rt_max": {"type": "number"},
           "polarity": {"enum": ["+", "-", null]},
           "series": {"type": "integer", "description": "Number of series that hold the target."},
+          "origin": {"type": "array", "items": {"type": "string"}, "description": "Only with `origin` on: the names of the series that hold the target, in the order the series were given."},
           "members": {
             "type": "array",
             "description": "The rows the target came from: the first is the one the others were compared with.",
@@ -89,6 +91,11 @@
         }
       }
     },
+    "origins": {
+      "type": "array",
+      "description": "Only with `origin` on: how many targets each combination of series holds (`origin` joins the names with `+`), in the order of the series.",
+      "items": {"type": "object", "required": ["origin", "series", "targets"], "properties": {"origin": {"type": "string"}, "series": {"type": "array", "items": {"type": "string"}}, "targets": {"type": "integer"}}}
+    },
     "conflicts": {
       "type": "array",
       "description": "Targets of one polarity within `da` and `rt_tol` that could not merge (rows of one series); both are in `targets`.",
@@ -104,6 +111,6 @@
       "description": "Every automatic choice: rt_warp (anchors, max_shift), rt_warp_skipped (anchors), window_from_rt_tol (rows without a window got rt +- rt_tol), polarity_from_param (rows), rt_min_clamped (targets whose start fell below 0).",
       "items": {"type": "object", "required": ["what", "series"], "properties": {"what": {"type": "string"}, "series": {"type": "string"}}}
     },
-    "csv": {"type": "string", "description": "id,mz,rt_min,rt_max,polarity,role, one row per target, role `target`."}
+    "csv": {"type": "string", "description": "id,mz,rt_min,rt_max,polarity,role, one row per target, role `target`; with `origin` on a last column `origin` (the series names joined by `+`, quoted when a name holds a comma)."}
   }
 }

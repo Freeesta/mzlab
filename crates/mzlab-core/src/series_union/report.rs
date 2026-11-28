@@ -200,43 +200,107 @@ fn series_info(series: &[Series], m: &Merged, p: &Params, choices: &mut Vec<Valu
 }
 
 fn params_value(p: &Params) -> Value {
-    Obj::new()
+    let o = Obj::new()
         .n("da", p.da)
         .n("rt_tol", p.rt_tol)
         .n("rt_gap", p.rt_gap)
         .put("rt_warp", text(p.warp_name()))
         .i("min_series", p.min_series as i64)
         .n("pad", p.pad)
-        .put("polarity", text(pol_text(p.polarity)))
-        .done()
+        .put("polarity", text(pol_text(p.polarity)));
+    // the key exists only when asked for, so a run without `origin` keeps its bytes
+    if p.origin {
+        o.put("origin", text("on"))
+    } else {
+        o
+    }
+    .done()
 }
 
-/// The target rows of the CSV and of the document, in the order of `named`.
-fn target_rows(named: &[(String, &Done)], series: &[Series]) -> (String, Vec<Value>) {
-    let mut csv = String::from("id,mz,rt_min,rt_max,polarity,role\n");
+/// The series that hold a target, in the order the series were given (`merge` adds the members series after series, one row per series).
+fn origin_of(d: &Done) -> Vec<usize> {
+    d.t.members.iter().map(|m| m.series).collect()
+}
+
+/// A CSV cell: quoted when it holds a comma, a quote or a line break.
+fn cell(s: &str) -> String {
+    if s.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", s.replace('"', "\"\""))
+    } else {
+        s.to_string()
+    }
+}
+
+/// The target rows of the CSV and of the document, in the order of `named`; with `origin` each row also says which series hold it
+/// (`a+b` in the CSV, the names as a list in the document).
+fn target_rows(named: &[(String, &Done)], series: &[Series], origin: bool) -> (String, Vec<Value>) {
+    let mut csv = String::from("id,mz,rt_min,rt_max,polarity,role");
+    csv += if origin { ",origin\n" } else { "\n" };
     let mut targets = Vec::new();
     for (id, d) in named {
+        let from = origin_of(d);
+        let names = |k: &[usize]| {
+            k.iter()
+                .map(|&i| series[i].name.as_str())
+                .collect::<Vec<_>>()
+        };
         csv += &format!(
-            "{id},{},{},{},{},target\n",
+            "{id},{},{},{},{},target",
             fix(d.mz, 5),
             fix(d.lo, 4),
             fix(d.hi, 4),
             pol_text(d.t.polarity)
         );
-        targets.push(
-            Obj::new()
-                .put("id", text(id))
-                .n("mz", d.mz)
-                .n("rt", d.rt)
-                .n("rt_min", d.lo)
-                .n("rt_max", d.hi)
-                .put("polarity", pol_value(d.t.polarity))
-                .i("series", d.series as i64)
-                .put("members", members(d, series))
-                .done(),
-        );
+        csv += &if origin {
+            format!(",{}\n", cell(&names(&from).join("+")))
+        } else {
+            "\n".into()
+        };
+        let o = Obj::new()
+            .put("id", text(id))
+            .n("mz", d.mz)
+            .n("rt", d.rt)
+            .n("rt_min", d.lo)
+            .n("rt_max", d.hi)
+            .put("polarity", pol_value(d.t.polarity))
+            .i("series", d.series as i64);
+        let o = if origin {
+            o.put(
+                "origin",
+                Value::Arr(names(&from).into_iter().map(text).collect()),
+            )
+        } else {
+            o
+        };
+        targets.push(o.put("members", members(d, series)).done());
     }
     (csv, targets)
+}
+
+/// How many targets each combination of series holds (`origins` of the document, only with `origin`): the combinations in the order of their series.
+fn origins_value(named: &[(String, &Done)], series: &[Series]) -> Value {
+    // kept in the order of the series as they come in: no sort, so no second copy of the sort code in the module
+    let mut count: Vec<(Vec<usize>, i64)> = Vec::new();
+    for (_, d) in named {
+        let k = origin_of(d);
+        match count.binary_search_by(|(c, _)| c.cmp(&k)) {
+            Ok(i) => count[i].1 += 1,
+            Err(i) => count.insert(i, (k, 1)),
+        }
+    }
+    Value::Arr(
+        count
+            .into_iter()
+            .map(|(k, n)| {
+                let names: Vec<&str> = k.iter().map(|&i| series[i].name.as_str()).collect();
+                Obj::new()
+                    .put("origin", text(&names.join("+")))
+                    .put("series", Value::Arr(names.into_iter().map(text).collect()))
+                    .i("targets", n)
+                    .done()
+            })
+            .collect(),
+    )
 }
 
 fn dropped_value(dropped: &[&Done], series: &[Series]) -> Vec<Value> {
@@ -283,7 +347,7 @@ pub fn document(series: &[Series], m: &Merged, p: &Params) -> String {
         .collect();
     let mut choices = Vec::new();
     let series_v = series_info(series, m, p, &mut choices);
-    let (csv, targets) = target_rows(&named, series);
+    let (csv, targets) = target_rows(&named, series, p.origin);
     let clamped = named.iter().filter(|(_, d)| d.clamped).count();
     if clamped > 0 {
         choices.push(choice(
@@ -305,14 +369,19 @@ pub fn document(series: &[Series], m: &Merged, p: &Params) -> String {
         .i("dropped", drop_v.len() as i64)
         .i("conflicts", conf.len() as i64)
         .done();
+    let doc = Obj::new()
+        .put("schema", text(super::SCHEMA))
+        .put("params", params_value(p))
+        .put("counts", counts)
+        .put("series", series_v)
+        .put("targets", Value::Arr(targets));
+    let doc = if p.origin {
+        doc.put("origins", origins_value(&named, series))
+    } else {
+        doc
+    };
     write(
-        &Obj::new()
-            .put("schema", text(super::SCHEMA))
-            .put("params", params_value(p))
-            .put("counts", counts)
-            .put("series", series_v)
-            .put("targets", Value::Arr(targets))
-            .put("conflicts", Value::Arr(conf))
+        &doc.put("conflicts", Value::Arr(conf))
             .put("dropped", Value::Arr(drop_v))
             .put("choices", Value::Arr(choices))
             .put("csv", text(&csv))
