@@ -374,6 +374,9 @@ fn one_file(p: &Parsed, what: &str) -> std::result::Result<PathBuf, String> {
 }
 
 #[cfg(test)]
+#[path = "spectrum_bins_hr_tests.rs"]
+mod bins_hr_tests;
+#[cfg(test)]
 #[path = "spectrum_bins_tests.rs"]
 mod bins_tests;
 #[cfg(test)]
