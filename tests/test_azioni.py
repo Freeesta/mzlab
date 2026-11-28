@@ -54,6 +54,42 @@ def test_rows_of_one_action_and_order_inside_a_group():
     assert r == [["n", "n1", False], ["n", "n2", True], ["a", "a", False], ["b", "b", False], "-", ["h", "h", False]]
 
 
+def test_menu_point_actions_then_panel_actions_with_their_key():
+    """Study §3.7: what is under the pointer first, a separator, then the panel commands (the menu ones before the ones that come from the bar), each with its key."""
+    r = run("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>0,...o});
+      reg('bar','tools',{scope:'panel',barra:true,menu:true});
+      reg('fs','view',{scope:'panel',shortcut:{key:'f',where:'chart',label:'x'}});
+      reg('help','help');reg('pt','extract',{shortcut:{key:'x',where:'chart',label:'x'}});reg('rz','reset',{scope:'panel'});
+      reg('hid','tools',{scope:'panel',barra:true,menu:false});
+      const m=AZIONI.forContext({view:'v'});
+      console.log(JSON.stringify({m:m.map(i=>i==='-'?'-':[i.id,i.key||null]),scopes:AZIONI.actions.map(a=>[a.id,a.scope]),bar:AZIONI.list({view:'v'},'barra').map(a=>a.id)}))""")
+    assert r["m"] == [["pt", "X"], "-", ["help", None], "-", ["rz", None], "-", ["fs", "F"], "-", ["bar", None]]
+    assert dict(r["scopes"]) == {"bar": "panel", "fs": "panel", "help": "point", "pt": "point", "rz": "panel", "hid": "panel"}
+    assert r["bar"] == ["bar", "hid"], "the bar still lists its actions: the same entries, two views"
+
+
+def test_unknown_scope_is_refused():
+    r = run("let e=null;try{AZIONI.register({id:'a',group:'help',scope:'row',views:[],name:()=>'',run:()=>0})}catch(x){e=x.message}console.log(JSON.stringify(e))")
+    assert r and r.startswith("AZIONI:")
+
+
+def test_menu_never_has_more_than_12_rows_the_tail_goes_in_one_submenu():
+    r = run("""const reg=(id,group,o)=>AZIONI.register({id,group,views:['v'],name:()=>id,run:()=>log.push(id),...o});
+      globalThis.I18N={t:k=>k};const log=[];
+      for(let i=0;i<8;i++)reg('p'+i,'extract');
+      for(let i=0;i<9;i++)reg('q'+i,'view',{scope:'panel',shortcut:i==0?{key:'f',where:'chart',label:'x'}:undefined,checked:i==1?()=>true:undefined});
+      const top=a=>AZIONI.clean(AZIONI.forContext({view:'v'})).filter(i=>i!=='-');
+      const t=top(),more=t[t.length-1],sub=more.sub();
+      const small=(()=>{const x=AZIONI.clean([{id:'a',label:'a',fn:()=>0},'-',{id:'b',label:'b',fn:()=>0}]);return x.length})();
+      sub[1].run();
+      console.log(JSON.stringify({n:t.length,ids:t.map(i=>i.id),sub:sub.map(r=>[r.name,r.key||null,r.check]),log,small}))""")
+    assert r["n"] == 12 and r["ids"][-1] == "menu.more"
+    assert r["ids"][:8] == [f"p{i}" for i in range(8)] and r["ids"][8:11] == ["q0", "q1", "q2"]
+    assert r["sub"][0] == ["q3", None, None] and len(r["sub"]) == 6
+    assert r["log"] == ["q4"], "a row of the submenu runs its action"
+    assert r["small"] == 3, "a short menu is left alone"
+
+
 def test_spectrum_actions_have_texts():
     """Every i18n key named by a registered action of the spectrum exists in the catalog."""
     src = "".join((WEB / f).read_text(encoding="utf-8") for f in ("spettro.js", "dda.js", "liste.js", "elementare.js", "visualizza.js", "libreria.js", "workflow.js", "fair-azioni.js"))
@@ -112,7 +148,7 @@ def test_every_id_of_the_icon_table_is_a_registered_action():
     ids = json.loads(subprocess.run(["node", "-e", f"const fs=require('fs');const I=new Function(fs.readFileSync({str(WEB / 'azioni-icone.js')!r},'utf8')+';return AZIONI_ICONE;')();console.log(JSON.stringify(Object.keys(I.POR_ID)))"],
                                     check=True, capture_output=True, encoding="utf-8").stdout)
     for i in ids:
-        assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src, f"{i}: no action with this id in mzlab/web"
+        assert f'"{i}"' in src or f'over("{i.split(".")[-1]}"' in src or (i.startswith("panel.") and f'["{i[6:]}", ' in src), f"{i}: no action with this id in mzlab/web"   # panel.* rows: azioni-barra.js ROWS
 
 
 def test_arrangement_actions_show_in_every_view_and_have_texts():

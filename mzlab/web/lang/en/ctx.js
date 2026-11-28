@@ -76,5 +76,20 @@ I18N.add("en", {
   "ctx.chrom.etpk.aria": "Show or hide the retention time on the main peaks",
   "etpk.nm": "{v} nm",
   "etpk.tip.int": "intensity <b>{y}</b>",
-  "ctx.spec.generate": "Generate formula (m/z {mz})…"
+  "ctx.spec.generate": "Generate formula (m/z {mz})…",
+  "ctx.more": "More panel actions",
+  "ctx.panel.izoom": "Zoom mode",
+  "ctx.panel.iauto": "Integrate: automatic",
+  "ctx.panel.iman": "Integrate: manual",
+  "ctx.panel.idel": "Integrate: delete peak",
+  "ctx.panel.tlink": "Link zoom across charts",
+  "ctx.panel.smooth": "Smoothing",
+  "ctx.panel.log": "Logarithmic scale",
+  "ctx.panel.rul": "Ruler: m/z difference",
+  "ctx.panel.rel": "Relative intensity (%)",
+  "ctx.panel.lock": "Lock y scale",
+  "ctx.panel.tabp": "Peak table",
+  "ctx.panel.dl": "Download…",
+  "ctx.panel.ms2tri": "MS² markers",
+  "ctx.panel.area": "Fill area under traces"
 });

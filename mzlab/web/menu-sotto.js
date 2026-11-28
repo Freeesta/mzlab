@@ -17,6 +17,7 @@ window.MENUSUB = {
         if (r.hover) { const on = (/** @type {boolean} */ v) => () => r.hover(v); e.onmouseenter = e.onfocus = on(true); e.onmouseleave = e.onblur = on(false); }
         e.appendChild(document.createTextNode(r.name));
         if (r.check) { const ck = document.createElement("span"); ck.className = "ck"; ck.setAttribute("aria-hidden", "true"); ck.textContent = "\u2713"; e.appendChild(ck); }
+        if (r.key) { const kb = document.createElement("span"); kb.className = "kb"; kb.setAttribute("aria-hidden", "true"); kb.textContent = r.key; e.appendChild(kb); }   // the key of the action
         e.onclick = (/** @type {MouseEvent} */ ev) => { ev.stopPropagation(); const keep = r.keep && r.keep(ev); r.run(ev); if (keep) { fill(); const i = rowsOf().findIndex(x => x.getAttribute("aria-label") === (r.aria || r.name)); if (i >= 0) /** @type {HTMLElement} */ (rowsOf()[i]).focus(); } else m.hidden = true; };
         sm.appendChild(e);
       });

@@ -6,28 +6,59 @@
 // Classic script, loaded after esperimenti.js; the modules register their actions in their own files (mappa.js for the RT x m/z map).
 /**
  * @typedef {{ view: string, [k: string]: any }} Context
- * @typedef {{ id: string, group: string, views: string[], iconKey?: string, menu?: boolean, barra?: boolean,
+ * @typedef {{ id: string, group: string, views: string[], iconKey?: string, menu?: boolean, barra?: boolean, scope?: "point" | "panel",
  *   visible?: (c: Context) => boolean, available?: (c: Context) => boolean, checked?: (c: Context) => boolean,
  *   name?: (c: Context) => string, aria?: (c: Context) => string, menuLabel?: (c: Context) => string, tip?: (c: Context) => string, svg?: (c: Context) => string,
  *   shortcut?: Shortcut, run?: (c: Context) => any, order?: number, doubleClick?: (c: Context) => boolean, doubleClickOrder?: number, rows?: (c: Context) => Row[], [k: string]: any }} Action
  * @typedef {{ key?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, where: "chart" | "view", label?: string }} Shortcut
  *   key = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; where = "chart": only with the focus on a chart, "view": anywhere in the view; label = i18n key of the short label
  * @typedef {{ name: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, info?: boolean, icon?: string, run: () => any }} Row
- * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} MenuEntry
+ * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, key?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} MenuEntry
  */
-// an entry not available now (`off`, set by AZIONI.forContext) is not shown at all; a separator left first, last or doubled by that goes too
+// an entry not available now (`off`, set by AZIONI.forContext) is not shown at all; a separator left first, last or doubled by that goes too.
+// A menu never has more than MAX_ROWS rows at the top level (study §3.7): the tail (the panel block comes last, so it spills first) goes into ONE submenu «More panel actions».
+const MAX_ROWS = 12;
+/** @param {any[]} out the items, separators ("-") included: no separator first, last or doubled */
+const trimSeps = out => {
+  const r = /** @type {any[]} */ ([]);
+  for (const it of out) if (!(it === "-" && (!r.length || r[r.length - 1] === "-"))) r.push(it);
+  if (r[r.length - 1] === "-") r.pop();
+  return r;
+};
+/** @param {any} it one entry (or an icon row of several) as the rows of the submenu @returns {any[]} */
+const subRows = it => (it.fila || [it]).map((/** @type {any} */ x) => ({ name: x.label, aria: x.aria, tip: x.tip, check: x.check, key: x.key, run: () => x.fn() }));
 /** @param {any[]} items */
 const cleanMenu = items => {
-  const out = /** @type {any[]} */ ([]);
+  let out = /** @type {any[]} */ ([]);
   for (let it of items) {
     if (it !== "-" && it.fila) { const f = it.fila.filter((x) => !x.off); if (!f.length) continue; it = { ...it, fila: f }; }
     else if (it !== "-" && it.off) continue;
-    if (it === "-" && (!out.length || out[out.length - 1] === "-")) continue;
     out.push(it);
   }
-  if (out[out.length - 1] === "-") out.pop();
+  out = trimSeps(out);
+  const rows = out.filter(it => it !== "-").length;
+  if (rows > MAX_ROWS) {
+    // from the end: only a plain entry can move (an entry that already has a submenu, a grey row or the readout row stays)
+    const move = /** @type {Set<any>} */ (new Set()), need = rows - (MAX_ROWS - 1);
+    for (let i = out.length - 1; i >= 0 && move.size < need; i--) { const it = out[i]; if (it !== "-" && !it.sub && !it.dim && (it.fn || it.fila)) move.add(it); }
+    if (move.size > 1) {
+      const sub = /** @type {any[]} */ ([]), rest = /** @type {any[]} */ ([]);
+      for (const it of out) {
+        if (!move.has(it)) { rest.push(it); continue; }
+        if (!sub.length) { const name = typeof I18N !== "undefined" ? I18N.t("ctx.more") : "More"; rest.push({ id: "menu.more", label: name, aria: name, icon: typeof AZIONI_ICONE !== "undefined" ? AZIONI_ICONE.svg("list") : "", check: null, dim: false, off: false, fn: () => {}, sub: () => sub.flatMap(subRows) }); }
+        sub.push(it);
+      }
+      out = trimSeps(rest);
+    }
+  }
   return out;
 };
+// `scope`: "point" (under the pointer, the default) or "panel" (the whole panel, repeated from the bar). Block of an action in the menu: 0 = point actions, 1 = panel commands of the menu, 2 = panel commands that come from the bar
+/** @param {any} a */
+const block = a => (a.scope === "panel" ? (a.barra ? 2 : 1) : 0);
+// the key of an action as the user's system writes it (⌘O or Ctrl+O), for the menu (AZIONI.keyText is added below, with the keys)
+/** @param {any} a */
+const keyOf = a => (a.shortcut && /** @type {any} */ (AZIONI).keyText ? /** @type {any} */ (AZIONI).keyText(a.shortcut) : undefined);
 const AZIONI = (() => {
   // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
   const GROUPS = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "disp", "learn", "copy", "help", "ann"];
@@ -37,6 +68,7 @@ const AZIONI = (() => {
   function register(a) {
     if (actions.some(v => v.id === a.id)) throw new Error("AZIONI: id already registered: " + a.id);
     if (!GROUPS.includes(a.group)) throw new Error("AZIONI: unknown group " + a.group + " of " + a.id);
+    if (!["point", "panel"].includes(a.scope ||= "point")) throw new Error("AZIONI: unknown scope " + a.scope + " of " + a.id);
     // the icon of the action: its own key, else the table of azioni-icone.js
     if (!a.iconKey && typeof AZIONI_ICONE !== "undefined") a.iconKey = AZIONI_ICONE.POR_ID[a.id];
     actions.push(a);
@@ -51,32 +83,32 @@ const AZIONI = (() => {
   const shown = (a, c) => (a.views.includes(c.view) || a.views.includes("*")) && (!a.visible || a.visible(c));
   /** @param {Action} a @param {Context} c */
   const ready = (a, c) => !a.available || a.available(c);
-  // the actions of the view in the order of the groups (inside a group: `order`, then the order of registration)
+  // the actions of the view in the order of the groups (inside a group: `order`, then the order of registration); the menu lists the point actions, then the panel ones
   /** @param {Context} c @param {"menu" | "barra" | "all"} [where] */
   function list(c, where = "menu") {
     const l = actions.filter(a => shown(a, c) && (where === "all" || (where === "menu" ? a.menu !== false : a.barra === true)));
-    return l.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || (a.order || 0) - (b.order || 0) || actions.indexOf(a) - actions.indexOf(b));
+    return l.sort((a, b) => (where === "menu" ? block(a) - block(b) : 0) || GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || (a.order || 0) - (b.order || 0) || actions.indexOf(a) - actions.indexOf(b));
   }
-  // the entries of the right-click menu (shared component: menu() of explore.js), a separator between two groups;
-  // an action with `rows` gives several rows (one per open XIC, per measure…), all with its id
+  // the entries of the right-click menu (menu() of explore.js), a separator between two groups; an action with `rows` gives several rows (one per open XIC…), all with its id
   /** @param {Context} c @returns {(MenuEntry | "-")[]} */
   function forContext(c) {
     /** @type {(MenuEntry | "-")[]} */
     const items = [];
-    let last = null;
+    let last = "";
     for (const a of list(c)) {
+      const sec = block(a) + a.group;                  // a separator between two groups and between the point block and the panel block
       if (a.rows) {
         const ok = ready(a, c), rs = a.rows(c);
-        if (rs.length && last && a.group !== last) items.push("-");
-        if (rs.length) last = a.group;
-        rs.forEach(r => items.push({ id: a.id, label: r.name, aria: r.aria || r.name, tip: r.tip, icon: r.icon || iconOf(a, c), check: r.check ?? null, dim: !ok || !!r.dim, off: !ok || (!!r.dim && !r.info), fn: r.run }));
+        if (rs.length && last && sec !== last) items.push("-");
+        if (rs.length) last = sec;
+        rs.forEach(r => items.push({ id: a.id, label: r.name, aria: r.aria || r.name, tip: r.tip, icon: r.icon || iconOf(a, c), key: keyOf(a), check: r.check ?? null, dim: !ok || !!r.dim, off: !ok || (!!r.dim && !r.info), fn: r.run }));
         continue;
       }
-      if (last && a.group !== last) items.push("-");
-      last = a.group;
+      if (last && sec !== last) items.push("-");
+      last = sec;
       const name = a.name ? a.name(c) : a.id;
       if (a.submenu) { items.push({ id: a.id, label: name, aria: name, icon: iconOf(a, c), check: null, dim: !ready(a, c), off: !ready(a, c), fn: () => {}, sub: () => a.submenu(c) }); continue; }
-      items.push({ id: a.id, label: a.menuLabel ? a.menuLabel(c) : name, aria: a.aria ? a.aria(c) : name, tip: a.tip && a.tip(c), icon: iconOf(a, c),
+      items.push({ id: a.id, label: a.menuLabel ? a.menuLabel(c) : name, aria: a.aria ? a.aria(c) : name, tip: a.tip && a.tip(c), icon: iconOf(a, c), key: keyOf(a),
         check: a.checked ? a.checked(c) : null, dim: !ready(a, c), off: !ready(a, c), fn: () => run(a.id, c), fila: a.fila, soloIcona: !!a.fila });
     }
     // consecutive entries of the same `fila` share one row of the menu
@@ -109,7 +141,7 @@ const AZIONI = (() => {
 // ---- shortcuts: the field `shortcut` of an action, ONE keydown for all of them (the functions are also added to AZIONI)
 const KEYS = (() => {
   const { actions, shown, ready, run } = AZIONI;
-  const mac = () => /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
+  const mac = () => typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent || "");
   /** The text of a shortcut as the user's system writes it: ⌘O / ⌥1 on the Mac, Ctrl+O / Alt+1 elsewhere. @param {Shortcut} s */
   function keyText(s) {
     const n = String(s.key || "").replace("Arrow", "").replace("Left", "←").replace("Right", "→"), t = s.code ? s.code.replace(/^(Digit|Key)/, "") : n.length > 1 ? n : n.toUpperCase();

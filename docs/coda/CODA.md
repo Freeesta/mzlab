@@ -94,5 +94,4 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | PBAR-DDA-TICBG-BAR | `docs/coda/prompt/PBAR-DDA-TICBG-BAR.md` | - | panel toolbar slice: the DDA buttons and `ticbg` in the groups of the shared bar, their popovers anchored and closed from the bar |
 | PBAR-REMOVE-OLD | `docs/coda/prompt/PBAR-REMOVE-OLD.md` | PBAR-DDA-TICBG-BAR | panel toolbar slice: default `qqq.pbar` on and delete the per-panel tool rows and their overflow code |
 | PBAR-PHONE-KEYS | `docs/coda/prompt/PBAR-PHONE-KEYS.md` | - | panel toolbar slice: the bar at 390 px and its keyboard use |
-| PBAR-MENU-SCOPE | `docs/coda/prompt/PBAR-MENU-SCOPE.md` | - | panel toolbar slice: one right-click menu per panel kind built from the registry with `scope` (point or panel), groups, keys and the same commands as the bar |
 | TIP-SINGLE-FILE-LEGEND | `docs/coda/prompt/TIP-SINGLE-FILE-LEGEND.md` | needs owner decision: whether a single-file session drops the file name from the legends and other readouts too | the chromatogram hover box drops the file name with one file loaded; the legend chips, the XIC lens and the peak label box still repeat it |

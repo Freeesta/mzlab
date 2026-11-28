@@ -218,7 +218,7 @@
   /** the saved value of the «Area» toggle of a panel (undefined for the other types) @param {any} p */
   const areaOf = p => panelTr(p) ? p.area !== false : undefined;
   // the «Area» toggle of the header of an MRM / SIM panel (drawn by AZIONI.bar, azioni-barra.js)
-  AZIONI.register({ id: "panel.area", group: "tools", views: ["chrom", "xic", "mrm"], menu: false, barra: true, scope: "panel", bar: "t", bid: "area", ti: "ctl.area.title", al: "=", tx: () => EH(I18N.t("ctl.area")), cl: "bt tgl", toggle: 1, at: ' type="button"',
+  AZIONI.register({ id: "panel.area", group: "tools", views: ["chrom", "xic", "mrm"], menu: true, menuLabel: () => I18N.t("ctx.panel.area"), aria: () => I18N.t("ctx.panel.area"), tip: () => I18N.t("ctl.area.title"), barra: true, scope: "panel", bar: "t", bid: "area", ti: "ctl.area.title", al: "=", tx: () => EH(I18N.t("ctl.area")), cl: "bt tgl", toggle: 1, at: ' type="button"',
     visible: (/** @type {any} */ c) => !!ESP.mrm({ type: c.view }), checked: (/** @type {any} */ c) => c.p.area !== false, name: () => I18N.t("ctl.area.title"), svg: () => "",
     run: (/** @type {any} */ c) => { c.p.area = c.p.area === false; AZIONI.refresh(c); draw(c.p); uiSave(); } });
 

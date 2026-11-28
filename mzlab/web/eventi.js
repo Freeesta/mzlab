@@ -426,7 +426,7 @@ async function editAnn(p, ann) {
   const V = ["spec", "chrom", "xic", "mrm"], T = I18N.t.bind(I18N);
   /** @param {any} o */
   const reg = o => AZIONI.register({ views: V, ...o });
-  reg({ id: "view.resetZoom", group: "reset", available: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClick: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClickOrder: 2,
+  reg({ id: "view.resetZoom", group: "reset", scope: "panel", available: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClick: /** @param {any} c */ c => !!(c.p.zoom || c.p.zoomY), doubleClickOrder: 2,
     name: () => T("ctx.resetZoom"), run: /** @param {any} c */ c => { pushZh(c.p); c.p.zoom = null; c.p.zoomY = null; if (c.dbl) c.p.sel = null; draw(c.p); if (c.dbl) uiSave(); } });
   reg({ id: "ann.edit", group: "ann", order: 1, visible: /** @param {any} c */ c => !!c.near, available: /** @param {any} c */ c => !!c.near, doubleClick: /** @param {any} c */ c => !!c.near, doubleClickOrder: 1,
     name: /** @param {any} c */ c => T("ctx.ann.edit", { text: c.near ? c.near.text : "…" }), run: /** @param {any} c */ c => editAnn(c.p, c.near) });
