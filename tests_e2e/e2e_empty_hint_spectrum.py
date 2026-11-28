@@ -114,12 +114,12 @@ try:
         step("no chromatogram panel: the same words as plain text, no arrow", nochrom)
 
         def other():
-            # any other message of the spectrum panel (no scan in the interval) is the same text-only prompt
-            pg.evaluate("(() => { const q = %s; q.r0 = 1e6; q.r1 = 1e6 + 1; draw(q); })()" % S)
+            # any other message of the spectrum panel (an unknown precursor) is the same text-only prompt
+            pg.evaluate("(() => { const q = %s; q.level = 2; q.prec = 9999; draw(q); })()" % S)
             wait_for_js(pg, "%s._eh && %s._eh.spec.key === 'empty.note'" % (S, S), timeout=30000)
-            s = state(pg); need(s["disabled"] and s["text"].startswith("No scan in this interval") and not s["arrow"], "no scan: %s" % s)
+            s = state(pg); need(s["disabled"] and s["text"].startswith("None of the files shown has the precursor") and not s["arrow"], "unknown precursor: %s" % s)
             need(pg.evaluate("%s.leg.innerHTML === ''" % S), "the legend is reset")
-        step("a spectrum with no scan in the interval: its message as the same text-only prompt, legend reset", other)
+        step("a spectrum with an unknown precursor: its message as the same text-only prompt, legend reset", other)
         step("no missing i18n key, no page error", lambda: need(not [x for x in r.errs if "missing key" in str(x) or x[0] == "pageerror"], r.errs))
     r.close()
 
