@@ -135,7 +135,11 @@ fn bins_of_a_blank_and_of_a_sum_match_across_site_app_cli_and_wasm() {
             )
         );
     }
-    // the engine `.wasm` gives the same text (or a refusal with the same key) when `MZLAB_WASM_PKG` points at its package
+    wasm_matches(&s, &answers);
+}
+
+/// The engine `.wasm` gives the same text (or a refusal with the same key) when `MZLAB_WASM_PKG` points at its package.
+fn wasm_matches(s: &Setup, answers: &[Option<String>]) {
     let Ok(pkg) = std::env::var("MZLAB_WASM_PKG") else {
         return;
     };
