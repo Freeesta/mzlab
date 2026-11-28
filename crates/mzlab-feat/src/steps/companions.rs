@@ -45,6 +45,7 @@ fn params() -> Vec<Param> {
         Param::boolean("iso_group", "Group isotopes")
             .default_bool(false)
             .doc("Adds an isotopes section: M, M+1 and M+2 rows grouped by the rules below, and a +1 channel that holds spill_min to spill_max of M flagged as spill-over instead of an isotope")
+            .tip("Groups M, M+1 and M+2 into isotopes and flags a spill-over +1 channel.")
             .advanced(),
         Param::number("iso_min_corr", "Isotope correlation floor")
             .min(-1.0)
@@ -71,6 +72,7 @@ fn params() -> Vec<Param> {
             .min(0.0)
             .default_num(0.5)
             .doc("A correlated +1 channel holding at least this share of M is flagged as instrument spill-over, with its ratio and correlation")
+            .tip("A correlated +1 channel with at least this share of M is flagged as spill-over.")
             .advanced(),
         Param::number("spill_max", "Spill-over up to")
             .min(0.0)

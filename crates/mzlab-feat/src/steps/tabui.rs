@@ -120,6 +120,7 @@ fn generate() -> Step {
             Param::boolean("formula_filter", "Formula filter")
                 .default_bool(d.formula_filter)
                 .doc("Keeps only hypotheses reachable from the parent in filter_steps rule steps whose expected M+2/M is within m2_tol of the parent's; the counts of what it left out are written in the registry")
+                .tip("Keeps only hypotheses reachable from the parent in a few steps with a consistent M+2/M.")
                 .advanced(),
             Param::integer("filter_steps", "Filter: most steps")
                 .min(1.0)
