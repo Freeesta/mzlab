@@ -17,10 +17,10 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 ## Queue
 | id | prompt file | needs first | notes |
 |---|---|---|---|
-| ION-COUNTS-PEAK-TABLE | `docs/coda/prompt/ION-COUNTS-PEAK-TABLE.md` | - | opt-in ion-scale columns for `peak table` (area, height, noise and S/N in ions), with the factor of `ionscale` per file |
+| ION-TABLE-FULLSCAN | `docs/coda/prompt/ION-TABLE-FULLSCAN.md` | - | `peak table FILE... --ions` for full-scan files (EMS, EPI, Q1): the scan type and the fill time read from the scans, today only via `trace xic --ions` then `--traces` |
+| ION-TABLE-SUMS | `docs/coda/prompt/ION-TABLE-SUMS.md` | - | the `--sums` row of `peak table --ions`: its ion cells (empty today) as the sum of the ions of the rows that share a factor |
 | ION-COUNTS-QUANT-TARGETS | `docs/coda/prompt/ION-COUNTS-QUANT-TARGETS.md` | - | opt-in ion-scale columns for `quant targets` and the Flow step `quant.targets`, with the factor of `ionscale` per file |
 | ION-COUNTS-LABELS | `docs/coda/prompt/ION-COUNTS-LABELS.md` | needs owner decision: real-file facts (counts and format only, never names or data) | read the fill time of a trap scan and the Q1 scan time, step and range of `raw xic --ions` from `method/1`, once their labels are known |
-| FLOW-RECIPE-FIRST | `docs/coda/prompt/FLOW-RECIPE-FIRST.md` | - | `flow run` estimates the unit-resolution recipe per file, the browser runner and `rebuild` from the first file; decided 26 Nov: the per-file recipe everywhere (bytes change only where the estimates differ; log which recipe from which file) |
 | ISOTOPES-UNIT | `docs/coda/prompt/ISOTOPES-UNIT.md` | - | lost data: group M, M+1, M+2 at unit resolution; Q1 spill-over flag; optional `tp.generate` filter |
 | SPECTRUM-COMPARE-MIRROR | `docs/coda/prompt/SPECTRUM-COMPARE-MIRROR.md` | - | site card of `spectrum compare`: a mirror plot of the two spectra with its data table |
 | NOMINAL-BIN-HR | `docs/coda/prompt/NOMINAL-BIN-HR.md` | - | `spectrum get --bin` on a high-resolution profile file: the route answers no scan there; give the bins or a clear refusal |
@@ -90,5 +90,4 @@ The queue of ready-to-run roadmap tasks. The coordinator never has to remember w
 | WIFF-OPEN-INSTANT | `docs/coda/prompt/WIFF-OPEN-INSTANT.md` | - | after the index ahead, Open selected still opens each index in the engine (`lrOpen`, `native_attach`, about 240 ms for 4 samples): open it while the dialog is open so Open is instant |
 | PBAR-REMOVE-OLD | `docs/coda/prompt/PBAR-REMOVE-OLD.md` | - | panel toolbar slice: default `qqq.pbar` on and delete the per-panel tool rows and their overflow code |
 | PBAR-PHONE-KEYS | `docs/coda/prompt/PBAR-PHONE-KEYS.md` | - | panel toolbar slice: the bar at 390 px and its keyboard use |
-| PBAR-MENU-SCOPE | `docs/coda/prompt/PBAR-MENU-SCOPE.md` | - | panel toolbar slice: one right-click menu per panel kind built from the registry with `scope` (point or panel), groups, keys and the same commands as the bar |
 | TIP-SINGLE-FILE-LEGEND | `docs/coda/prompt/TIP-SINGLE-FILE-LEGEND.md` | needs owner decision: whether a single-file session drops the file name from the legends and other readouts too | the chromatogram hover box drops the file name with one file loaded; the legend chips, the XIC lens and the peak label box still repeat it |

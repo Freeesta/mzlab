@@ -11,7 +11,7 @@
  *   name?: (c: Context) => string, aria?: (c: Context) => string, menuLabel?: (c: Context) => string, tip?: (c: Context) => string, svg?: (c: Context) => string,
  *   shortcut?: Shortcut, run?: (c: Context) => any, order?: number, doubleClick?: (c: Context) => boolean, doubleClickOrder?: number, rows?: (c: Context) => Row[], [k: string]: any }} Action
  * @typedef {{ key?: string, code?: string, mod?: boolean, alt?: boolean, shift?: boolean, where: "chart" | "view", label?: string }} Shortcut
- *   key = `e.key` of the letter / Enter / ? (compared in lower case); code = `e.code` for the digits of Alt+1-3; mod = Ctrl on Windows and Linux, ⌘ on the Mac; where = "chart": only with the focus on a chart, "view": anywhere in the view; label = i18n key of the short label
+ *   key = `e.key` (lower case); code = `e.code` (Alt+1-3); mod = Ctrl, ⌘ on the Mac; where = "chart": focus on a chart, "view": anywhere; label = i18n key
  * @typedef {{ name: string, aria?: string, tip?: string, check?: boolean | null, dim?: boolean, info?: boolean, icon?: string, run: () => any }} Row
  * @typedef {{ id: string, label: string, aria: string, tip?: string, icon?: string, check: boolean | null, dim: boolean, off: boolean, fn: () => any, fila?: string, soloIcona?: boolean, sub?: () => any[] }} MenuEntry
  */
@@ -29,7 +29,7 @@ const cleanMenu = items => {
   return out;
 };
 const AZIONI = (() => {
-  // the order of the groups in every menu: one table for all the panels (the spectrum: value .. link; the map: extract .. help; zoom reset first and the annotations last in every graph)
+  // the order of the groups in every menu: one table for all the panels
   const GROUPS = ["reset", "value", "ms2", "gen", "extract", "xic", "cont", "tools", "dda", "lib", "link", "lock", "view", "zoom", "disp", "learn", "copy", "help", "ann"];
   /** @type {Action[]} */
   const actions = [];
@@ -57,8 +57,7 @@ const AZIONI = (() => {
     const l = actions.filter(a => shown(a, c) && (where === "all" || (where === "menu" ? a.menu !== false : a.barra === true)));
     return l.sort((a, b) => GROUPS.indexOf(a.group) - GROUPS.indexOf(b.group) || (a.order || 0) - (b.order || 0) || actions.indexOf(a) - actions.indexOf(b));
   }
-  // the entries of the right-click menu (shared component: menu() of explore.js), a separator between two groups;
-  // an action with `rows` gives several rows (one per open XIC, per measure…), all with its id
+  // the entries of the right-click menu (menu() of explore.js), a separator between two groups; an action with `rows` gives several rows, all with its id
   /** @param {Context} c @returns {(MenuEntry | "-")[]} */
   function forContext(c) {
     /** @type {(MenuEntry | "-")[]} */
@@ -116,7 +115,7 @@ const KEYS = (() => {
     if (mac()) return (s.mod ? "⌘" : "") + (s.alt ? "⌥" : "") + (s.shift ? "⇧" : "") + t;
     return [s.mod ? "Ctrl" : "", s.alt ? "Alt" : "", s.shift ? "Shift" : "", t].filter(Boolean).join("+");
   }
-  /** Does this key event press that shortcut? Letters ignore case (Shift only if the shortcut asks for it); Alt+digit uses `code`. @param {Shortcut} s @param {KeyboardEvent} e */
+  /** Does this key event press that shortcut? @param {Shortcut} s @param {KeyboardEvent} e */
   function pressed(s, e) {
     if (!!s.mod !== (e.ctrlKey || e.metaKey) || !!s.alt !== e.altKey) return false;
     if (s.code) return e.code === s.code && !!s.shift === e.shiftKey;
@@ -129,9 +128,9 @@ const KEYS = (() => {
   // the text field or dialog that keeps its own keys
   /** @param {EventTarget | null} t */
   const inTextField = t => !!document.querySelector("dialog[open]") || !!(t instanceof Element && t.closest("input,textarea,select,[contenteditable='true'],[contenteditable='']"));
-  /** The panel whose chart has the focus (canvas, or the panel itself in full screen). @param {EventTarget | null} t */
+  /** The panel whose chart has the focus. @param {EventTarget | null} t */
   const panelOf = t => (typeof E === "undefined" || !(t instanceof Element)) ? null : E.panels.find((/** @type {any} */ q) => q.el && (q.cv === t || q.el === t)) || null;
-  /** The context of a key on a chart: the point of the cursor (RT of the traces) or the highest visible peak (spectrum), as Shift+F10 does. @param {any} p @param {KeyboardEvent} e */
+  /** The context of a key on a chart: the cursor point or the highest visible peak, as Shift+F10 does. @param {any} p @param {KeyboardEvent} e */
   function chartContext(p, e) {
     const a = p._a, c = /** @type {any} */ ({ view: p.type, p, e, near: null, a, has: false, m: null, lab: "…" });
     if (!a || !a.X) return c;

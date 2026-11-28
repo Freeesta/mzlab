@@ -69,17 +69,19 @@ export async function infoRoute(path, u, { slots, rpc, base, stats, t0, init }) 
   return done(`{"files":[${parts.join(",")}]}`);
 }
 
-/** api/mantraces (POST `{files, windows, sums}`, `files` = `[{"name", "conc"?, "conc_unit"?, "transitions": [{"rt", "y", "panel", "label", "unit"}]}]`): the same table as api/manint
+/** api/mantraces (POST `{files, windows, sums, ions?, choices?}`, `files` = `[{"name", "conc"?, "conc_unit"?, "transitions": [{"rt", "y", "panel", "label", "unit"}]}]`): the same table as api/manint
  * (manint::table_text), for traces that are not the file's transitions; "E" + JSON = a 400.
  * @param {{rpc: (m: any) => Promise<any>, stats: any, t0: number}} env  @param {any} init the init of the fetch */
 async function tracesRoute({ rpc, stats, t0 }, init) {
   /** @type {any} */ let b = null; try { b = JSON.parse(String(init && init.body)); } catch (_) { return null; }
   if (!b || typeof b.files !== "string" || typeof b.windows !== "string") return null;
-  const r = await rpc({ op: "manint", files: b.files, windows: b.windows, sums: !!b.sums });
+  // `ions` (a JSON text, see rust-manions.js) asks for the ion scale: the columns after the others (peak table --ions); `choices: true` answers what it told the engine per sample
+  const ions = typeof b.ions === "string" ? b.ions : "";
+  const r = await rpc(ions && b.choices ? { op: "manionchoices", files: b.files, ions } : { op: "manint", files: b.files, windows: b.windows, sums: !!b.sums, ions });
   if (r.dead || r.error || !r.info) return null;
   stats.rust++;
   const bad = r.info[0] === "E";
-  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad ? "application/json" : "text/csv", ms: performance.now() - t0 };
+  return { status: bad ? 400 : 200, text: bad ? r.info.slice(1) : r.info, type: bad || (ions && b.choices) ? "application/json" : "text/csv", ms: performance.now() - t0 };
 }
 
 /** api/manint?k=..&w=JSON windows (manint::table_text, `file` = the place in k)[&sums=1][&tm=JSON minutes of the files, null = none]: the `mrm` transitions of every slot, then the op `manint` of the

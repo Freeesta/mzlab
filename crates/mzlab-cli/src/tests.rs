@@ -96,19 +96,32 @@ pub(crate) fn layered_table(files: &[(String, Vec<u8>)], layers: &str, as_text: 
         })
         .collect();
     let open = |k: usize| Index::open(idxs[k].clone(), idxs[k].len() as u64);
-    // as_text: the recipe text the browser sends to the pool, `{"layers": [...]}`
-    let mut r = if as_text {
-        run::recipe_for(&format!("{{\"layers\":{layers}}}"), &mut open(0).unwrap()).unwrap()
-    } else {
-        let layers = run::layers_from_json(layers).unwrap();
-        run::recipe_of_layers(&mut open(0).unwrap(), &layers).unwrap()
+    // as_text: the recipe text the browser sends to the pool, `{"layers": [...]}`; each file takes its own recipe (`detect_file`) and the alignment
+    // fills each file at the floor it estimated (`series_recipe`)
+    let text = format!("{{\"layers\":{layers}}}");
+    let parsed = run::layers_from_json(layers).unwrap();
+    let recipe_of = |k: usize| {
+        if as_text {
+            run::recipe_for(&text, &mut open(k).unwrap()).unwrap()
+        } else {
+            run::recipe_of_layers(&mut open(k).unwrap(), &parsed).unwrap()
+        }
     };
+    let mut r = recipe_of(0);
     r.fill_gaps = false;
     let det: Vec<Vec<u8>> = files
         .iter()
         .enumerate()
-        .map(|(k, (n, _))| run::detect(&mut open(k).unwrap(), n, &r).unwrap())
+        .map(|(k, (n, _))| {
+            let mut rk = recipe_of(k);
+            rk.fill_gaps = false;
+            run::detect(&mut open(k).unwrap(), n, &rk).unwrap()
+        })
         .collect();
+    if r.detect.axis.is_da() {
+        r.screen
+            .set_file_floors((0..files.len()).map(|k| recipe_of(k).fill.floor).collect());
+    }
     let (tables, origin) = run::read_files(&det).unwrap();
     run::align(&tables, &origin, &r, open).unwrap()
 }

@@ -46,7 +46,11 @@ try:
             assert first[0][0].startswith("Open MS² scan") and first[0][1], first[:2]
             assert "ormula" in first[1][0], first[:3]
             # the item reads «Options…» (disp.menu); the long wording lives in its aria-label (disp.menu.aria)
-            assert any("display options" in (i[1] or "") for i in first[:8]) and hrs >= 3, (first, hrs)
+            # a panel action: past the 12 top-level rows it sits in the "More panel actions" submenu, which opens on hover
+            assert pg.evaluate("!!document.querySelector('#ctx [data-azione=\"menu.more\"]')") and len(items) <= 12, items
+            pg.hover("#ctx [data-azione=\"menu.more\"]")
+            sub = pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].filter(e=>e.getBoundingClientRect().width>0).map(e=>[e.textContent.trim(),e.getAttribute('aria-label')])")
+            assert any("display options" in (i[1] or "") for i in sub) and hrs >= 3, (sub, hrs)
             assert pg.evaluate(f"DDA.ms2For({S1}, {S1}._pm).length") >= 1
             pg.click("#ctx [role^=menuitem]:has-text('Open MS² scan')"); ready(pg); pg.wait_for_timeout(800)
             assert pg.evaluate("E.panels.find(p=>p.dda!=null).sid") is not None

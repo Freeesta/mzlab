@@ -12,7 +12,10 @@ use mzlab_core::json::Out;
 use mzlab_core::mzmlhead::Mzml;
 use mzlab_core::readers::Limits;
 
+#[path = "manual_table_ions.rs"]
+mod ions_cmd;
 use crate::Outcome;
+use ions_cmd::IonAsk;
 
 /// The help text; the column lists come from the constants that write the CSV header, so the help cannot drift from the bytes.
 pub fn help() -> String {
@@ -23,7 +26,7 @@ pub fn help() -> String {
     format!(
 "mzlab-cli peak table: the integrations drawn by hand on transition / SIM traces, measured again from the files, as CSV.
 
-usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality,state] [--max-shift MIN] [--json] [--out PATH]
+usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums] [--times PATH] [--columns sn,fig,quality,state] [--max-shift MIN] [--ions [--scan-type K] [--set NAME=VALUE,...]] [--json] [--out PATH]
        mzlab-cli peak table (FILE... | --traces PATH...) --shifts --windows PATH [--max-shift MIN]
        mzlab-cli peak table (FILE... | --traces PATH...) --auto [--params PATH]
 
@@ -52,6 +55,12 @@ usage: mzlab-cli peak table (FILE... | --traces PATH...) --windows PATH [--sums]
                   table has more columns after origin: {ext}
   --columns LIST  more columns after the others, any of: state ({state}: forced for a window given or moved by you, detected for the engine's own peak, absent for no_peak), sn ({sn}: the height over the noise of the stretch a window names with \"noise\": [a, b], empty without),
                   fig ({fig}, on the window's own baseline), quality ({quality}); the bytes of the page's table
+  --ions      the ion scale, after every other column: area_ions, height_ions, noise_ions (the noise of the trace at one ion = 1 / the factor), sn_ions (Poisson S/N,
+              the floor of one ion), ions_per_cps (the seconds one point accumulates ions), ion_source (method = a method value, data = 1 / the ion quantum of the
+              trace, trace = the factor a trace of `trace xic --ions` brought) and ion_scan_type; the cps columns are unchanged and the sum row leaves them empty.
+              The scan type of a file's channels is sim, of a `trace xic --ions` trace the one it carries; --scan-type ems|epi|q1|sim|other names it. The method values are
+              --set fill_ms=, dwell_ms=, scan_s=, step_da=, mass_lo=, mass_hi= (repeated or separated by commas); a --set value wins over the dwell read from the method of
+              the file. Each sample logs its scan type on stderr; with --json the answer gains `ion_scale` (the same per sample). --scan-type and --set need --ions (exit 2)
   --json      the table as JSON {{\"columns\": [NAME], \"rows\": [{{NAME: TEXT}}]}} (every cell the text of the CSV, so a number keeps its digits); with --shifts or --auto the
               answer is JSON already and --json changes nothing
   --out PATH  write there instead of the standard output
@@ -82,8 +91,17 @@ struct Request {
     traces: Vec<PathBuf>,
     columns: Vec<String>,
     max_shift: Option<f64>,
+    ions: Option<IonAsk>,
     json: bool,
     out: Option<PathBuf>,
+}
+
+fn minutes(v: &str) -> std::result::Result<f64, String> {
+    let ok = |m: &f64| m.is_finite() && *m >= 0.0;
+    v.parse::<f64>()
+        .ok()
+        .filter(ok)
+        .ok_or_else(|| "--max-shift needs a number of minutes, 0 or more".into())
 }
 
 fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
@@ -92,6 +110,8 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     let (mut auto, mut params, mut times, mut traces) = (false, None, None, Vec::new());
     let (mut columns, mut json): (Vec<String>, bool) = (Vec::new(), false);
     let mut max_shift: Option<f64> = None;
+    let (mut with_ions, mut scan_type, mut sets): (bool, Option<String>, Vec<String>) =
+        (false, None, Vec::new());
     let mut it = args.into_iter();
     while let Some(a) = it.next() {
         match a.as_str() {
@@ -112,14 +132,13 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
                 columns = l.split(',').map(str::to_string).collect();
             }
             "--max-shift" => {
-                let v = it.next().ok_or("--max-shift needs a number of minutes")?;
-                max_shift = Some(
-                    v.parse::<f64>()
-                        .ok()
-                        .filter(|m| m.is_finite() && *m >= 0.0)
-                        .ok_or("--max-shift needs a number of minutes, 0 or more")?,
-                );
+                max_shift = Some(minutes(
+                    &it.next().ok_or("--max-shift needs a number of minutes")?,
+                )?)
             }
+            "--ions" => with_ions = true,
+            "--scan-type" => scan_type = Some(it.next().ok_or("--scan-type needs a kind")?),
+            "--set" => sets.push(it.next().ok_or("--set needs NAME=VALUE")?),
             "--sums" => sums = true,
             "--shifts" => shifts = true,
             "--auto" => auto = true,
@@ -136,6 +155,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
     if max_shift.is_some() && auto {
         return Err("--max-shift goes with --windows (a window with follow), not --auto".into());
     }
+    let ions = ions_cmd::parse_flags(with_ions, scan_type.as_deref(), &sets, !(auto || shifts))?;
     if auto && shifts {
         return Err("--auto and --shifts are two answers: pick one".into());
     }
@@ -154,6 +174,7 @@ fn parse(args: Vec<String>) -> std::result::Result<Option<Request>, String> {
         traces,
         columns,
         max_shift,
+        ions,
         json,
         out,
     }))
@@ -210,13 +231,29 @@ fn wiff_name(stem: &str, given: &str, taken: &[String]) -> String {
         .unwrap_or_default()
 }
 
+/// One sample read from a file: its name, its `/api/mrm` transitions and, when the ion scale was asked, the `method/1` of the sample.
+type Read = (
+    String,
+    String,
+    Option<mzlab_core::error::Result<Option<String>>>,
+);
+
+/// The `method/1` text of the sample `m` (its dwell is the ion scale of a SIM / MRM channel).
+fn method_of<R: mzlab_core::idxread::ReadAt>(
+    m: &mut Mzml<R>,
+    name: &str,
+) -> mzlab_core::error::Result<Option<String>> {
+    m.method(name, mzlab_core::method_fit::DOC_MAX as u64)
+}
+
 /// (name, `/api/mrm` transitions) of every sample of the file `p`; a sample whose records lie past the end of its file (a copy cut short) adds a line
 /// to `warn`, the table keeps what was read before the cut.
 fn samples_of(
     p: &Path,
     taken: &mut Vec<String>,
     warn: &mut String,
-) -> Result<Vec<(String, String)>> {
+    want_method: bool,
+) -> Result<Vec<Read>> {
     let name = p
         .file_name()
         .map_or(String::new(), |n| n.to_string_lossy().into_owned());
@@ -227,7 +264,9 @@ fn samples_of(
         let mut m = Mzml::new(f, size);
         let chroms = m.chromatograms(0)?;
         taken.push(name.clone());
-        return Ok(vec![(name, mrm_transitions(&mut m, &chroms)?)]);
+        let tr = mrm_transitions(&mut m, &chroms)?;
+        let method = want_method.then(|| method_of(&mut m, &name));
+        return Ok(vec![(name, tr, method)]);
     }
     let mut l = mzlab_lettori::open(crate::flow_set::file_set(p)?, &Limits::desktop())?;
     let stem = name
@@ -252,14 +291,16 @@ fn samples_of(
             *warn += &format!("warning: {n}: {missing} records past the end of the file (cut short?): only the points before the cut are integrated\n");
         }
         taken.push(n.clone());
-        out.push((n, mrm_transitions(&mut m, &chroms)?));
+        let tr = mrm_transitions(&mut m, &chroms)?;
+        let method = want_method.then(|| method_of(&mut m, &n));
+        out.push((n, tr, method));
     }
     Ok(out)
 }
 
 /// The `files` of `manint` (`[{"name", "transitions"}]`) for the files given, in order; the time point is the engine's, from each name.
 pub(crate) fn files_json(files: &[PathBuf], warn: &mut String) -> Result<String> {
-    files_json_timed(files, warn, None)
+    Ok(files_json_timed(files, warn, None, None)?.0)
 }
 
 /// `files_json` with the time points of `times` (`{"<sample>": minutes | null}`, the sample as the table writes it) in place of the ones of the names.
@@ -267,13 +308,18 @@ fn files_json_timed(
     files: &[PathBuf],
     warn: &mut String,
     times: Option<&mzlab_core::json::Value>,
-) -> Result<String> {
+    ions: Option<&IonAsk>,
+) -> Result<(String, Vec<ions_cmd::Scale>)> {
     let mut taken = Vec::new();
+    let mut scales = Vec::new();
     let mut o = Out::default();
     o.raw("[");
     let mut first = true;
     for p in files {
-        for (name, tr) in samples_of(p, &mut taken, warn)? {
+        for (name, tr, method) in samples_of(p, &mut taken, warn, ions.is_some())? {
+            if let (Some(a), Some(m)) = (ions, &method) {
+                scales.push(ions_cmd::of_file(a, m, &name));
+            }
             o.raw(if first { "{\"name\":" } else { ",{\"name\":" })
                 .str(&name);
             if let Some(t) = times.and_then(|t| t.get(mzlab_core::manint::sample_of(&name))) {
@@ -287,7 +333,7 @@ fn files_json_timed(
         }
     }
     o.raw("]");
-    Ok(o.0)
+    Ok((o.0, scales))
 }
 
 fn table(c: &Request, warn: &mut String) -> Result<String> {
@@ -298,10 +344,13 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         None => None,
     };
     // traces the caller supplies (a chromatogram, an XIC, a DAD trace), as the page sends them or as `trace xic` writes them
-    let files = if c.traces.is_empty() {
-        files_json_timed(&c.files, warn, times.as_ref())?
+    let (files, scales) = if c.traces.is_empty() {
+        files_json_timed(&c.files, warn, times.as_ref(), c.ions.as_ref())?
     } else {
-        crate::traces_in::read(&c.traces)?
+        (
+            crate::traces_in::read(&c.traces)?,
+            ions_cmd::of_trace_files(c.ions.as_ref(), &c.traces)?,
+        )
     };
     if let Some(p) = &c.auto {
         let params = if p.as_os_str().is_empty() {
@@ -350,8 +399,11 @@ fn table(c: &Request, warn: &mut String) -> Result<String> {
         // an area is integrated wherever the window is put: the word says which of them found a peak (detected, forced, absent)
         *warn += "hint: add --columns state to say per row whether the window was placed by you (forced), found by the engine (detected) or holds no peak (absent); the engine's own peaks: --auto\n";
     }
-    let csv = mzlab_core::manint::table_text(&files, &windows, c.sums)?;
-    Ok(if c.json { csv_to_json(&csv) } else { csv })
+    if c.ions.is_none() {
+        let csv = mzlab_core::manint::table_text(&files, &windows, c.sums)?;
+        return Ok(if c.json { csv_to_json(&csv) } else { csv });
+    }
+    ions_cmd::table(&files, &windows, c.sums, c.json, &scales, warn, csv_to_json)
 }
 
 /// The cells of one CSV line (a quoted cell may hold commas and doubled quotes).
@@ -429,6 +481,10 @@ pub fn run(args: Vec<String>) -> Outcome {
 #[cfg(test)]
 #[path = "manual_table_cmd_tests.rs"]
 mod tests;
+
+#[cfg(test)]
+#[path = "manual_table_ions_tests.rs"]
+mod ions_tests;
 
 #[cfg(test)]
 #[path = "manual_table_traces_tests.rs"]

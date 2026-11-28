@@ -32,9 +32,20 @@ def at(pg, rt):
 def menu(pg, rt=1.0):
     pg.evaluate(f"{MRM}.el.scrollIntoView({{block: 'center'}})"); frames(pg, 3)
     x, y = at(pg, rt); pg.mouse.click(x, y, button="right"); pg.wait_for_selector("#ctx:not([hidden])")
-    return pg.evaluate("[...document.querySelectorAll('#ctx [role^=menuitem]')].map(e => [e.getAttribute('role'), e.textContent.replace(/^✓\s*|\s*✓$/g, '').trim(), e.getAttribute('aria-checked')])")
+    rows = "[...document.querySelectorAll('#ctx [role^=menuitem]')].filter(e => e.getBoundingClientRect().width > 0).map(e => [e.getAttribute('role'), e.textContent.replace(/^✓\s*|\s*✓$/g, '').trim(), e.getAttribute('aria-checked')])"
+    top = pg.evaluate(rows)
+    if pg.evaluate("!!document.querySelector('#ctx [data-azione=\"menu.more\"]')"):      # the tail of a long menu is in one submenu: open it, its rows are listed too
+        pg.hover("#ctx [data-azione=\"menu.more\"]")
+        if pg.evaluate("document.querySelector('#ctx [data-azione=\"menu.more\"]').getAttribute('aria-expanded') !== 'true'"): pg.click("#ctx [data-azione=\"menu.more\"]")
+        top += pg.evaluate(rows)
+    return top
+def shut(pg):
+    """Close the menu and its submenu (Esc closes one level at a time)."""
+    for _ in range(3):
+        if pg.evaluate("document.getElementById('ctx').hidden"): return
+        pg.keyboard.press("Escape")
 def item(pg, label):
-    pg.click(f"#ctx [role^=menuitem]:has-text('{label}')"); ready(pg)
+    pg.click(f"#ctx [role^=menuitem]:not([data-azione='menu.more']):has-text('{label}')"); ready(pg)
 def load(pg, name):
     pg.set_input_files("#pick", [str(D / name), str(D / (name + ".scan"))])
     wait_for_js(pg, "document.querySelectorAll('#flist input[data-k=use]').length >= 1", timeout=90000); pg.click("text=Load data"); ready(pg)
@@ -49,12 +60,12 @@ try:
         T = pg.evaluate("({ uv: I18N.t('ctx.uv.atRt'), twc: I18N.t('ctx.mrm.twc'), al: I18N.t('disp.pdaAlign'), col: I18N.t('tdati.col.twc') })")
         def entries():
             wait_for_js(pg, "!!AZIONI.get('mrm.twc')", timeout=30000)
-            labs = menu(pg); pg.keyboard.press("Escape")
+            labs = menu(pg); shut(pg)
             assert any(l[1] == T["uv"] for l in labs), labs
             assert ["menuitemcheckbox", T["twc"], "false"] in labs and any(l[0] == "menuitemcheckbox" and l[1] == T["al"] for l in labs), labs
         step("the MRM panel of a file with a DAD: «UV spectrum at RT», «TWC» and «Allinea» in its menu", entries)
         def menu_axe():
-            menu(pg); axe_ok(pg, "#ctx"); pg.keyboard.press("Escape")
+            menu(pg); axe_ok(pg, "#ctx"); shut(pg)
         step("axe: the menu of the MRM panel", menu_axe)
         def dbl():
             x, y = at(pg, TRUE["a"]["rt"]); pg.mouse.dblclick(x, y)
@@ -74,7 +85,7 @@ try:
             menu(pg); item(pg, T["twc"])
             wait_for_js(pg, f"{MRM}.overlay === 'twc' && {MRM}._a && {MRM}._a.twc === true", timeout=60000)
             assert pg.evaluate(f"{MRM}.cv._needR") > 0
-            labs = menu(pg); pg.keyboard.press("Escape"); assert ["menuitemcheckbox", T["twc"], "true"] in labs, labs
+            labs = menu(pg); shut(pg); assert ["menuitemcheckbox", T["twc"], "true"] in labs, labs
         step("the «TWC» check draws the TWC on a right axis of the MRM panel", overlay)
         def readings():
             d = pg.evaluate("(async () => { const j = await J('api/chrom?k=0&kind=pda&level=1'); let b = 0; j.y.forEach((v, i) => { if (v > j.y[b]) b = i; }); return { rt: j.rt[b], y: j.y[b] }; })()")
@@ -104,7 +115,7 @@ try:
         pg = r2.page(p)
         load(pg, "nodad.wiff")
         def none():
-            labs = menu(pg); pg.keyboard.press("Escape")
+            labs = menu(pg); shut(pg)
             T2 = pg.evaluate("[I18N.t('ctx.uv.atRt'), I18N.t('ctx.mrm.twc')]")
             assert not any(l[1] in T2 for l in labs), labs
         step("an MRM file with no DAD: no UV spectrum and no TWC in the menu", none)
