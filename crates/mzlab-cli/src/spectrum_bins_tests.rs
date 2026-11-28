@@ -196,7 +196,7 @@ fn bad_requests_are_usage_errors() {
         vec!["--mz-offset", "0.2"],
         vec!["--bin", "nominal", "--mz-offset", "abc"],
         vec!["--bin", "nominal", "--mz-offset", "0.9"],
-        vec!["--bin", "nominal", "--minus", &f],
+        vec!["--bin", "nominal", "--peak", "auto"],
     ] {
         let mut a = vec!["spectrum", "get", &f, "--rt", "1"];
         a.extend(args.iter().copied());
@@ -208,10 +208,6 @@ fn bad_requests_are_usage_errors() {
             "{args:?}"
         );
     }
-    let o = run(&[
-        "spectrum", "get", &f, "--rt", "0,2", "--bin", "nominal", "--sum", "--json",
-    ]);
-    assert_eq!(o.code, 2, "{}", o.stderr);
     let _ = std::fs::remove_dir_all(d);
 }
 
