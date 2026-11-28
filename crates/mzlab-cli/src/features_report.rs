@@ -84,6 +84,7 @@ fn label_of(x: &Member) -> Option<LabelCheck> {
         spacings: p("spacings")?,
         runs_pct: p("runs")?,
         fine_pct: p("fine")?,
+        short_pct: p("short")?,
         sparse: true,
     })
 }

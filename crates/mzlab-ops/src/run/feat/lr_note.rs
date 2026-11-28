@@ -63,11 +63,16 @@ fn label_params(c: &mzlab_feat::lrscreen::LabelCheck) -> Vec<(&'static str, usiz
         ("spacings", c.spacings),
         ("runs", c.runs_pct),
         ("fine", c.fine_pct),
+        ("short", c.short_pct),
         ("runs_cut", k.runs_pct),
         ("fine_cut", k.fine_pct),
         ("run_points", k.run_points),
         ("run_step", k.run_step_mda),
         ("fine_step", k.fine_step_mda),
+        ("short_cut", k.short_pct),
+        ("short_points", k.short_points),
+        ("short_step", k.short_step_mda),
+        ("short_min", k.short_min),
     ]
 }
 

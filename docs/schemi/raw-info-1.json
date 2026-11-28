@@ -339,6 +339,7 @@
                         "agree",
                         "runs_share",
                         "fine_share",
+                        "short_runs_share",
                         "profile_scans",
                         "level_scans"
                       ],
@@ -372,6 +373,12 @@
                           ]
                         },
                         "fine_share": {
+                          "type": [
+                            "number",
+                            "null"
+                          ]
+                        },
+                        "short_runs_share": {
                           "type": [
                             "number",
                             "null"
