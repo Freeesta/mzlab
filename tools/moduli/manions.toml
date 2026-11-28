@@ -1,0 +1,8 @@
+uscita = "wasm-feat/manions"
+pacchetto = "mzlab-manions-wasm"
+chiavi = { manions = 41 }
+wasm_opt = "@motore"
+parte = "a"
+tetto = 209700
+misura = 199785
+nota = "ion-scale columns of the integrations table (`manint::table_text_ions`, `peak table --ions`): the `manual_table` code of `rotte` plus the ion columns, lazy, loaded by rust-manions.js at the first request that asks for the ion scale; a module of its own because `rotte` is nearly full; NEW module, size measured by the CI size step after wasm-opt, cap = 1.05 x that"

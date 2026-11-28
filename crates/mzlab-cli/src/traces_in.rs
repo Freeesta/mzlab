@@ -126,6 +126,45 @@ pub(crate) fn read(paths: &[std::path::PathBuf]) -> Result<String> {
     Ok(o.0)
 }
 
+/// What one sample of `read` says about its ion scale: the scan type and, per trace, the seconds one point accumulates ions.
+pub(crate) struct SampleScale {
+    pub scan_type: Option<String>,
+    pub seconds: Vec<Option<f64>>,
+}
+
+/// The ion scale each sample of `read(paths)` brings (the `ion_scale` that `trace xic --ions` writes in the evidence of every trace), in the same order.
+/// The page's own list brings none: its samples answer with empty vectors.
+pub(crate) fn scales(paths: &[std::path::PathBuf]) -> Result<Vec<SampleScale>> {
+    let mut out = Vec::new();
+    for p in paths {
+        let path = p.display().to_string();
+        let t = std::fs::read_to_string(p)
+            .map_err(|e| Error::new("err.cli.file").with("path", format!("{path}: {e}")))?;
+        let v = parse(t.as_bytes()).map_err(|_| shape(&path))?;
+        let docs: Vec<&Value> = match list(&v) {
+            Some(a) => a.iter().collect(),
+            None => vec![&v],
+        };
+        for d in docs {
+            let traces: Vec<&Value> = match d.get("schema").and_then(Value::str) {
+                Some("trace-set/1") => d.get("traces").map_or(&[][..], Value::arr).iter().collect(),
+                Some("trace/1") => vec![d],
+                _ => Vec::new(),
+            };
+            let sc = |t: &Value| t.get("evidence").and_then(|e| e.get("ion_scale")).cloned();
+            let seconds = traces
+                .iter()
+                .map(|t| sc(t).and_then(|s| s.get("ions_per_cps").and_then(Value::f64)))
+                .collect();
+            let scan_type = traces.iter().find_map(|t| {
+                sc(t).and_then(|s| s.get("scan_type").and_then(Value::str).map(str::to_string))
+            });
+            out.push(SampleScale { scan_type, seconds });
+        }
+    }
+    Ok(out)
+}
+
 #[cfg(test)]
 #[path = "traces_in_tests.rs"]
 mod tests;

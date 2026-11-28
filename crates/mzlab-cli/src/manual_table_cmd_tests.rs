@@ -363,7 +363,15 @@ fn help_lists_the_header_columns_in_order() {
     ] {
         assert!(h.contains(e.trim_start_matches(',')), "{e}");
     }
-    assert!(!h.contains("--set"), "peak table has no --set");
+    // the ion scale (`--ions`) is the only place of `--set`: the method values of the factor
+    assert!(h.contains("--set fill_ms="), "{h}");
+    assert!(h.contains(
+        mzlab_core::manint::IONS_HEAD
+            .trim_start_matches(',')
+            .split(',')
+            .next()
+            .unwrap()
+    ));
 }
 
 /// A table of windows says on stderr where the state word is (`--columns state`); with the column asked for, and in `--auto` (which has it), no hint.

@@ -49,7 +49,7 @@ pub(crate) static RELATED: &[Rel] = &[
     r("peak edges", "click on a trace nearest apex window junk refused guard force points s/n manual", &["peak area", "peak auto-lr", "peak table"]),
     r("peak area", "integrate one peak area", &["peak table"])
         .bulk("mzlab-cli peak table FILE... --windows PATH: the same fixed windows in every trace of every file, one call"),
-    r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows state forced detected versus integrated absent column", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
+    r("peak table", "integrate integration quantify area snr every peak all traces channels many files batch sim srm mrm xic target windows state forced detected versus integrated absent column area height noise in ions poisson s/n ion counts cps to ions ion scale scan type fill time dwell time", &["chrom.transitions", "peak auto-lr", "trace xic", "quant.curve"])
         .ex("mzlab-cli peak table a.mzML b.mzML --auto --out peaks.json"),
     r("spectrum get", "mass spectrum scan blank subtract sum add scans window ms2 epi product ion counts ions credible enough fill time nominal mass bin bins binning rebin unit resolution profile split fragment integer offset centre of mass peak apex fwhm background sides high resolution orbitrap ppm", &["spectrum list", "raw xic", "spectra.centroid"])
         .ex("mzlab-cli spectrum get f.mzML --rt 6,7 --ms-level 2 --sum"),

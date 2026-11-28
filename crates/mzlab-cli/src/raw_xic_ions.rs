@@ -15,6 +15,24 @@ pub(crate) const FACT_KEYS: &[&str] = &[
     "fill_ms", "dwell_ms", "scan_s", "step_da", "mass_lo", "mass_hi",
 ];
 
+/// The method values of `NAME=VALUE` items (`--set`, repeated or comma separated): every name one of `FACT_KEYS`, every value a number above 0.
+pub(crate) fn parse_facts(given: &[&str]) -> std::result::Result<Facts, String> {
+    let mut f = Facts::default();
+    for kv in given {
+        let (k, v) = kv.split_once('=').ok_or("--set needs NAME=VALUE")?;
+        let x = v
+            .parse::<f64>()
+            .ok()
+            .filter(|x| x.is_finite() && *x > 0.0)
+            .ok_or(format!("{k} must be a number above 0"))?;
+        *slot(&mut f, k).ok_or(format!(
+            "--set takes a method value here: {}",
+            FACT_KEYS.join(", ")
+        ))? = Some(x);
+    }
+    Ok(f)
+}
+
 /// `query.ions`: the scan type named (null: read from the scans) and every method value, only with the opt-in so the bytes without it are unchanged.
 pub(crate) fn params_member(o: &mut Out, k: &Ask) {
     if let Some(i) = &k.ions {
