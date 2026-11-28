@@ -38,16 +38,8 @@ fn strs(v: &[&str]) -> Value {
     Value::Arr(v.iter().map(|s| text(s)).collect())
 }
 
-pub(super) fn document(
-    set: &Set,
-    files: &[File],
-    pts: &[Pt],
-    fits: Vec<Value>,
-    log: &[Choice],
-    uv: Value,
-    warnings: &[String],
-) -> String {
-    let params = Obj::new()
+fn params_json(set: &Set) -> Value {
+    Obj::new()
         .put(
             "ids",
             strs(&set.ids.iter().map(String::as_str).collect::<Vec<_>>()),
@@ -66,7 +58,19 @@ pub(super) fn document(
         .n("uv_tol", set.uv_tol)
         .i("boot", set.boot as i64)
         .i("seed", set.seed as i64)
-        .done();
+        .done()
+}
+
+pub(super) fn document(
+    set: &Set,
+    files: &[File],
+    pts: &[Pt],
+    fits: Vec<Value>,
+    log: &[Choice],
+    uv: Value,
+    warnings: &[String],
+) -> String {
+    let params = params_json(set);
     let file_rows = files.iter().map(|f| {
         let flag = f
             .factor
